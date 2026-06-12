@@ -531,12 +531,16 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(sp)
 	var total := 0
+	var unlocked := 0
 	for c in inventory:
-		total += int(c["v"])
+		if not bool(c.get("lock", false)):
+			total += int(c["v"])
+			unlocked += 1
 	var sell_all := Button.new()
 	sell_all.text = "全部卖出"
 	sell_all.custom_minimum_size = Vector2(76, 28)
-	sell_all.disabled = inventory.is_empty()
+	sell_all.disabled = unlocked == 0
+	sell_all.tooltip_text = "卖出 %d 条未上锁的鱼，+%d 金币（锁定的会留下）" % [unlocked, total]
 	_apply_button_skin(sell_all, true)
 	sell_all.pressed.connect(_sell_all)
 	head.add_child(sell_all)
@@ -618,8 +622,20 @@ func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
 	meta.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42) if featured else Color(0.78, 0.68, 0.45))
 	info.add_child(meta)
 	row.add_child(info)
+	var locked: bool = bool(c.get("lock", false))
+	var lk := Button.new()
+	lk.text = "解" if locked else "锁"
+	lk.tooltip_text = "解除收藏锁" if locked else "上锁收藏（不会被卖出）"
+	lk.custom_minimum_size = Vector2(30, 32 if featured else 30)
+	lk.focus_mode = Control.FOCUS_NONE
+	_apply_button_skin(lk, false)
+	if locked:
+		lk.add_theme_color_override("font_color", Color(0.95, 0.78, 0.42))
+	lk.pressed.connect(_toggle_lock.bind(idx))
+	row.add_child(lk)
 	var sell := Button.new()
-	sell.text = "卖"
+	sell.text = "藏" if locked else "卖"
+	sell.disabled = locked
 	sell.custom_minimum_size = Vector2(38 if featured else 30, 32 if featured else 30)
 	_apply_button_skin(sell, featured)
 	sell.pressed.connect(_sell_one.bind(idx))
@@ -685,8 +701,20 @@ func _dex_card(id: String) -> Control:
 	return panel
 
 
+func _toggle_lock(idx: int) -> void:
+	if idx < 0 or idx >= inventory.size():
+		return
+	var c: Dictionary = inventory[idx]
+	c["lock"] = not bool(c.get("lock", false))
+	_refresh_panel()
+	_save()
+
+
 func _sell_one(idx: int) -> void:
 	if idx < 0 or idx >= inventory.size():
+		return
+	if bool(inventory[idx].get("lock", false)):
+		_toast("这条鱼已上锁收藏", 1.5, Color(0.95, 0.78, 0.42))
 		return
 	var c: Dictionary = inventory[idx]
 	inventory.remove_at(idx)
@@ -699,16 +727,24 @@ func _sell_one(idx: int) -> void:
 
 
 func _sell_all() -> void:
-	if inventory.is_empty():
-		return
 	var total := 0
+	var n := 0
+	var keep: Array = []
 	for c in inventory:
-		total += int(c["v"])
-	var n := inventory.size()
-	inventory.clear()
+		if bool(c.get("lock", false)):
+			keep.append(c)       # 收藏锁：跳过锁定的鱼
+		else:
+			total += int(c["v"])
+			n += 1
+	if n == 0:
+		return
+	inventory = keep
 	coins += total
 	lifetime_coins += total
-	_toast("卖出 %d 条鱼 +%d 金币" % [n, total], 2.2, Color(0.85, 0.7, 0.35))
+	var msg := "卖出 %d 条鱼 +%d 金币" % [n, total]
+	if not keep.is_empty():
+		msg += "（%d 条收藏留着）" % keep.size()
+	_toast(msg, 2.2, Color(0.85, 0.7, 0.35))
 	_update_hud()
 	_refresh_panel()
 	_save()
@@ -879,7 +915,8 @@ func _save() -> void:
 		return
 	var inv: Array = []
 	for c in inventory:
-		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0))])
+		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
+			1 if bool(c.get("lock", false)) else 0])
 	var data := {
 		"ver": 4,
 		"coins": coins,
@@ -922,7 +959,8 @@ func _load_save() -> void:
 	for e in data.get("inv", []):           # v1 存档无此字段 → 空背包
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):
 			inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
-				"q": int(e[3]) if e.size() >= 4 else 0})  # v2 三元组 → 无星级
+				"q": int(e[3]) if e.size() >= 4 else 0,    # v2 三元组 → 无星级
+				"lock": e.size() >= 5 and int(e[4]) == 1}) # v3 及更早 → 未锁定
 	lifetime_coins = int(data.get("lt_coins", 0))
 	lifetime_catches = int(data.get("lt_catches", 0))
 	dex = {}

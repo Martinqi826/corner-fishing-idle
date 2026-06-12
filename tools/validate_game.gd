@@ -157,13 +157,28 @@ func _check_sell_expand() -> void:
 
 	for i in 6:
 		game._do_catch()
+	# 收藏锁：锁两条，全卖应跳过
+	game._toggle_lock(0)
+	game._toggle_lock(2)
+	_assert(bool(game.inventory[0]["lock"]), "上锁应生效")
+	var locked_id: String = game.inventory[0]["id"]
 	var total := 0
 	for c in game.inventory:
-		total += int(c["v"])
+		if not bool(c.get("lock", false)):
+			total += int(c["v"])
+	var coins_before: int = game.coins
+	game._sell_one(0)
+	_assert(game.coins == coins_before and game.inventory.size() == 6, "锁定的鱼不应被单卖")
 	game._sell_all()
-	_assert(game.coins == total, "全卖后金币应为 %d，实际 %d" % [total, game.coins])
-	_assert(game.inventory.is_empty(), "全卖后背包应为空")
+	_assert(game.coins == total, "全卖应只卖未锁定，金币应为 %d，实际 %d" % [total, game.coins])
+	_assert(game.inventory.size() == 2, "全卖后应留 2 条收藏，实际 %d" % game.inventory.size())
+	_assert(str(game.inventory[0]["id"]) == locked_id, "留下的应是锁定那条")
 	_assert(game.lifetime_coins == total, "累计卖鱼金额应为 %d" % total)
+	game._toggle_lock(0)
+	game._toggle_lock(1)
+	game._sell_all()
+	_assert(game.inventory.is_empty(), "解锁后全卖应清空")
+	total = game.coins
 
 	# 扩容
 	game.coins = 200
@@ -239,7 +254,7 @@ func _check_save_v2() -> void:
 	g1.bag_level = 3
 	g1.bait_level = 2
 	g1.inventory = [
-		{"id": "koi", "w": 3.5, "v": 880, "q": 3},
+		{"id": "koi", "w": 3.5, "v": 880, "q": 3, "lock": true},
 		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
 	]
 	g1.dex = {"koi": {"n": 3, "w": 5.5}, "crucian": {"n": 12, "w": 0.58}}
@@ -258,6 +273,8 @@ func _check_save_v2() -> void:
 	_assert(str(g2.inventory[0]["id"]) == "koi" and int(g2.inventory[0]["v"]) == 880,
 		"背包条目应完整恢复")
 	_assert(int(g2.inventory[0]["q"]) == 3, "星级应随存档恢复")
+	_assert(bool(g2.inventory[0]["lock"]) and not bool(g2.inventory[1].get("lock", false)),
+		"收藏锁应随存档恢复")
 	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
 	_assert(int(g2.dex["crucian"]["n"]) == 12 and absf(float(g2.dex["koi"]["w"]) - 5.5) < 0.01,
 		"图鉴纪录（捕获数/最大体重）应随存档恢复")
