@@ -61,6 +61,21 @@ func _run() -> void:
 	await _settle(90)  # 30fps × 90 帧 = 3 秒
 	_snap("motion_b.png")
 
+	# 6) UI 对位校验：按钮命中区/落水点画红色标记，美术更新后跑一遍核对是否错位
+	for k in ["catch", "rod", "set"]:
+		var m := ColorRect.new()
+		m.color = Color(1, 0, 0, 0.4)
+		m.size = Vector2(30, 32)
+		m.position = (_main.btn_centers[k] as Vector2) - Vector2(15, 16)
+		_main.ui_root.add_child(m)
+	var bp := ColorRect.new()
+	bp.color = Color(0, 1, 0, 0.5)
+	bp.size = Vector2(8, 8)
+	bp.position = _main.painter.bite_point - Vector2(4, 4)
+	_main.ui_root.add_child(bp)
+	await _settle(2)
+	_snap("ui_align_check.png")
+
 	quit()
 
 

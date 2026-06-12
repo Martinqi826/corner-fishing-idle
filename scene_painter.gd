@@ -9,8 +9,12 @@ const W := 520.0
 const H := 400.0
 const HORIZON := 206.0
 
-# 合成主图模式下的咬钩点（≈烤进主图里的钓线落水处），涟漪/飘字以此为锚。
-const COMPOSITE_BITE := Vector2(322, 300)
+# 合成主图模式下的咬钩点（= 主图里画的小浮漂/钓线落水处），涟漪/飘字以此为锚。
+# 默认值按当前主图实测；main.gd 可从 ui_layout.json 覆盖（Codex 美术更新时同步）。
+var bite_point := Vector2(384, 344)
+
+# 浮漂精灵缩放：资源是 64/96 大画布，原尺寸在场景里过大，按场景比例缩小。
+const BOBBER_SCALE := 0.24
 # 灯光呼吸锚点回退值（dynamic_art_plan.md 给定的近似位置；
 # 实际锚点在 _ready 里扫描主图暖色像素质心自动定位，主图更新也不会错位）
 const LANTERN_POS := Vector2(438, 274)
@@ -214,15 +218,15 @@ func _start_wild(kind := "") -> void:
 		"fish":
 			_wild_dur = _prng.randf_range(0.7, 1.1)
 			_wild_scale = _prng.randf_range(0.22, 0.35)
-			var fx := COMPOSITE_BITE.x + _prng.randf_range(-34.0, 30.0)
-			_wild_from = Vector2(fx, COMPOSITE_BITE.y + 4.0)
+			var fx := bite_point.x + _prng.randf_range(-34.0, 30.0)
+			_wild_from = Vector2(fx, bite_point.y + 4.0)
 			_wild_to = _wild_from
 			add_ripple(_wild_from, 24.0)
 
 
 func bobber_pos() -> Vector2:
 	if use_composite:
-		return COMPOSITE_BITE
+		return bite_point
 	return Vector2(_bobber.x, _bobber.y + sin(t * 2.0) * 1.5 + dip * 9.0)
 
 
@@ -311,7 +315,7 @@ func _draw_wildlife() -> void:
 	var sz := Vector2(tex.get_size()) * _wild_scale
 	draw_texture_rect(tex, Rect2(pos - sz * 0.5, sz), false, Color(1, 1, 1, 0.95 * fade))
 	if _wild_kind == "fish" and prog > 0.85 and _ripples.size() < 2:
-		add_ripple(Vector2(_wild_from.x, COMPOSITE_BITE.y + 4.0), 20.0)
+		add_ripple(Vector2(_wild_from.x, bite_point.y + 4.0), 20.0)
 
 
 ## 涟漪：有 Codex 帧动画时按扩散进度播 4 帧；否则回退程序化圆弧。
@@ -338,8 +342,9 @@ func _draw_bobber_sprite() -> void:
 	if tex == null:
 		_draw_bobber_proc(p)
 		return
-	var sz := Vector2(tex.get_size())
-	draw_texture(tex, p - sz * 0.5 + Vector2(0, sin(t * 2.0) * 1.5 + dip * 8.0))
+	var sz := Vector2(tex.get_size()) * BOBBER_SCALE
+	var off := Vector2(0, sin(t * 2.0) * 1.2 + dip * 5.0)
+	draw_texture_rect(tex, Rect2(p - sz * 0.5 + off, sz), false)
 
 
 ## 灯光呼吸：4 帧 ping-pong + 相邻帧交叉淡化，慢速脉动。

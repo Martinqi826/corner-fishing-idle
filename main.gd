@@ -9,8 +9,17 @@ extends Node2D
 
 # 可交互区：右下角可见场景 + 按钮；其余透明区点击穿透到桌面。
 const INTERACT_RECT := Rect2(160, 148, 360, 252)
-# 合成主图里三按钮的中心（与 corner_scene_winter_base.png 烤进的按钮对齐）。
-const COMPOSITE_BTNS := [[Vector2(460, 384), "catch"], [Vector2(481, 384), "rod"], [Vector2(502, 384), "set"]]
+
+# —— UI 布局契约 ——
+# 主图烤入按钮/落水点的坐标随 Codex 美术版本漂移。优先从 ui_layout.json 读取
+# （Codex 更新美术时同步改 json 即可，不用动代码）；无 json 时用下面实测的回退值。
+# json 格式：{"buttons": {"catch": [x,y], "rod": [x,y], "set": [x,y]}, "bite_point": [x,y]}
+const UI_LAYOUT_PATHS := ["res://ui_layout.json", "res://assets/art/ui/ui_layout.json"]
+var btn_centers := {
+	"catch": Vector2(424, 371),
+	"rod": Vector2(452, 371),
+	"set": Vector2(481, 371),
+}
 
 # —— 钓鱼状态机 ——
 enum {ST_WAIT, ST_BITE}
@@ -54,6 +63,7 @@ func _ready() -> void:
 	get_tree().set_auto_accept_quit(false)  # 退出前存档
 	_setup_theme()
 	_setup_window()
+	_load_ui_layout()
 	_load_save()
 	_build_buttons()
 	_update_hud()
@@ -238,22 +248,42 @@ func _build_buttons() -> void:
 		_build_round_buttons()
 
 
+## 读取 ui_layout.json（若 Codex 提供），覆盖按钮中心与落水点。
+func _load_ui_layout() -> void:
+	for path in UI_LAYOUT_PATHS:
+		if not FileAccess.file_exists(path):
+			continue
+		var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if not (data is Dictionary):
+			continue
+		var btns: Variant = data.get("buttons", {})
+		if btns is Dictionary:
+			for k in btn_centers.keys():
+				var v: Variant = btns.get(k, btns.get("settings" if k == "set" else k, null))
+				if v is Array and v.size() >= 2:
+					btn_centers[k] = Vector2(float(v[0]), float(v[1]))
+		var bp: Variant = data.get("bite_point", null)
+		if bp is Array and bp.size() >= 2:
+			painter.bite_point = Vector2(float(bp[0]), float(bp[1]))
+		return
+
+
 # 合成主图模式：按钮已烤进主图，这里只放透明命中区（带悬停高亮），点击可用、无重影。
 func _build_hit_areas() -> void:
-	for c in COMPOSITE_BTNS:
+	for k in ["catch", "rod", "set"]:
 		var b := Button.new()
 		b.flat = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(22, 26)
-		b.size = Vector2(22, 26)
-		b.position = (c[0] as Vector2) - Vector2(11, 13)
+		b.custom_minimum_size = Vector2(30, 32)
+		b.size = Vector2(30, 32)
+		b.position = (btn_centers[k] as Vector2) - Vector2(15, 16)
 		b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 		b.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 		var hov := StyleBoxFlat.new()
 		hov.bg_color = Color(1, 1, 1, 0.16)
-		hov.set_corner_radius_all(13)
+		hov.set_corner_radius_all(15)
 		b.add_theme_stylebox_override("hover", hov)
-		b.pressed.connect(_toggle_panel.bind(c[1]))
+		b.pressed.connect(_toggle_panel.bind(k))
 		ui_root.add_child(b)
 
 
@@ -334,7 +364,7 @@ func _set_interactive_full(full: bool) -> void:
 
 func _panel_bg_style() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.12, 0.13, 0.12, 0.86)
+	sb.bg_color = Color(0.12, 0.13, 0.12, 0.94)
 	sb.set_corner_radius_all(16)
 	sb.set_border_width_all(1)
 	sb.border_color = Color(0.88, 0.84, 0.74, 0.72)
@@ -400,63 +430,66 @@ func _tier_color(tier: int) -> Color:
 	return FishData.TIER_COLORS[clampi(tier, 0, FishData.TIER_COLORS.size() - 1)]
 
 
+func _ui_tier_color(tier: int, on_paper := false) -> Color:
+	if tier == 0:
+		return Color(0.38, 0.37, 0.33) if on_paper else Color(0.86, 0.84, 0.78)
+	return _tier_color(tier)
+
+
 func _make_card(title: String) -> Control:
 	var p := PanelContainer.new()
-	p.position = Vector2(64, 36)
-	p.custom_minimum_size = Vector2(392, 312)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.95, 0.93, 0.87, 0.97)
-	sb.set_corner_radius_all(12)
-	sb.set_border_width_all(1)
-	sb.border_color = Color(0.5, 0.5, 0.45, 0.6)
-	p.add_theme_stylebox_override("panel", sb)
+	p.z_index = 50
+	p.position = Vector2(218, 42)
+	p.custom_minimum_size = Vector2(278, 332)
+	p.add_theme_stylebox_override("panel", _panel_bg_style())
 	var m := MarginContainer.new()
 	m.name = "M"
-	for side in ["left", "top", "right", "bottom"]:
-		m.add_theme_constant_override("margin_" + side, 16)
+	m.add_theme_constant_override("margin_left", 18)
+	m.add_theme_constant_override("margin_top", 16)
+	m.add_theme_constant_override("margin_right", 18)
+	m.add_theme_constant_override("margin_bottom", 16)
 	p.add_child(m)
 	var v := VBoxContainer.new()
 	v.name = "V"
-	v.add_theme_constant_override("separation", 9)
+	v.add_theme_constant_override("separation", 10)
 	m.add_child(v)
-	# 标题行 + 关闭
 	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
 	var tl := Label.new()
 	tl.text = title
-	tl.add_theme_font_size_override("font_size", 18)
-	tl.add_theme_color_override("font_color", Color(0.25, 0.25, 0.22))
+	tl.add_theme_font_size_override("font_size", 20)
+	tl.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
 	hb.add_child(tl)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(sp)
 	var cb := Button.new()
-	cb.text = "×"
+	cb.text = "?"
 	cb.flat = true
 	cb.focus_mode = Control.FOCUS_NONE
-	cb.add_theme_color_override("font_color", Color(0.4, 0.4, 0.38))
+	cb.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	cb.pressed.connect(_close_panel)
 	hb.add_child(cb)
 	v.add_child(hb)
 	return p
 
 
+func _set_catch_tab(tab: int) -> void:
+	_catch_tab = tab
+	_open_panel("catch")
+
+
 func _fill_bag_panel(v: VBoxContainer) -> void:
-	# 页签行
 	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 8)
-	for i in 2:
+	tabs.add_theme_constant_override("separation", 6)
+	var names := ["背包", "图鉴"]
+	for i in range(2):
 		var tb := Button.new()
-		tb.text = ["背包", "图鉴"][i]
-		tb.focus_mode = Control.FOCUS_NONE
-		tb.toggle_mode = false
-		tb.flat = i != _catch_tab
-		if i == _catch_tab:
-			tb.add_theme_color_override("font_color", Color(0.25, 0.25, 0.22))
-		else:
-			tb.add_theme_color_override("font_color", Color(0.55, 0.55, 0.5))
-			tb.pressed.connect(func() -> void:
-				_catch_tab = i
-				_open_panel("catch"))
+		tb.text = names[i]
+		tb.custom_minimum_size = Vector2(86, 28)
+		_apply_button_skin(tb, i == _catch_tab)
+		if i != _catch_tab:
+			tb.pressed.connect(_set_catch_tab.bind(i))
 		tabs.add_child(tb)
 	v.add_child(tabs)
 	if _catch_tab == 0:
@@ -466,13 +499,12 @@ func _fill_bag_panel(v: VBoxContainer) -> void:
 
 
 func _fill_bag_tab(v: VBoxContainer) -> void:
-	# 状态行：容量 + 全部卖出 + 扩容
 	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
+	head.add_theme_constant_override("separation", 6)
 	var cap := Label.new()
-	cap.text = "容量 %d/%d" % [inventory.size(), _bag_capacity()]
-	cap.add_theme_color_override("font_color",
-		Color(0.85, 0.55, 0.25) if _bag_full() else Color(0.35, 0.35, 0.32))
+	cap.text = "%d/%d" % [inventory.size(), _bag_capacity()]
+	cap.custom_minimum_size = Vector2(46, 0)
+	cap.add_theme_color_override("font_color", Color(0.95, 0.78, 0.42) if _bag_full() else Color(0.78, 0.74, 0.66))
 	head.add_child(cap)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -481,91 +513,144 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	for c in inventory:
 		total += int(c["v"])
 	var sell_all := Button.new()
-	sell_all.text = "全部卖出 +%d" % total
-	sell_all.focus_mode = Control.FOCUS_NONE
+	sell_all.text = "全部卖出"
+	sell_all.custom_minimum_size = Vector2(76, 28)
 	sell_all.disabled = inventory.is_empty()
+	_apply_button_skin(sell_all, true)
 	sell_all.pressed.connect(_sell_all)
 	head.add_child(sell_all)
 	if bag_level <= BAG_COSTS.size():
 		var cost: int = BAG_COSTS[bag_level - 1]
 		var expand := Button.new()
-		expand.text = "扩容 %d" % cost
-		expand.focus_mode = Control.FOCUS_NONE
+		expand.text = "扩容"
+		expand.custom_minimum_size = Vector2(52, 28)
 		expand.disabled = coins < cost
-		expand.tooltip_text = "扩到 %d 格" % BAG_CAPS[bag_level]
+		expand.tooltip_text = "扩到 %d 格，花费 %d 金币" % [BAG_CAPS[bag_level], cost]
+		_apply_button_skin(expand, false)
 		expand.pressed.connect(_try_expand_bag)
 		head.add_child(expand)
 	v.add_child(head)
-	# 鱼列表（滚动）
+
+	if inventory.is_empty():
+		var empty_panel := PanelContainer.new()
+		empty_panel.custom_minimum_size = Vector2(0, 86)
+		empty_panel.add_theme_stylebox_override("panel", _paper_style(0.86))
+		var empty_margin := MarginContainer.new()
+		empty_margin.add_theme_constant_override("margin_left", 14)
+		empty_margin.add_theme_constant_override("margin_top", 14)
+		empty_margin.add_theme_constant_override("margin_right", 14)
+		empty_margin.add_theme_constant_override("margin_bottom", 14)
+		empty_panel.add_child(empty_margin)
+		var empty := Label.new()
+		empty.text = "鱼篓还是空的，等浮漂动一动。"
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty.add_theme_color_override("font_color", Color(0.42, 0.40, 0.34))
+		empty_margin.add_child(empty)
+		v.add_child(empty_panel)
+		return
+
+	var featured: Dictionary = inventory[inventory.size() - 1]
+	v.add_child(_fish_entry(featured, inventory.size() - 1, true))
+
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(360, 198)
+	sc.custom_minimum_size = Vector2(0, 148)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 3)
-	if inventory.is_empty():
-		var empty := Label.new()
-		empty.text = "空空如也，等鱼上钩…"
-		empty.add_theme_color_override("font_color", Color(0.55, 0.55, 0.5))
-		list.add_child(empty)
+	list.add_theme_constant_override("separation", 5)
 	for i in inventory.size():
-		var c: Dictionary = inventory[i]
-		var tier := FishData.tier_of(c["id"])
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		var nm := Label.new()
-		nm.text = "%s·%s%s" % [FishData.TIER_NAMES[tier],
-			FishData.size_tag(c["id"], c["w"]), FishData.display_name(c["id"])]
-		nm.custom_minimum_size = Vector2(128, 0)
-		nm.add_theme_color_override("font_color", FishData.TIER_COLORS[tier])
-		row.add_child(nm)
-		var wt := Label.new()
-		wt.text = "%.2fkg" % c["w"]
-		wt.custom_minimum_size = Vector2(72, 0)
-		wt.add_theme_color_override("font_color", Color(0.45, 0.45, 0.42))
-		row.add_child(wt)
-		var val := Label.new()
-		val.text = "%d 金币" % c["v"]
-		val.custom_minimum_size = Vector2(74, 0)
-		val.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
-		row.add_child(val)
-		var sell := Button.new()
-		sell.text = "卖"
-		sell.focus_mode = Control.FOCUS_NONE
-		sell.pressed.connect(_sell_one.bind(i))
-		row.add_child(sell)
-		list.add_child(row)
+		if i == inventory.size() - 1:
+			continue
+		list.add_child(_fish_entry(inventory[i], i, false))
 	sc.add_child(list)
 	v.add_child(sc)
 
 
+func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
+	var tier := FishData.tier_of(c["id"])
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 76 if featured else 52)
+	panel.add_theme_stylebox_override("panel", _paper_style(0.92) if featured else _dark_row_style(0.48))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8 if featured else 6)
+	margin.add_theme_constant_override("margin_top", 6 if featured else 3)
+	margin.add_theme_constant_override("margin_right", 8 if featured else 5)
+	margin.add_theme_constant_override("margin_bottom", 6 if featured else 3)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 7)
+	margin.add_child(row)
+	row.add_child(_fish_icon(str(c["id"]), 58 if featured else 38))
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 0)
+	var nm := Label.new()
+	nm.text = "%s %s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(c["id"], c["w"]), FishData.display_name(c["id"])]
+	nm.clip_text = true
+	nm.add_theme_font_size_override("font_size", 15 if featured else 13)
+	nm.add_theme_color_override("font_color", _ui_tier_color(tier, featured) if featured else _ui_tier_color(tier, false))
+	info.add_child(nm)
+	var meta := Label.new()
+	meta.text = "%.2fkg    %d 金币" % [c["w"], c["v"]]
+	meta.add_theme_font_size_override("font_size", 13 if featured else 12)
+	meta.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42) if featured else Color(0.78, 0.68, 0.45))
+	info.add_child(meta)
+	row.add_child(info)
+	var sell := Button.new()
+	sell.text = "卖"
+	sell.custom_minimum_size = Vector2(38 if featured else 30, 32 if featured else 30)
+	_apply_button_skin(sell, featured)
+	sell.pressed.connect(_sell_one.bind(idx))
+	row.add_child(sell)
+	return panel
+
+
 func _fill_dex_tab(v: VBoxContainer) -> void:
 	var stat := Label.new()
-	stat.text = "终身渔获 %d　累计卖鱼 %d 金币　图鉴 %d/%d" % [
-		lifetime_catches, lifetime_coins, dex.size(), FishData.FISH.size()]
-	stat.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
+	stat.text = "收集 %d/%d  /  渔获 %d" % [dex.size(), FishData.FISH.size(), lifetime_catches]
+	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	v.add_child(stat)
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(360, 198)
+	sc.custom_minimum_size = Vector2(0, 252)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 14)
-	grid.add_theme_constant_override("v_separation", 7)
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
 	var ids := FishData.FISH.keys()
 	ids.sort_custom(func(a, b): return FishData.tier_of(a) < FishData.tier_of(b))
 	for id in ids:
-		var lbl := Label.new()
-		if dex.has(id):
-			var tier := FishData.tier_of(id)
-			lbl.text = "%s·%s" % [FishData.TIER_NAMES[tier], FishData.display_name(id)]
-			lbl.add_theme_color_override("font_color", FishData.TIER_COLORS[tier])
-		else:
-			lbl.text = "？？？"
-			lbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.58))
-		grid.add_child(lbl)
+		grid.add_child(_dex_card(str(id)))
 	sc.add_child(grid)
 	v.add_child(sc)
+
+
+func _dex_card(id: String) -> Control:
+	var known := dex.has(id)
+	var tier := FishData.tier_of(id)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(112, 82)
+	panel.add_theme_stylebox_override("panel", _paper_style(0.88) if known else _dark_row_style(0.40))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 6)
+	margin.add_theme_constant_override("margin_top", 5)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_bottom", 5)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 1)
+	margin.add_child(box)
+	var icon := _fish_icon(id, 42)
+	icon.modulate = Color(1, 1, 1, 1.0 if known else 0.28)
+	box.add_child(icon)
+	var name := Label.new()
+	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name.clip_text = true
+	name.text = FishData.display_name(id) if known else "未发现"
+	name.add_theme_font_size_override("font_size", 12)
+	name.add_theme_color_override("font_color", _ui_tier_color(tier, true) if known else Color(0.58, 0.56, 0.50))
+	box.add_child(name)
+	return panel
 
 
 func _sell_one(idx: int) -> void:
@@ -622,7 +707,7 @@ func _fill_upgrades(v: VBoxContainer) -> void:
 	desc.text = "升级效果：等待更短 · 稀有鱼更易上钩 · 鱼价 +%d%%" % int((rod_level - 1) * 8)
 	desc.add_theme_color_override("font_color", Color(0.4, 0.4, 0.38))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc.custom_minimum_size = Vector2(360, 0)
+	desc.custom_minimum_size = Vector2(238, 0)
 	v.add_child(desc)
 	var cost := _rod_cost()
 	var costlbl := Label.new()
