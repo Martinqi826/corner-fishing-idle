@@ -35,7 +35,7 @@ var bait_level := 0  # FishData.BAITS 下标，金币永久升级
 var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占一格
 var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
-var dex := {}  # id -> true（钓到过的鱼）
+var dex := {}  # id -> {"n": 累计捕获数, "w": 最大体重纪录}（图鉴纪录轴）
 
 # 背包容量与扩容费用（bag_level 1 起步；费用 = 升到下一级）。
 # 调研定标：起始 20 格（Melvor 同款），整档 +5 格，费用走 1-2-5 阶梯（首扩几分钟产出可买）。
@@ -140,6 +140,19 @@ func _begin_bite() -> void:
 	painter.add_ripple(painter.bobber_pos(), 22.0)
 
 
+## 更新图鉴纪录（捕获数 +1、最大体重取大）。返回是否打破"既有"纪录：
+## 该鱼种此前已钓 ≥5 条且新体重超过旧纪录才算（避免前期每条都播报）。
+func _dex_record(id: String, w: float) -> bool:
+	if not dex.has(id):
+		dex[id] = {"n": 1, "w": w}
+		return false
+	var r: Dictionary = dex[id]
+	var broke: bool = int(r["n"]) >= 5 and w > float(r["w"])
+	r["n"] = int(r["n"]) + 1
+	r["w"] = maxf(float(r["w"]), w)
+	return broke
+
+
 func _bag_capacity() -> int:
 	return BAG_CAPS[clampi(bag_level - 1, 0, BAG_CAPS.size() - 1)]
 
@@ -159,11 +172,14 @@ func _do_catch() -> void:
 		+ FishData.display_name(c["id"])
 	inventory.append(c)
 	lifetime_catches += 1
-	dex[c["id"]] = true
+	var broke_record := _dex_record(c["id"], float(c["w"]))
 	var col: Color = FishData.TIER_COLORS[tier]
 	_popup("%s %.2fkg" % [fname, c["w"]], painter.bobber_pos() + Vector2(-22, -8), col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
-	if tier >= 3 or q >= 2:
+	if broke_record:
+		_toast("破纪录！%s %.2fkg，刷新个人最大" % [FishData.display_name(c["id"]), c["w"]],
+			2.6, Color(0.95, 0.82, 0.45))
+	elif tier >= 3 or q >= 2:
 		_toast("%s钓到 %s（%.2fkg，%d 金币）" % [
 			(FishData.TIER_NAMES[tier] + "！") if tier >= 3 else "",
 			fname, c["w"], c["v"]], 2.4, col)
@@ -656,6 +672,16 @@ func _dex_card(id: String) -> Control:
 	name.add_theme_font_size_override("font_size", 12)
 	name.add_theme_color_override("font_color", _ui_tier_color(tier, true) if known else Color(0.58, 0.56, 0.50))
 	box.add_child(name)
+	if known:
+		var r: Dictionary = dex[id]
+		var rec := Label.new()
+		rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rec.clip_text = true
+		rec.text = "×%d · 最大 %.2fkg" % [int(r["n"]), float(r["w"])] \
+			if float(r["w"]) > 0.0 else "×%d" % int(r["n"])
+		rec.add_theme_font_size_override("font_size", 10)
+		rec.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42))
+		box.add_child(rec)
 	return panel
 
 
@@ -855,7 +881,7 @@ func _save() -> void:
 	for c in inventory:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0))])
 	var data := {
-		"ver": 3,
+		"ver": 4,
 		"coins": coins,
 		"rod_level": rod_level,
 		"bag_level": bag_level,
@@ -863,13 +889,20 @@ func _save() -> void:
 		"inv": inv,
 		"lt_coins": lifetime_coins,
 		"lt_catches": lifetime_catches,
-		"dex": dex.keys(),
+		"dex": _dex_to_save(),
 		"opacity": _opacity,
 		"ts": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(data))
+
+
+func _dex_to_save() -> Dictionary:
+	var out := {}
+	for id in dex:
+		out[id] = [int(dex[id]["n"]), float(dex[id]["w"])]
+	return out
 
 
 func _load_save() -> void:
@@ -893,9 +926,15 @@ func _load_save() -> void:
 	lifetime_coins = int(data.get("lt_coins", 0))
 	lifetime_catches = int(data.get("lt_catches", 0))
 	dex = {}
-	for id in data.get("dex", []):
-		if FishData.FISH.has(str(id)):       # 老存档里已改名/移除的鱼种直接丢弃
-			dex[str(id)] = true
+	var dex_raw: Variant = data.get("dex", [])
+	if dex_raw is Dictionary:                # v4：{id: [n, w_max]}
+		for id in dex_raw:
+			if FishData.FISH.has(str(id)) and dex_raw[id] is Array and (dex_raw[id] as Array).size() >= 2:
+				dex[str(id)] = {"n": int(dex_raw[id][0]), "w": float(dex_raw[id][1])}
+	elif dex_raw is Array:                   # v1~v3：仅 id 列表 → 纪录从头积累
+		for id in dex_raw:
+			if FishData.FISH.has(str(id)):   # 老存档里已改名/移除的鱼种直接丢弃
+				dex[str(id)] = {"n": 1, "w": 0.0}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
 	# 离线渔获：按时长估算上鱼数，逐条入篓直到装满
@@ -920,7 +959,7 @@ func _offline_catch(elapsed: float) -> int:
 	for i in n:
 		var c := FishData.roll_catch(rng, rod_level, bait_level)
 		inventory.append(c)
-		dex[c["id"]] = true
+		_dex_record(c["id"], float(c["w"]))
 		lifetime_catches += 1
 	return n
 

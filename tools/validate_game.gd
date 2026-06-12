@@ -242,7 +242,7 @@ func _check_save_v2() -> void:
 		{"id": "koi", "w": 3.5, "v": 880, "q": 3},
 		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
 	]
-	g1.dex = {"koi": true, "crucian": true}
+	g1.dex = {"koi": {"n": 3, "w": 5.5}, "crucian": {"n": 12, "w": 0.58}}
 	g1._save()
 	g1.queue_free()
 	await process_frame
@@ -259,6 +259,8 @@ func _check_save_v2() -> void:
 		"背包条目应完整恢复")
 	_assert(int(g2.inventory[0]["q"]) == 3, "星级应随存档恢复")
 	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
+	_assert(int(g2.dex["crucian"]["n"]) == 12 and absf(float(g2.dex["koi"]["w"]) - 5.5) < 0.01,
+		"图鉴纪录（捕获数/最大体重）应随存档恢复")
 	print("  v2 往返：金币 %d 背包 %d 条 容量 %d" % [g2.coins, g2.inventory.size(), g2._bag_capacity()])
 	g2.queue_free()
 	await process_frame
@@ -287,6 +289,16 @@ func _check_migration_v1() -> void:
 	_assert(g.inventory.is_empty(), "v1 迁移背包应为空")
 	_assert(g.dex.has("crucian") and g.dex.has("carp"), "v1 迁移应保留有效图鉴")
 	_assert(not g.dex.has("arowana"), "v1 迁移应丢弃已移除鱼种")
+	_assert(int(g.dex["crucian"]["n"]) == 1 and float(g.dex["crucian"]["w"]) == 0.0,
+		"旧版 id 列表应迁移为纪录结构（n=1, w=0）")
+	# 纪录逻辑：前 5 条不播报，第 6 条更重才算破纪录
+	g.dex["carp"] = {"n": 5, "w": 3.0}
+	_assert(not g._dex_record("carp", 2.0), "未超纪录不应播报")
+	_assert(g._dex_record("carp", 4.2), "超纪录且 n≥5 应播报")
+	_assert(absf(float(g.dex["carp"]["w"]) - 4.2) < 0.01 and int(g.dex["carp"]["n"]) == 7,
+		"纪录应更新（w=4.2, n=7）")
+	g.dex["bass"] = {"n": 1, "w": 1.0}
+	_assert(not g._dex_record("bass", 2.0), "n<5 即使超纪录也不播报")
 	_assert(g.lifetime_coins == 500 and g.lifetime_catches == 60, "v1 迁移应保留终身统计")
 	print("  v1→v2 迁移通过（金币/鱼竿/图鉴保留，背包默认空）")
 	g.queue_free()
