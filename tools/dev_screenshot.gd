@@ -55,6 +55,12 @@ func _run() -> void:
 	await _settle(4)
 	_snap("scene_dynamic.png")
 
+	# 5) 动效校验：间隔 3 秒拍两帧，供外部做像素差对比（证明肉眼可见的动态）
+	await _settle(6)
+	_snap("motion_a.png")
+	await _settle(90)  # 30fps × 90 帧 = 3 秒
+	_snap("motion_b.png")
+
 	quit()
 
 

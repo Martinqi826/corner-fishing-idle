@@ -86,7 +86,7 @@ func _ready() -> void:
 		if tx != null:
 			_wild_tex[k.get_slice("_", 0)] = tx
 	# 每层随机参数 + 随机相位（避免所有循环同步重启，plan 的 Motion Rules）
-	_shimmer_period = _prng.randf_range(4.8, 7.2)
+	_shimmer_period = _prng.randf_range(4.2, 5.5)
 	_glow_period = _prng.randf_range(3.5, 5.5)
 	for i in _mist_tex.size():
 		_mist_par.append({
@@ -97,12 +97,13 @@ func _ready() -> void:
 		})
 	for i in _snow_tex.size():
 		_snow_par.append({
-			"period": _prng.randf_range(12.0, 22.0),
-			"dist": _prng.randf_range(12.0, 28.0),
+			"speed": _prng.randf_range(7.0, 15.0),   # px/s 连续下落
+			"sway": _prng.randf_range(6.0, 16.0),    # 横向摆动幅度
 			"phase": _prng.randf(),
-			"alpha": _prng.randf_range(0.18, 0.38),
+			"alpha": _prng.randf_range(0.22, 0.38),
 		})
-	_wild_timer = _prng.randf_range(45.0, 120.0)
+	# 首次小动物事件提前到 12~25s（让玩家尽快看到一次），之后恢复 45~120s 低频
+	_wild_timer = _prng.randf_range(12.0, 25.0)
 	_lantern = _detect_lantern()
 
 
@@ -165,7 +166,7 @@ func _process(delta: float) -> void:
 func _tick_idle_pulse(delta: float) -> void:
 	_pulse_t -= delta
 	if _pulse_t <= 0.0:
-		_pulse_t = _prng.randf_range(7.0, 12.0)
+		_pulse_t = _prng.randf_range(5.0, 9.0)
 		if _ripples.is_empty():
 			add_ripple(bobber_pos(), 18.0)
 
@@ -254,13 +255,13 @@ func _draw_composite() -> void:
 	_draw_glow_layer()
 
 
-## 雾气微风：每层用不同周期/振幅做正弦微移（8~18px），透明度轻微呼吸。
+## 雾气微风：每层异周期正弦漂移（约 ±20~40px），透明度做明显的浓淡呼吸。
 func _draw_mist_layer() -> void:
 	for i in _mist_tex.size():
 		var p: Dictionary = _mist_par[i]
 		var ph: float = TAU * t / p["period"] + p["phase"]
-		var off := Vector2(sin(ph) * p["amp"], cos(ph * 0.7) * p["amp"] * 0.2)
-		var a: float = p["alpha"] * (0.9 + 0.1 * sin(ph * 1.3))
+		var off := Vector2(sin(ph) * p["amp"] * 2.2, cos(ph * 0.7) * p["amp"] * 0.4)
+		var a: float = p["alpha"] * (0.62 + 0.38 * sin(ph * 1.7))
 		draw_texture(_mist_tex[i], off, Color(1, 1, 1, a))
 
 
@@ -276,19 +277,20 @@ func _draw_shimmer_layer() -> void:
 	var i0 := int(f) % n
 	var i1 := (i0 + 1) % n
 	var frac := f - floorf(f)
-	var base_a := 0.5 + 0.15 * sin(t * 0.33)  # 0.35 ~ 0.65
+	var base_a := 0.55 + 0.2 * sin(t * 0.5)  # 0.35 ~ 0.75，呼吸更明显
 	draw_texture(_shimmer_tex[i0], Vector2.ZERO, Color(1, 1, 1, base_a * (1.0 - frac)))
 	draw_texture(_shimmer_tex[i1], Vector2.ZERO, Color(1, 1, 1, base_a * frac))
 
 
-## 雪粒漂移：每层沿右下方向缓移，循环点用 sin 包络淡入淡出遮住跳变。
+## 雪粒漂移：连续向下飘落（7~15 px/s）+ 横向轻摆，纵向 wrap 两次绘制实现无缝循环。
 func _draw_snow_layer() -> void:
 	for i in _snow_tex.size():
 		var p: Dictionary = _snow_par[i]
-		var prog: float = fposmod(t / p["period"] + p["phase"], 1.0)
-		var off := Vector2(p["dist"] * 0.55, p["dist"]) * prog
-		var a: float = p["alpha"] * sin(PI * prog)
-		draw_texture(_snow_tex[i], off, Color(1, 1, 1, a))
+		var yy: float = fposmod(t * p["speed"] + p["phase"] * H, H)
+		var xx: float = sin(t * 0.35 + p["phase"] * TAU) * p["sway"]
+		var col := Color(1, 1, 1, p["alpha"])
+		draw_texture(_snow_tex[i], Vector2(xx, yy), col)
+		draw_texture(_snow_tex[i], Vector2(xx, yy - H), col)
 
 
 ## 小动物低频事件：首尾各 ~18% 时长淡入淡出，绝不抢画面。
@@ -351,12 +353,13 @@ func _draw_glow_layer() -> void:
 	var i0 := int(f)
 	var i1: int = mini(i0 + 1, n - 1)
 	var frac := f - floorf(f)
-	var base_a := 0.62 + 0.14 * sin(t * 0.9)  # 0.48 ~ 0.76
-	var sz := Vector2(_glow_tex[0].get_size())
-	var tl := _lantern - sz * 0.5
-	draw_texture(_glow_tex[i0], tl, Color(1, 1, 1, base_a * (1.0 - frac)))
+	var base_a := 0.55 + 0.28 * sin(t * TAU / _glow_period)  # 0.27 ~ 0.83，呼吸更明显
+	var s: float = 1.0 + 0.10 * sin(t * TAU / _glow_period)  # 光晕随呼吸轻微胀缩
+	var sz := Vector2(_glow_tex[0].get_size()) * s
+	var rect := Rect2(_lantern - sz * 0.5, sz)
+	draw_texture_rect(_glow_tex[i0], rect, false, Color(1, 1, 1, base_a * (1.0 - frac)))
 	if i1 != i0:
-		draw_texture(_glow_tex[i1], tl, Color(1, 1, 1, base_a * frac))
+		draw_texture_rect(_glow_tex[i1], rect, false, Color(1, 1, 1, base_a * frac))
 
 
 func _draw_bobber_proc(p: Vector2) -> void:

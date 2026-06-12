@@ -5,3 +5,7 @@
 # 系统
 Thumbs.db
 .DS_Store
+
+# 截图工具的动效校验帧与临时文件
+docs/img/motion_*.png
+docs/img/_*.png
