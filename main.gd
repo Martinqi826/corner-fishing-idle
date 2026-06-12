@@ -332,6 +332,74 @@ func _set_interactive_full(full: bool) -> void:
 		_update_passthrough()
 
 
+func _panel_bg_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.13, 0.12, 0.86)
+	sb.set_corner_radius_all(16)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(0.88, 0.84, 0.74, 0.72)
+	sb.shadow_color = Color(0, 0, 0, 0.32)
+	sb.shadow_size = 10
+	sb.shadow_offset = Vector2(4, 6)
+	return sb
+
+
+func _paper_style(alpha := 0.88) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.91, 0.88, 0.78, alpha)
+	sb.set_corner_radius_all(12)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(1.0, 0.96, 0.84, 0.46)
+	return sb
+
+
+func _dark_row_style(alpha := 0.52) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.20, 0.21, 0.19, alpha)
+	sb.set_corner_radius_all(9)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(0.86, 0.82, 0.70, 0.16)
+	return sb
+
+
+func _button_style(primary := false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.66, 0.49, 0.25, 0.92) if primary else Color(0.36, 0.36, 0.32, 0.84)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(1.0, 0.87, 0.55, 0.28) if primary else Color(0.84, 0.80, 0.68, 0.22)
+	return sb
+
+
+func _apply_button_skin(b: Button, primary := false) -> void:
+	b.focus_mode = Control.FOCUS_NONE
+	var normal := _button_style(primary)
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(0.78, 0.59, 0.31, 0.98) if primary else Color(0.46, 0.46, 0.40, 0.92)
+	var pressed := normal.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color(0.50, 0.36, 0.18, 0.98) if primary else Color(0.25, 0.25, 0.22, 0.95)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", pressed)
+	b.add_theme_stylebox_override("disabled", normal)
+	b.add_theme_color_override("font_color", Color(0.96, 0.91, 0.80) if not primary else Color(0.18, 0.15, 0.10))
+	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.52, 0.46, 0.75))
+
+
+func _fish_icon(id: String, size := 42) -> TextureRect:
+	var tr := TextureRect.new()
+	tr.custom_minimum_size = Vector2(size, size)
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var path := "res://assets/art/fish/%s.png" % id
+	if ResourceLoader.exists(path):
+		tr.texture = load(path) as Texture2D
+	return tr
+
+
+func _tier_color(tier: int) -> Color:
+	return FishData.TIER_COLORS[clampi(tier, 0, FishData.TIER_COLORS.size() - 1)]
+
+
 func _make_card(title: String) -> Control:
 	var p := PanelContainer.new()
 	p.position = Vector2(64, 36)
