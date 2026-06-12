@@ -1,0 +1,170 @@
+[
+  {
+    "id": "whitebait",
+    "runtime": "assets/art/fish/whitebait.png",
+    "source": "assets/art/fish/source/whitebait.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "topmouth",
+    "runtime": "assets/art/fish/topmouth.png",
+    "source": "assets/art/fish/source/topmouth.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "loach",
+    "runtime": "assets/art/fish/loach.png",
+    "source": "assets/art/fish/source/loach.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "crucian",
+    "runtime": "assets/art/fish/crucian.png",
+    "source": "assets/art/fish/source/crucian.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "bighead",
+    "runtime": "assets/art/fish/bighead.png",
+    "source": "assets/art/fish/source/bighead.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "yellowhead",
+    "runtime": "assets/art/fish/yellowhead.png",
+    "source": "assets/art/fish/source/yellowhead.png",
+    "sheet": "assets/art/source/fish_sheets/tier0_common_sheet.png"
+  },
+  {
+    "id": "dace",
+    "runtime": "assets/art/fish/dace.png",
+    "source": "assets/art/fish/source/dace.png",
+    "sheet": "assets/art/source/fish_sheets/tier1_good_sheet.png"
+  },
+  {
+    "id": "carp",
+    "runtime": "assets/art/fish/carp.png",
+    "source": "assets/art/fish/source/carp.png",
+    "sheet": "assets/art/source/fish_sheets/tier1_good_sheet.png"
+  },
+  {
+    "id": "grass",
+    "runtime": "assets/art/fish/grass.png",
+    "source": "assets/art/fish/source/grass.png",
+    "sheet": "assets/art/source/fish_sheets/tier1_good_sheet.png"
+  },
+  {
+    "id": "bream",
+    "runtime": "assets/art/fish/bream.png",
+    "source": "assets/art/fish/source/bream.png",
+    "sheet": "assets/art/source/fish_sheets/tier1_good_sheet.png"
+  },
+  {
+    "id": "blackcarp",
+    "runtime": "assets/art/fish/blackcarp.png",
+    "source": "assets/art/fish/source/blackcarp.png",
+    "sheet": "assets/art/source/fish_sheets/tier1_good_sheet.png"
+  },
+  {
+    "id": "bass",
+    "runtime": "assets/art/fish/bass.png",
+    "source": "assets/art/fish/source/bass.png",
+    "sheet": "assets/art/source/fish_sheets/tier2_rare_sheet.png"
+  },
+  {
+    "id": "fangbream",
+    "runtime": "assets/art/fish/fangbream.png",
+    "source": "assets/art/fish/source/fangbream.png",
+    "sheet": "assets/art/source/fish_sheets/tier2_rare_sheet.png"
+  },
+  {
+    "id": "barbel",
+    "runtime": "assets/art/fish/barbel.png",
+    "source": "assets/art/fish/source/barbel.png",
+    "sheet": "assets/art/source/fish_sheets/tier2_rare_sheet.png"
+  },
+  {
+    "id": "culter",
+    "runtime": "assets/art/fish/culter.png",
+    "source": "assets/art/fish/source/culter.png",
+    "sheet": "assets/art/source/fish_sheets/tier2_rare_sheet.png"
+  },
+  {
+    "id": "mandarin",
+    "runtime": "assets/art/fish/mandarin.png",
+    "source": "assets/art/fish/source/mandarin.png",
+    "sheet": "assets/art/source/fish_sheets/tier2_rare_sheet.png"
+  },
+  {
+    "id": "snakehead",
+    "runtime": "assets/art/fish/snakehead.png",
+    "source": "assets/art/fish/source/snakehead.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "trout",
+    "runtime": "assets/art/fish/trout.png",
+    "source": "assets/art/fish/source/trout.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "pike",
+    "runtime": "assets/art/fish/pike.png",
+    "source": "assets/art/fish/source/pike.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "zander",
+    "runtime": "assets/art/fish/zander.png",
+    "source": "assets/art/fish/source/zander.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "longsnout",
+    "runtime": "assets/art/fish/longsnout.png",
+    "source": "assets/art/fish/source/longsnout.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "lenok",
+    "runtime": "assets/art/fish/lenok.png",
+    "source": "assets/art/fish/source/lenok.png",
+    "sheet": "assets/art/source/fish_sheets/tier3_epic_sheet.png"
+  },
+  {
+    "id": "koi",
+    "runtime": "assets/art/fish/koi.png",
+    "source": "assets/art/fish/source/koi.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  },
+  {
+    "id": "salmon",
+    "runtime": "assets/art/fish/salmon.png",
+    "source": "assets/art/fish/source/salmon.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  },
+  {
+    "id": "sturgeon",
+    "runtime": "assets/art/fish/sturgeon.png",
+    "source": "assets/art/fish/source/sturgeon.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  },
+  {
+    "id": "taimen",
+    "runtime": "assets/art/fish/taimen.png",
+    "source": "assets/art/fish/source/taimen.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  },
+  {
+    "id": "chinese_sturgeon",
+    "runtime": "assets/art/fish/chinese_sturgeon.png",
+    "source": "assets/art/fish/source/chinese_sturgeon.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  },
+  {
+    "id": "kaluga",
+    "runtime": "assets/art/fish/kaluga.png",
+    "source": "assets/art/fish/source/kaluga.png",
+    "sheet": "assets/art/source/fish_sheets/tier4_5_legend_myth_sheet.png"
+  }
+]
