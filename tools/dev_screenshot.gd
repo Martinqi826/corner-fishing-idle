@@ -14,6 +14,7 @@ func _init() -> void:
 func _run() -> void:
 	await process_frame
 	_main = load("res://main.tscn").instantiate()
+	_main.save_enabled = false  # 截图实例不读不写真实存档
 	root.add_child(_main)
 	for i in 30:
 		await process_frame
@@ -22,17 +23,24 @@ func _run() -> void:
 	# 1) 场景 + 按钮 + 一次上鱼反馈
 	_main.coins = 1234
 	_main._update_hud()
-	_main._toast("传说！钓到 锦鲤（+320）", 3.0, FishData.RARITY_COLORS[3])
-	_main._popup("锦鲤 +320", _main.painter.bobber_pos() + Vector2(-18, -8), FishData.RARITY_COLORS[3])
+	_main._toast("传说！钓到 锦鲤（3.20kg）", 3.0, FishData.TIER_COLORS[4])
+	_main._popup("锦鲤 3.20kg", _main.painter.bobber_pos() + Vector2(-22, -8), FishData.TIER_COLORS[4])
 	await _settle(2)
 	_snap("scene.png")
 
-	# 2) 打开鱼篓图鉴（先钓几条填充图鉴）
-	for i in 30:
+	# 2) 背包页签（先钓几条入包）
+	for i in 6:
 		_main._do_catch()
+	_main._catch_tab = 0
 	_main._open_panel("catch")
 	await _settle(2)
-	_snap("panel_catch.png")
+	_snap("panel_bag.png")
+
+	# 2b) 图鉴页签
+	_main._catch_tab = 1
+	_main._open_panel("catch")
+	await _settle(2)
+	_snap("panel_dex.png")
 
 	# 3) 升级面板
 	_main._open_panel("rod")
