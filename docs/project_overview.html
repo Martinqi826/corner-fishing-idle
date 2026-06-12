@@ -1,0 +1,77 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Corner Fishing Idle - 项目说明与美术资源</title>
+  <style>
+    :root { color-scheme: light; --ink:#2f3432; --muted:#6f7169; --paper:#eee8dc; --line:#c9c2b5; --water:#476f78; --pine:#3f4d45; --gold:#d6a85d; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Microsoft YaHei", "Segoe UI", sans-serif; background:#d8d2c4; color:var(--ink); }
+    header { min-height:72vh; display:flex; align-items:flex-end; background:linear-gradient(180deg,#d8d2c4 0%,#cfc8bb 100%); position:relative; overflow:hidden; }
+    header::after { content:""; position:absolute; inset:0; background:url('../assets/art/background/corner_scene_winter_base.png') right bottom / min(720px, 70vw) auto no-repeat; }
+    .hero { position:relative; z-index:1; width:min(1040px,92vw); margin:0 auto; padding:72px 0 56px; }
+    h1 { font-size:42px; line-height:1.05; margin:0 0 12px; font-weight:700; letter-spacing:0; }
+    p { line-height:1.8; color:var(--muted); max-width:760px; }
+    main { width:min(1040px,92vw); margin:0 auto; padding:42px 0 72px; }
+    section { margin:0 0 42px; }
+    h2 { font-size:22px; margin:0 0 16px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+    .asset { background:rgba(238,232,220,.68); border:1px solid var(--line); border-radius:8px; padding:14px; min-height:170px; display:flex; flex-direction:column; gap:12px; }
+    .preview { height:96px; display:grid; place-items:center; background:linear-gradient(135deg,rgba(255,255,255,.32),rgba(71,111,120,.16)); border-radius:6px; overflow:hidden; }
+    .preview img { max-width:100%; max-height:100%; image-rendering:auto; }
+    .wide .preview { height:220px; }
+    code { color:var(--water); font-family:Consolas, monospace; font-size:13px; word-break:break-all; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip { border:1px solid var(--line); border-radius:999px; padding:6px 10px; color:var(--muted); background:rgba(255,255,255,.28); }
+    .swatches { display:flex; gap:8px; flex-wrap:wrap; }
+    .swatch { width:44px; height:28px; border-radius:6px; border:1px solid rgba(0,0,0,.14); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <h1>Corner Fishing Idle</h1>
+      <p>一个贴在桌面右下角的透明挂机钓鱼小场景。画面以冬日雪山、松林、河面和安静钓鱼人为核心，左上方向使用雾化透明边缘融入桌面。当前主视觉以正式精修插画品质为标准，不以占位图或程序绘制图作为最终交付。</p>
+      <div class="chips"><span class="chip">Godot 透明窗口</span><span class="chip">右下角构图</span><span class="chip">手绘微写实</span><span class="chip">低干扰动效</span></div>
+    </div>
+  </header>
+  <main>
+    <section>
+      <h2>美术方向</h2>
+      <p>资源遵循 <code>docs/art_direction.md</code> 和 <code>docs/art_asset_audit.md</code>：柔和冬日色彩、主体集中在右下角、边缘透明羽化、UI 像小型桌面组件。动画以水波、浮漂、灯光和轻微收竿为主。</p>
+      <div class="swatches"><span class="swatch" style="background:#d8d2c4"></span><span class="swatch" style="background:#9aa8ae"></span><span class="swatch" style="background:#3f4d45"></span><span class="swatch" style="background:#476f78"></span><span class="swatch" style="background:#d6a85d"></span></div>
+    </section>
+    <section class="wide">
+      <h2>资源总览</h2>
+      <div class="asset"><div class="preview"><img src="img/art_asset_contact_sheet.png" alt="当前美术资源总览"></div><code>docs/img/art_asset_contact_sheet.png</code><p>当前运行时美术资源的总览图，用于快速检查风格一致性和透明边缘质量。</p></div>
+    </section>
+    <section class="wide">
+      <h2>主场景</h2>
+      <div class="asset"><div class="preview"><img src="../assets/art/background/corner_scene_winter_base.png" alt="右下角冬日钓鱼主场景"></div><code>assets/art/background/corner_scene_winter_base.png</code><p>520 x 400，带 alpha，正式 Godot 接入用主场景图，已按右下角透明窗口适配。</p></div>
+    </section>
+    <section class="wide">
+      <h2>概念参考</h2>
+      <div class="asset"><div class="preview"><img src="../assets/art/source/corner_scene_winter_final_source.png" alt="冬日钓鱼正式源图"></div><code>assets/art/source/corner_scene_winter_final_source.png</code><p>正式主视觉源图，作为后续切图、局部重绘、动画拆层和同风格资源扩展的质量基准。</p></div>
+    </section>
+    <section>
+      <h2>资源展示</h2>
+      <div class="grid">
+        <div class="asset"><div class="preview"><img src="../assets/art/background/water_highlight_overlay.png" alt="水面高光"></div><code>background/water_highlight_overlay.png</code><p>水面循环高光叠层。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/character/fisher_idle.png" alt="钓鱼人待机"></div><code>character/fisher_idle.png</code><p>钓鱼人待机帧。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/character/fisher_pull_01.png" alt="收竿帧1"></div><code>character/fisher_pull_01.png</code><p>收竿动画帧。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/rod.png" alt="钓竿"></div><code>props/rod.png</code><p>可旋转或独立挂接的钓竿。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/bobber_idle.png" alt="浮漂待机"></div><code>props/bobber_idle.png</code><p>浮漂待机状态。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/bobber_bite.png" alt="浮漂咬钩"></div><code>props/bobber_bite.png</code><p>咬钩时下沉状态。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/lantern.png" alt="灯"></div><code>props/lantern.png</code><p>小灯与暖色发光点。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/fish/fish_common_01.png" alt="普通鱼1"></div><code>fish/fish_common_01.png</code><p>普通鱼图标。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/fish/fish_rare_01.png" alt="稀有鱼"></div><code>fish/fish_rare_01.png</code><p>稀有鱼图标。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_fish.png" alt="鱼按钮"></div><code>ui/ui_button_fish.png</code><p>鱼获/图鉴入口。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_rod.png" alt="钓竿按钮"></div><code>ui/ui_button_rod.png</code><p>装备/钓竿入口。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_coin.png" alt="金币按钮"></div><code>ui/ui_button_coin.png</code><p>收益/商店入口。</p></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+

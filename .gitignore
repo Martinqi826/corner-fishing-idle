@@ -1,0 +1,7 @@
+# Godot 4+ 导入缓存与编辑器临时文件
+.godot/
+*.translation
+
+# 系统
+Thumbs.db
+.DS_Store
