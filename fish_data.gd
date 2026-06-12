@@ -56,6 +56,36 @@ const FISH := {
 # 基础品阶权重（rod Lv.1）：58/25/11/4.5/1.3/0.2（%）
 const BASE_WEIGHTS := {0: 58.0, 1: 25.0, 2: 11.0, 3: 4.5, 4: 1.3, 5: 0.2}
 
+# —— 星级品质（WEBFISHING 模板：逐级 roll，鱼饵决定每级通过率）——
+const QUALITY_NAMES := ["", "上品", "极品", "完美"]
+const QUALITY_MULTS := [1.0, 1.8, 4.0, 8.0]
+## 鱼饵：金币永久升级（线性进阶，参考 Melvor 自动化的游戏币门控）。
+## probs[i] = 从 i-1 星升到 i 星的通过率；P(★)=p1，P(★★)=p1·p2，P(★★★)=p1·p2·p3。
+const BAITS := [
+	{"name": "蚯蚓", "cost": 0, "probs": [1.0, 0.08, 0.02, 0.05], "desc": "河边随手挖的"},
+	{"name": "红虫", "cost": 800, "probs": [1.0, 0.22, 0.10, 0.08], "desc": "冬钓利器，上品率明显提升"},
+	{"name": "活虾", "cost": 5000, "probs": [1.0, 0.45, 0.18, 0.12], "desc": "大鱼爱追活食"},
+	{"name": "秘制饵", "cost": 24000, "probs": [1.0, 0.70, 0.35, 0.18], "desc": "老钓翁的祖传配方"},
+]
+
+
+## 星级抽取：逐级 roll，失败即停。
+static func roll_quality(bait_idx: int, rng: RandomNumberGenerator) -> int:
+	var probs: Array = BAITS[clampi(bait_idx, 0, BAITS.size() - 1)]["probs"]
+	var q := 0
+	for lvl in range(1, probs.size()):
+		if rng.randf() < float(probs[lvl]):
+			q = lvl
+		else:
+			break
+	return q
+
+
+static func quality_label(q: int) -> String:
+	if q <= 0:
+		return ""
+	return QUALITY_NAMES[clampi(q, 0, 3)] + "★".repeat(q) + "·"
+
 
 ## 按权重抽品阶，再在该品阶内随机选种，返回鱼 id。
 static func roll_fish(weights: Dictionary, rng: RandomNumberGenerator) -> String:
@@ -91,9 +121,9 @@ static func weights_for_rod(rod_level: int) -> Dictionary:
 	}
 
 
-## 钓一条鱼：抽种 + 抽体重 + 算价值。返回 {"id", "w"(kg), "v"(金币)}。
-## 体重 roll 偏向小个体（k²），卖价与体重线性挂钩（Fisch 模型）。
-static func roll_catch(rng: RandomNumberGenerator, rod_level: int) -> Dictionary:
+## 钓一条鱼：抽种 + 抽体重 + 抽星级 + 算价值。返回 {"id", "w"(kg), "v"(金币), "q"(星级)}。
+## 体重 roll 偏向小个体（k²），卖价与体重线性挂钩（Fisch 模型）再乘星级倍率。
+static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0) -> Dictionary:
 	var id := roll_fish(weights_for_rod(rod_level), rng)
 	var f: Dictionary = FISH[id]
 	var k := rng.randf()
@@ -105,10 +135,12 @@ static func roll_catch(rng: RandomNumberGenerator, rod_level: int) -> Dictionary
 	var base: float = lerpf(float(f["vmin"]), float(f["vmax"]), size_ratio)
 	var rod_mult := 1.0 + float(rod_level - 1) * 0.08
 	var jitter := rng.randf_range(0.92, 1.08)
+	var q := roll_quality(bait_idx, rng)
 	return {
 		"id": id,
 		"w": snappedf(w, 0.01),
-		"v": max(1, int(round(base * rod_mult * jitter))),
+		"v": max(1, int(round(base * rod_mult * jitter * QUALITY_MULTS[q]))),
+		"q": q,
 	}
 
 

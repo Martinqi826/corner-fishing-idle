@@ -29,6 +29,9 @@ func _run() -> void:
 	print("=== 鱼竿数值 ===")
 	_check_rod()
 
+	print("=== 鱼饵 / 星级品质 ===")
+	_check_quality()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -197,6 +200,31 @@ func _check_rod() -> void:
 const TEST_SAVE := "user://test_save.json"
 
 
+func _check_quality() -> void:
+	_assert(FishData.QUALITY_NAMES.size() == 4 and FishData.QUALITY_MULTS.size() == 4,
+		"星级应为 4 档")
+	_assert(FishData.BAITS.size() == 4, "鱼饵应为 4 档")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	var q0 := {0: 0, 1: 0, 2: 0, 3: 0}
+	var q3 := {0: 0, 1: 0, 2: 0, 3: 0}
+	for i in 8000:
+		q0[FishData.roll_quality(0, rng)] += 1
+		q3[FishData.roll_quality(3, rng)] += 1
+	print("  星级分布(8000)：蚯蚓 %s ｜ 秘制饵 %s" % [str(q0), str(q3)])
+	_assert(q0[0] > q3[0], "高级饵应减少无星渔获")
+	_assert(q3[1] + q3[2] + q3[3] > q0[1] + q0[2] + q0[3], "高级饵应提高星级率")
+	_assert(q3[3] > 0, "秘制饵 8000 次内应出完美★★★")
+	_assert(q0[1] > q0[2] and q3[1] > q3[3], "星级越高越稀有")
+	var v0 := 0
+	var v3 := 0
+	for i in 1500:
+		v0 += int(FishData.roll_catch(rng, 1, 0)["v"])
+		v3 += int(FishData.roll_catch(rng, 1, 3)["v"])
+	_assert(v3 > v0, "高级饵整体产出应更高")
+	print("  均价：蚯蚓 %.1f → 秘制饵 %.1f" % [v0 / 1500.0, v3 / 1500.0])
+
+
 func _check_save_v2() -> void:
 	var path := ProjectSettings.globalize_path(TEST_SAVE)
 	if FileAccess.file_exists(TEST_SAVE):
@@ -209,9 +237,10 @@ func _check_save_v2() -> void:
 	g1.coins = 777
 	g1.rod_level = 4
 	g1.bag_level = 3
+	g1.bait_level = 2
 	g1.inventory = [
-		{"id": "koi", "w": 3.5, "v": 880},
-		{"id": "crucian", "w": 0.4, "v": 5},
+		{"id": "koi", "w": 3.5, "v": 880, "q": 3},
+		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
 	]
 	g1.dex = {"koi": true, "crucian": true}
 	g1._save()
@@ -227,7 +256,9 @@ func _check_save_v2() -> void:
 	_assert(g2.bag_level == 3, "v2 应恢复 bag_level 3")
 	_assert(g2.inventory.size() == 2, "v2 应恢复背包 2 条鱼，实际 %d" % g2.inventory.size())
 	_assert(str(g2.inventory[0]["id"]) == "koi" and int(g2.inventory[0]["v"]) == 880,
-		"v2 背包条目应完整恢复")
+		"背包条目应完整恢复")
+	_assert(int(g2.inventory[0]["q"]) == 3, "星级应随存档恢复")
+	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
 	print("  v2 往返：金币 %d 背包 %d 条 容量 %d" % [g2.coins, g2.inventory.size(), g2._bag_capacity()])
 	g2.queue_free()
 	await process_frame
@@ -267,7 +298,7 @@ func _check_offline() -> void:
 	# ts=1 小时前 → 离线产鱼入篓，受容量限制
 	var old := {
 		"ver": 2, "coins": 0, "rod_level": 1, "bag_level": 1,
-		"inv": [["ghostfish", 1.0, 10]],  # 已移除的鱼种应被过滤
+		"inv": [["ghostfish", 1.0, 10], ["carp", 2.0, 30]],  # 未知鱼种过滤；v2 三元组 → q=0
 		"lt_coins": 0, "lt_catches": 0, "dex": [], "opacity": 1.0,
 		"ts": Time.get_unix_time_from_system() - 3600.0,
 	}
@@ -285,6 +316,7 @@ func _check_offline() -> void:
 	_assert(g.coins == 0, "离线不应直接产金币")
 	for c in g.inventory:
 		_assert(str(c["id"]) != "ghostfish", "未知鱼种应在载入时被过滤")
+	_assert(int(g.inventory[0].get("q", -1)) == 0, "v2 三元组迁移后 q 应为 0")
 	print("  离线 1h 入篓 %d 条（容量 %d）" % [g.inventory.size(), g._bag_capacity()])
 	g.queue_free()
 	await process_frame

@@ -31,7 +31,8 @@ var _started := false
 var coins := 0
 var rod_level := 1
 var bag_level := 1
-var inventory: Array = []  # 每条 {"id", "w"(kg), "v"(金币)}，一条鱼占一格
+var bait_level := 0  # FishData.BAITS 下标，金币永久升级
+var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占一格
 var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
 var dex := {}  # id -> true（钓到过的鱼）
@@ -151,18 +152,22 @@ func _do_catch() -> void:
 	if _bag_full():
 		_begin_wait()
 		return
-	var c := FishData.roll_catch(rng, rod_level)
+	var c := FishData.roll_catch(rng, rod_level, bait_level)
 	var tier := FishData.tier_of(c["id"])
-	var fname := FishData.size_tag(c["id"], c["w"]) + FishData.display_name(c["id"])
+	var q := int(c.get("q", 0))
+	var fname := FishData.quality_label(q) + FishData.size_tag(c["id"], c["w"]) \
+		+ FishData.display_name(c["id"])
 	inventory.append(c)
 	lifetime_catches += 1
 	dex[c["id"]] = true
 	var col: Color = FishData.TIER_COLORS[tier]
 	_popup("%s %.2fkg" % [fname, c["w"]], painter.bobber_pos() + Vector2(-22, -8), col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
-	if tier >= 3:
-		_toast("%s！钓到 %s（%.2fkg）" % [FishData.TIER_NAMES[tier], fname, c["w"]], 2.4, col)
-	if tier >= 4:
+	if tier >= 3 or q >= 2:
+		_toast("%s钓到 %s（%.2fkg，%d 金币）" % [
+			(FishData.TIER_NAMES[tier] + "！") if tier >= 3 else "",
+			fname, c["w"], c["v"]], 2.4, col)
+	if tier >= 4 or q >= 3:
 		_flash()
 	if _bag_full():
 		_toast("鱼篓满了，先去卖鱼或扩容～", 3.0, Color(1.0, 0.75, 0.4))
@@ -585,7 +590,8 @@ func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 0)
 	var nm := Label.new()
-	nm.text = "%s %s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(c["id"], c["w"]), FishData.display_name(c["id"])]
+	nm.text = "%s %s%s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(c["id"], c["w"]),
+		FishData.display_name(c["id"]), "★".repeat(int(c.get("q", 0)))]
 	nm.clip_text = true
 	nm.add_theme_font_size_override("font_size", 15 if featured else 13)
 	nm.add_theme_color_override("font_color", _ui_tier_color(tier, featured) if featured else _ui_tier_color(tier, false))
@@ -719,8 +725,42 @@ func _fill_upgrades(v: VBoxContainer) -> void:
 	btn.text = "升级鱼竿"
 	btn.focus_mode = Control.FOCUS_NONE
 	btn.custom_minimum_size = Vector2(0, 34)
+	_apply_button_skin(btn, true)
 	btn.pressed.connect(_try_upgrade_rod)
 	v.add_child(btn)
+	# —— 鱼饵（星级品质线）——
+	v.add_child(HSeparator.new())
+	var bait: Dictionary = FishData.BAITS[bait_level]
+	var binfo := Label.new()
+	binfo.text = "鱼饵：%s（%s）" % [bait["name"], bait["desc"]]
+	binfo.add_theme_font_size_override("font_size", 16)
+	binfo.add_theme_color_override("font_color", Color(0.3, 0.3, 0.28))
+	v.add_child(binfo)
+	var bdesc := Label.new()
+	var p: Array = bait["probs"]
+	bdesc.text = "上品★ %d%% · 极品★★ %.1f%% · 完美★★★ %.2f%%（价值 ×1.8/×4/×8）" % [
+		int(float(p[1]) * 100.0), float(p[1]) * float(p[2]) * 100.0,
+		float(p[1]) * float(p[2]) * float(p[3]) * 100.0]
+	bdesc.add_theme_font_size_override("font_size", 12)
+	bdesc.add_theme_color_override("font_color", Color(0.4, 0.4, 0.38))
+	bdesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bdesc.custom_minimum_size = Vector2(238, 0)
+	v.add_child(bdesc)
+	if bait_level < FishData.BAITS.size() - 1:
+		var nxt: Dictionary = FishData.BAITS[bait_level + 1]
+		var bcost := int(nxt["cost"])
+		var bcostlbl := Label.new()
+		bcostlbl.text = "换用 %s：%d 金币" % [nxt["name"], bcost]
+		bcostlbl.add_theme_color_override("font_color",
+			Color(0.85, 0.6, 0.2) if coins >= bcost else Color(0.7, 0.4, 0.4))
+		v.add_child(bcostlbl)
+		var bbtn := Button.new()
+		bbtn.text = "升级鱼饵"
+		bbtn.focus_mode = Control.FOCUS_NONE
+		bbtn.custom_minimum_size = Vector2(0, 34)
+		_apply_button_skin(bbtn, false)
+		bbtn.pressed.connect(_try_upgrade_bait)
+		v.add_child(bbtn)
 
 
 func _fill_settings(v: VBoxContainer) -> void:
@@ -757,11 +797,13 @@ func _fill_settings(v: VBoxContainer) -> void:
 	var reset := Button.new()
 	reset.text = "回到右下角"
 	reset.focus_mode = Control.FOCUS_NONE
+	_apply_button_skin(reset, false)
 	reset.pressed.connect(_place_corner)
 	v.add_child(reset)
 	var quit := Button.new()
 	quit.text = "退出游戏"
 	quit.focus_mode = Control.FOCUS_NONE
+	_apply_button_skin(quit, false)
 	quit.pressed.connect(_quit_game)
 	v.add_child(quit)
 
@@ -782,6 +824,22 @@ func _try_upgrade_rod() -> void:
 	_open_panel("rod")
 
 
+func _try_upgrade_bait() -> void:
+	if bait_level >= FishData.BAITS.size() - 1:
+		return
+	var nxt: Dictionary = FishData.BAITS[bait_level + 1]
+	var cost := int(nxt["cost"])
+	if coins < cost:
+		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
+		return
+	coins -= cost
+	bait_level += 1
+	_update_hud()
+	_toast("换上了%s，星级渔获概率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
+	_save()
+	_open_panel("rod")
+
+
 func _set_opacity(val: float) -> void:
 	_opacity = val
 	painter.modulate.a = val
@@ -795,12 +853,13 @@ func _save() -> void:
 		return
 	var inv: Array = []
 	for c in inventory:
-		inv.append([c["id"], c["w"], c["v"]])
+		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0))])
 	var data := {
-		"ver": 2,
+		"ver": 3,
 		"coins": coins,
 		"rod_level": rod_level,
 		"bag_level": bag_level,
+		"bait": bait_level,
 		"inv": inv,
 		"lt_coins": lifetime_coins,
 		"lt_catches": lifetime_catches,
@@ -825,10 +884,12 @@ func _load_save() -> void:
 	coins = int(data.get("coins", 0))
 	rod_level = max(1, int(data.get("rod_level", 1)))
 	bag_level = max(1, int(data.get("bag_level", 1)))  # v1 存档无此字段 → 默认 1
+	bait_level = clampi(int(data.get("bait", 0)), 0, FishData.BAITS.size() - 1)  # v2 及更早 → 蚯蚓
 	inventory = []
 	for e in data.get("inv", []):           # v1 存档无此字段 → 空背包
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):
-			inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2])})
+			inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
+				"q": int(e[3]) if e.size() >= 4 else 0})  # v2 三元组 → 无星级
 	lifetime_coins = int(data.get("lt_coins", 0))
 	lifetime_catches = int(data.get("lt_catches", 0))
 	dex = {}
@@ -857,7 +918,7 @@ func _offline_catch(elapsed: float) -> int:
 	var free := _bag_capacity() - inventory.size()
 	var n: int = clampi(est, 0, free)
 	for i in n:
-		var c := FishData.roll_catch(rng, rod_level)
+		var c := FishData.roll_catch(rng, rod_level, bait_level)
 		inventory.append(c)
 		dex[c["id"]] = true
 		lifetime_catches += 1
