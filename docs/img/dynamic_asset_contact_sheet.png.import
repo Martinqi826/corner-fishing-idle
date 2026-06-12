@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://b0bhajwojr0lk"
+path="res://.godot/imported/dynamic_asset_contact_sheet.png-67c6752ea52fb9b1819796ccdace7619.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://docs/img/dynamic_asset_contact_sheet.png"
+dest_files=["res://.godot/imported/dynamic_asset_contact_sheet.png-67c6752ea52fb9b1819796ccdace7619.ctex"]
 
 [params]
 

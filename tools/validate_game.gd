@@ -38,6 +38,9 @@ func _run() -> void:
 	print("=== 离线产鱼 ===")
 	await _check_offline()
 
+	print("=== 动态美术层 ===")
+	await _check_effects()
+
 	print("=== 结果: %d 失败 ===" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -286,6 +289,33 @@ func _check_offline() -> void:
 	g.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
+
+
+func _check_effects() -> void:
+	var game: Node = load("res://main.tscn").instantiate()
+	game.save_enabled = false
+	root.add_child(game)
+	await process_frame
+	var p: Node2D = game.painter
+	_assert(p.use_composite, "应处于合成主图模式")
+	_assert(p._shimmer_tex.size() == 6, "水流高光应 6 帧，实际 %d" % p._shimmer_tex.size())
+	_assert(p._mist_tex.size() == 3, "雾气应 3 层，实际 %d" % p._mist_tex.size())
+	_assert(p._snow_tex.size() == 3, "雪粒应 3 层，实际 %d" % p._snow_tex.size())
+	_assert(p._ripple_tex.size() == 4, "浮漂涟漪应 4 帧，实际 %d" % p._ripple_tex.size())
+	_assert(p._glow_tex.size() == 4, "灯光呼吸应 4 帧，实际 %d" % p._glow_tex.size())
+	_assert(p._wild_tex.size() == 4, "小动物应 4 种，实际 %d" % p._wild_tex.size())
+	_assert(p._lantern.x > 440.0 and p._lantern.x < 490.0 and p._lantern.y > 300.0 and p._lantern.y < 355.0,
+		"灯笼锚点应自动定位到主图灯笼区域，实际 %s" % str(p._lantern))
+	# 小动物事件生命周期：fish 时长 0.7~1.1s，推进 2s 应结束并重排下次计时
+	p._start_wild("fish")
+	_assert(p._wild_kind == "fish", "应启动 fish 事件")
+	_assert(not p._ripples.is_empty(), "鱼跃应触发涟漪")
+	p._process(2.0)
+	_assert(p._wild_kind == "", "事件应在时长结束后清除")
+	_assert(p._wild_timer >= 45.0 and p._wild_timer <= 120.0, "下次事件应排在 45~120s 后")
+	print("  动态层资源齐全（水光6/雾3/雪3/涟漪4/灯光4/动物4），事件生命周期通过")
+	game.queue_free()
+	await process_frame
 
 
 func _assert(cond: bool, msg: String) -> void:

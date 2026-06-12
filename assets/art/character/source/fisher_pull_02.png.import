@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://djb3r77ruu6fe"
+path="res://.godot/imported/fisher_pull_02.png-16836df2b4b45c68a557d3a246b68ea1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/character/source/fisher_pull_02.png"
+dest_files=["res://.godot/imported/fisher_pull_02.png-16836df2b4b45c68a557d3a246b68ea1.ctex"]
 
 [params]
 

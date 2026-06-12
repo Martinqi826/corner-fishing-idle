@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://cvplekrfnuv80"
+path="res://.godot/imported/fox_peek_01.png-aa43db220531f7fdb26f68268d00aab9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/wildlife/fox_peek_01.png"
+dest_files=["res://.godot/imported/fox_peek_01.png-aa43db220531f7fdb26f68268d00aab9.ctex"]
 
 [params]
 

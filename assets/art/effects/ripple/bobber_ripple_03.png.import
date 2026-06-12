@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://bf5e18tu2ywyp"
+path="res://.godot/imported/bobber_ripple_03.png-3560f05ed1b5afa299c070e71023f5d2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/effects/ripple/bobber_ripple_03.png"
+dest_files=["res://.godot/imported/bobber_ripple_03.png-3560f05ed1b5afa299c070e71023f5d2.ctex"]
 
 [params]
 

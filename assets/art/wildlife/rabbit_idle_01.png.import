@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://cx2dhdu7mbg6o"
+path="res://.godot/imported/rabbit_idle_01.png-efcc1b7d0f5573cd20ce59f2c309d669.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/wildlife/rabbit_idle_01.png"
+dest_files=["res://.godot/imported/rabbit_idle_01.png-efcc1b7d0f5573cd20ce59f2c309d669.ctex"]
 
 [params]
 

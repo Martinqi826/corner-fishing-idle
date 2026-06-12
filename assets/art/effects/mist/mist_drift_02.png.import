@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://cps1asr2nogeb"
+path="res://.godot/imported/mist_drift_02.png-aaa9490fd40f6a635a55cc8d63cef207.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/effects/mist/mist_drift_02.png"
+dest_files=["res://.godot/imported/mist_drift_02.png-aaa9490fd40f6a635a55cc8d63cef207.ctex"]
 
 [params]
 

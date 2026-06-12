@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://ts1q3bm8gpdf"
+path="res://.godot/imported/rod.png-fb61bad92428c11b7fb74aec4e54679a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/props/source/rod.png"
+dest_files=["res://.godot/imported/rod.png-fb61bad92428c11b7fb74aec4e54679a.ctex"]
 
 [params]
 

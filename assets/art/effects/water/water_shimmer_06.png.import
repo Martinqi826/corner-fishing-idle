@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://ryq7gbg8bip2"
+path="res://.godot/imported/water_shimmer_06.png-6596a8fcc665d5dfd1e97de9047f7bf4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/effects/water/water_shimmer_06.png"
+dest_files=["res://.godot/imported/water_shimmer_06.png-6596a8fcc665d5dfd1e97de9047f7bf4.ctex"]
 
 [params]
 

@@ -47,6 +47,14 @@ func _run() -> void:
 	await _settle(2)
 	_snap("panel_rod.png")
 
+	# 4) 动态层：强制小动物事件（中段全亮）+ 涟漪帧动画
+	_main._close_panel()
+	_main.painter._start_wild("rabbit")
+	_main.painter._wild_t = _main.painter._wild_dur * 0.5
+	_main.painter.add_ripple(_main.painter.bobber_pos(), 28.0)
+	await _settle(4)
+	_snap("scene_dynamic.png")
+
 	quit()
 
 

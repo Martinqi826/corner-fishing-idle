@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2cv1o7hqe6dx"
-path="res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"
+uid="uid://n67s0qjag6w2"
+path="res://.godot/imported/fish_rare_01.png-1791c72bb0b1c6cfd5cb13dc86a19f62.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/source/archive/corner_scene_winter_placeholder_v0.png"
-dest_files=["res://.godot/imported/corner_scene_winter_placeholder_v0.png-f8612fbb99eaed084d8666cf2b1de854.ctex"]
+source_file="res://assets/art/fish/source/fish_rare_01.png"
+dest_files=["res://.godot/imported/fish_rare_01.png-1791c72bb0b1c6cfd5cb13dc86a19f62.ctex"]
 
 [params]
 
