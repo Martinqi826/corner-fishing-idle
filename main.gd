@@ -58,6 +58,7 @@ var _msg_id := 0
 var _panel: Control = null
 var _panel_kind := ""
 var _opacity := 1.0
+var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
 
 # 存档路径用变量：测试可改用独立文件，避免覆盖真实存档。
 var save_path := "user://corner_fishing_save.json"
@@ -99,6 +100,7 @@ func _ready() -> void:
 	coins_label.position = SCENE_OFF + Vector2(22, 96)
 	toast_label.position = SCENE_OFF + Vector2(40, 112)
 	toast_label.size = Vector2(440, 28)
+	_build_order_chip()
 	_setup_window()
 	_load_ui_layout()
 	_load_save()
@@ -290,6 +292,41 @@ func _update_hud() -> void:
 	elif _bag_full():
 		col = Color(1.0, 0.78, 0.45)
 	coins_label.add_theme_color_override("font_color", col)
+	_update_order_chip()
+
+
+## HUD 订单进度小字（低调、可点开订单页）。Stardew/AC 式每日目标常驻可见。
+func _build_order_chip() -> void:
+	order_chip = Button.new()
+	order_chip.flat = true
+	order_chip.focus_mode = Control.FOCUS_NONE
+	order_chip.position = SCENE_OFF + Vector2(22, 120)
+	order_chip.add_theme_font_size_override("font_size", 13)
+	order_chip.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	order_chip.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	order_chip.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	order_chip.add_theme_color_override("font_hover_color", Color(0.98, 0.90, 0.62))
+	order_chip.pressed.connect(func() -> void:
+		Audio.play_ui("ui_click")
+		_catch_tab = 2
+		_open_panel("catch"))
+	ui_root.add_child(order_chip)
+
+
+func _update_order_chip() -> void:
+	if order_chip == null:
+		return
+	_ensure_daily_order()
+	if bool(daily_order.get("done", false)):
+		order_chip.text = "今日订单 ✓ 已完成"
+		order_chip.add_theme_color_override("font_color", Color(0.55, 0.78, 0.50))
+		return
+	var fid := str(daily_order.get("fish", ""))
+	var need := int(daily_order.get("need", 1))
+	var have := mini(_daily_order_indices().size(), need)
+	order_chip.text = "订单  %s  %d/%d" % [FishData.display_name(fid), have, need]
+	order_chip.add_theme_color_override("font_color",
+		Color(0.95, 0.85, 0.5) if have >= need else Color(0.80, 0.73, 0.55))
 
 
 ## 面板开着时数据变了（上鱼/卖鱼/扩容），原地重建内容。
