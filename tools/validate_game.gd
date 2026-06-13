@@ -35,6 +35,9 @@ func _run() -> void:
 	print("=== 成就系统 ===")
 	await _check_achievements_feature()
 
+	print("=== 流动鱼贩 ===")
+	await _check_merchant()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -241,6 +244,37 @@ func _check_quality() -> void:
 		v3 += int(FishData.roll_catch(rng, 1, 3)["v"])
 	_assert(v3 > v0, "高级饵整体产出应更高")
 	print("  均价：蚯蚓 %.1f → 秘制饵 %.1f" % [v0 / 1500.0, v3 / 1500.0])
+
+
+func _check_merchant() -> void:
+	var game: Node = load("res://main.tscn").instantiate()
+	game.save_enabled = false
+	root.add_child(game)
+	await process_frame
+	_assert(not game._merchant_active, "起始鱼贩不在场")
+	# 放一条已知价值的鱼，平时按原价卖
+	game.inventory = [{"id": "carp", "w": 2.0, "v": 100, "q": 0}]
+	game._merchant_active = false
+	_assert(game._sell_value(game.inventory[0]) == 100, "平时卖价应为原价")
+	# 鱼贩在场 → ×1.5
+	game._merchant_active = true
+	_assert(game._sell_value(game.inventory[0]) == 150, "鱼贩在场卖价应 ×1.5")
+	game._sell_one(0)
+	_assert(game.lifetime_coins == 150, "鱼贩在场单卖应得 150，实际 %d" % game.lifetime_coins)
+	# 计时切换：在场倒计时归零应离场并排下次
+	game._merchant_active = true
+	game._merchant_t = 0.0
+	game._tick_merchant(0.1)
+	_assert(not game._merchant_active, "在场结束应离场")
+	_assert(game._merchant_t >= game.MERCHANT_GAP.x, "离场后应排下次出现")
+	# 不在场倒计时归零应到场
+	game._merchant_t = 0.0
+	game._tick_merchant(0.1)
+	_assert(game._merchant_active, "间隔结束应到场")
+	_assert(game._merchant_t >= game.MERCHANT_DUR.x, "到场后应设停留时长")
+	print("  鱼贩：×1.5 卖价 / 到场离场计时切换 通过")
+	game.queue_free()
+	await process_frame
 
 
 func _check_achievements_feature() -> void:

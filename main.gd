@@ -60,6 +60,14 @@ const OFFLINE_EFFICIENCY := 0.5       # 离线效率 50%
 var _save_t := 10.0
 var _pending_offline := ""
 
+# —— 流动鱼贩（动森 CJ 模式）：随机出现的限时收购，卖价 ×1.5 ——
+const MERCHANT_MULT := 1.5
+const MERCHANT_DUR := Vector2(60.0, 90.0)        # 停留时长区间(秒)
+const MERCHANT_GAP := Vector2(1200.0, 2400.0)    # 两次出现间隔(秒)
+const MERCHANT_FIRST := Vector2(180.0, 360.0)    # 首次出现(秒)，让玩家较快见到一次
+var _merchant_active := false
+var _merchant_t := 0.0                            # 当前阶段剩余秒数
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -70,6 +78,7 @@ func _ready() -> void:
 	_load_ui_layout()
 	_load_save()
 	_build_buttons()
+	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
 	_update_hud()
 	_begin_wait()
 	_started = true
@@ -119,6 +128,7 @@ func _process(delta: float) -> void:
 		if _save_t <= 0.0:
 			_save_t = 10.0
 			_save()
+	_tick_merchant(delta)
 	_state_t -= delta
 	match _state:
 		ST_WAIT:
@@ -215,9 +225,14 @@ func _update_hud() -> void:
 	var bag := "鱼篓 %d/%d" % [inventory.size(), _bag_capacity()]
 	if _bag_full():
 		bag += "（满）"
-	coins_label.text = "金币 %d　%s" % [coins, bag]
-	coins_label.add_theme_color_override("font_color",
-		Color(1.0, 0.78, 0.45) if _bag_full() else Color(0.92, 0.92, 0.9))
+	var mer := "　收鱼郎×1.5" if _merchant_active else ""
+	coins_label.text = "金币 %d　%s%s" % [coins, bag, mer]
+	var col := Color(0.92, 0.92, 0.9)
+	if _merchant_active:
+		col = Color(0.98, 0.82, 0.40)
+	elif _bag_full():
+		col = Color(1.0, 0.78, 0.45)
+	coins_label.add_theme_color_override("font_color", col)
 
 
 ## 面板开着时数据变了（上鱼/卖鱼/扩容），原地重建内容。
@@ -605,13 +620,14 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	var unlocked := 0
 	for c in inventory:
 		if not bool(c.get("lock", false)):
-			total += int(c["v"])
+			total += _sell_value(c)
 			unlocked += 1
 	var sell_all := Button.new()
 	sell_all.text = "全部卖出"
 	sell_all.custom_minimum_size = Vector2(76, 28)
 	sell_all.disabled = unlocked == 0
-	sell_all.tooltip_text = "卖出 %d 条未上锁的鱼，+%d 金币（锁定的会留下）" % [unlocked, total]
+	sell_all.tooltip_text = "卖出 %d 条未上锁的鱼，+%d 金币%s（锁定的会留下）" % [
+		unlocked, total, "（收鱼郎×1.5）" if _merchant_active else ""]
 	_apply_button_skin(sell_all, true)
 	sell_all.pressed.connect(_sell_all)
 	head.add_child(sell_all)
@@ -781,6 +797,13 @@ func _toggle_lock(idx: int) -> void:
 	_save()
 
 
+# 流动鱼贩在场时卖价 ×1.5（向上取整）。
+func _sell_value(c: Dictionary) -> int:
+	if _merchant_active:
+		return int(ceil(float(c["v"]) * MERCHANT_MULT))
+	return int(c["v"])
+
+
 func _sell_one(idx: int) -> void:
 	if idx < 0 or idx >= inventory.size():
 		return
@@ -789,9 +812,11 @@ func _sell_one(idx: int) -> void:
 		return
 	var c: Dictionary = inventory[idx]
 	inventory.remove_at(idx)
-	coins += int(c["v"])
-	lifetime_coins += int(c["v"])
-	_toast("卖出 %s +%d" % [FishData.display_name(c["id"]), c["v"]], 1.5, Color(0.85, 0.7, 0.35))
+	var v := _sell_value(c)
+	coins += v
+	lifetime_coins += v
+	_toast("卖出 %s +%d%s" % [FishData.display_name(c["id"]), v,
+		"（鱼贩×1.5）" if _merchant_active else ""], 1.5, Color(0.85, 0.7, 0.35))
 	_check_achievements()
 	_update_hud()
 	_refresh_panel()
@@ -806,14 +831,14 @@ func _sell_all() -> void:
 		if bool(c.get("lock", false)):
 			keep.append(c)       # 收藏锁：跳过锁定的鱼
 		else:
-			total += int(c["v"])
+			total += _sell_value(c)
 			n += 1
 	if n == 0:
 		return
 	inventory = keep
 	coins += total
 	lifetime_coins += total
-	var msg := "卖出 %d 条鱼 +%d 金币" % [n, total]
+	var msg := "卖出 %d 条鱼 +%d 金币%s" % [n, total, "（鱼贩×1.5）" if _merchant_active else ""]
 	if not keep.is_empty():
 		msg += "（%d 条收藏留着）" % keep.size()
 	_toast(msg, 2.2, Color(0.85, 0.7, 0.35))
@@ -821,6 +846,24 @@ func _sell_all() -> void:
 	_update_hud()
 	_refresh_panel()
 	_save()
+
+
+# ============================ 流动鱼贩 ============================
+
+func _tick_merchant(delta: float) -> void:
+	_merchant_t -= delta
+	if _merchant_t > 0.0:
+		return
+	if _merchant_active:
+		_merchant_active = false
+		_merchant_t = rng.randf_range(MERCHANT_GAP.x, MERCHANT_GAP.y)
+		_toast("收鱼郎走了，下次再来～", 2.4, Color(0.7, 0.66, 0.58))
+	else:
+		_merchant_active = true
+		_merchant_t = rng.randf_range(MERCHANT_DUR.x, MERCHANT_DUR.y)
+		_toast("收鱼郎来了！限时收购，全部卖价 ×1.5", 3.5, Color(0.98, 0.82, 0.40))
+	_update_hud()
+	_refresh_panel()
 
 
 func _try_expand_bag() -> void:

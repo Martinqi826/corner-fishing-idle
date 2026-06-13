@@ -1,0 +1,52 @@
+{
+  "ui_click": {
+    "path": "res://assets/audio/ui/ui_click.wav",
+    "duration_seconds": 0.12,
+    "description": "Button click / tab tap."
+  },
+  "ui_error": {
+    "path": "res://assets/audio/ui/ui_error.wav",
+    "duration_seconds": 0.28,
+    "description": "Invalid action or insufficient coins."
+  },
+  "cast": {
+    "path": "res://assets/audio/fishing/cast.wav",
+    "duration_seconds": 0.42,
+    "description": "Rod cast and line movement."
+  },
+  "bobber_splash": {
+    "path": "res://assets/audio/fishing/bobber_splash.wav",
+    "duration_seconds": 0.52,
+    "description": "Bobber entering water."
+  },
+  "bite": {
+    "path": "res://assets/audio/fishing/bite.wav",
+    "duration_seconds": 0.34,
+    "description": "Fish bite prompt."
+  },
+  "catch_common": {
+    "path": "res://assets/audio/fishing/catch_common.wav",
+    "duration_seconds": 0.46,
+    "description": "Common catch reward."
+  },
+  "catch_rare": {
+    "path": "res://assets/audio/fishing/catch_rare.wav",
+    "duration_seconds": 0.86,
+    "description": "Rare catch reward."
+  },
+  "coin": {
+    "path": "res://assets/audio/economy/coin.wav",
+    "duration_seconds": 0.22,
+    "description": "Coins gained."
+  },
+  "upgrade": {
+    "path": "res://assets/audio/economy/upgrade.wav",
+    "duration_seconds": 0.92,
+    "description": "Upgrade purchased."
+  },
+  "ambience_water_loop": {
+    "path": "res://assets/audio/ambience/ambience_water_loop.wav",
+    "duration_seconds": 8.0,
+    "description": "Low-volume looping water ambience."
+  }
+}
