@@ -61,6 +61,7 @@ var _glow_period := 4.5
 var _pulse_t := 8.0               # 浮漂待机涟漪计时
 
 # 小动物事件状态
+var quiet := false      # 专注模式：停小动物低频事件
 var _wild_kind := ""
 var _wild_t := 0.0
 var _wild_dur := 0.0
@@ -175,8 +176,14 @@ func _tick_idle_pulse(delta: float) -> void:
 			add_ripple(bobber_pos(), 18.0)
 
 
+func set_quiet(q: bool) -> void:
+	quiet = q
+	if q:
+		_wild_kind = ""
+
+
 func _tick_wildlife(delta: float) -> void:
-	if _wild_tex.is_empty():
+	if _wild_tex.is_empty() or quiet:
 		return
 	if _wild_kind == "":
 		_wild_timer -= delta

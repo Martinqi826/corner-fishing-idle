@@ -58,6 +58,7 @@ var _msg_id := 0
 var _panel: Control = null
 var _panel_kind := ""
 var _opacity := 1.0
+var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
 var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
 
 # 存档路径用变量：测试可改用独立文件，避免覆盖真实存档。
@@ -350,6 +351,8 @@ func _soft(c: Color) -> Color:
 
 
 func _popup(text: String, pos: Vector2, color: Color) -> void:
+	if focus_mode:
+		return  # 专注模式下不弹频繁飘字
 	var l := Label.new()
 	l.text = text
 	l.add_theme_color_override("font_color", _soft(color))
@@ -1533,6 +1536,23 @@ func _fill_settings(v: VBoxContainer) -> void:
 	_audio_slider(v, "音效", Audio.sfx_volume, Audio.set_sfx_volume)
 	_audio_slider(v, "环境音", Audio.ambience_volume, Audio.set_ambience_volume)
 	v.add_child(HSeparator.new())
+	# 专注/安静模式
+	var focus_row := HBoxContainer.new()
+	focus_row.add_theme_constant_override("separation", 8)
+	var focus_lbl := Label.new()
+	focus_lbl.text = "专注模式（少打扰）"
+	focus_lbl.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
+	focus_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	focus_row.add_child(focus_lbl)
+	var focus_btn := CheckButton.new()
+	focus_btn.button_pressed = focus_mode
+	focus_btn.focus_mode = Control.FOCUS_NONE
+	focus_btn.toggled.connect(func(on: bool) -> void:
+		_set_focus(on)
+		_save())
+	focus_row.add_child(focus_btn)
+	v.add_child(focus_row)
+	v.add_child(HSeparator.new())
 	var ol := Label.new()
 	ol.text = "不透明度"
 	ol.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
@@ -1694,6 +1714,16 @@ func _set_opacity(val: float) -> void:
 	coins_label.modulate.a = val
 
 
+## 专注/安静模式：停小动物事件 + 抑制飘字（_popup 已守卫）+ 场景轻微变暗。
+func _set_focus(on: bool) -> void:
+	focus_mode = on
+	if painter.has_method("set_quiet"):
+		painter.set_quiet(on)
+	_set_opacity(_opacity)  # 重新应用，叠加 focus 暗化
+	if on:
+		painter.modulate.a = _opacity * 0.8
+
+
 # ============================ 存档 / 离线 ============================
 
 func _save() -> void:
@@ -1719,6 +1749,7 @@ func _save() -> void:
 		"giant": caught_giant,
 		"ach": achievements_done.keys(),
 		"opacity": _opacity,
+		"focus": focus_mode,
 		"ts": Time.get_unix_time_from_system(),
 	}
 	if DisplayServer.get_name() != "headless":
@@ -1795,6 +1826,8 @@ func _load_save() -> void:
 			}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
+	if bool(data.get("focus", false)):
+		_set_focus(true)
 	var wp: Variant = data.get("win_pos", null)
 	if wp is Array and wp.size() >= 2:
 		_saved_win_pos = Vector2i(int(wp[0]), int(wp[1]))

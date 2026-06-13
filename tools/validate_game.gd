@@ -56,6 +56,9 @@ func _run() -> void:
 	print("=== 动态美术层 ===")
 	await _check_effects()
 
+	print("=== 专注模式 ===")
+	await _check_focus()
+
 	print("=== 结果: %d 失败 ===" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -205,6 +208,23 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_focus() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g._set_focus(true)
+	_assert(g.focus_mode and g.painter.quiet, "专注模式应置位并静默场景")
+	var before: int = g.ui_root.get_child_count()
+	g._popup("x", Vector2.ZERO, Color.WHITE)
+	_assert(g.ui_root.get_child_count() == before, "专注模式应抑制飘字")
+	g._set_focus(false)
+	_assert(not g.painter.quiet, "关闭专注应恢复场景事件")
+	print("  专注模式 通过")
+	g.queue_free()
 	await process_frame
 
 
