@@ -56,6 +56,9 @@ func _run() -> void:
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
+	print("=== 存档原子写 / 损坏回退 ===")
+	await _check_save_robust()
+
 	print("=== v1 老存档迁移 ===")
 	await _check_migration_v1()
 
@@ -582,6 +585,42 @@ func _check_achievements_feature() -> void:
 	g2.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
+
+
+func _check_save_robust() -> void:
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = true
+	g.save_path = TEST_SAVE
+	root.add_child(g)
+	await process_frame
+	g.coins = 555
+	g._save()
+	g.coins = 777
+	g._save()
+	_assert(FileAccess.file_exists(TEST_SAVE), "保存应生成主存档")
+	_assert(FileAccess.file_exists(TEST_SAVE + ".bak"), "二次保存应生成 .bak")
+	_assert(not FileAccess.file_exists(TEST_SAVE + ".tmp"), "原子写后不应残留 .tmp")
+	g.queue_free()
+	await process_frame
+	# 损坏主档（模拟写到一半被杀），应从 .bak 恢复
+	var bad := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	bad.store_string("{\"coins\": 77")  # 截断的 JSON
+	bad.close()
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(g2.coins == 555, "主档损坏应从 .bak 恢复 555，实际 %d" % g2.coins)
+	print("  存档原子写/损坏回退 通过（恢复金币 %d）" % g2.coins)
+	g2.queue_free()
+	await process_frame
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
 
 
 func _check_save_v2() -> void:

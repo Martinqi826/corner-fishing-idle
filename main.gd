@@ -2122,9 +2122,19 @@ func _save() -> void:
 	if DisplayServer.get_name() != "headless":
 		var wp := DisplayServer.window_get_position()
 		data["win_pos"] = [wp.x, wp.y]
-	var f := FileAccess.open(save_path, FileAccess.WRITE)
-	if f != null:
-		f.store_string(JSON.stringify(data))
+	# 原子写：先写临时文件，再把旧档移为 .bak，最后改名顶替。
+	# 避免进程被杀(每次重启 taskkill)恰逢写档而截断 JSON 导致进度清零。
+	var tmp := save_path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(data))
+	f.close()
+	if FileAccess.file_exists(save_path):
+		if FileAccess.file_exists(save_path + ".bak"):
+			DirAccess.remove_absolute(save_path + ".bak")
+		DirAccess.rename_absolute(save_path, save_path + ".bak")
+	DirAccess.rename_absolute(tmp, save_path)
 
 
 func _dex_to_save() -> Dictionary:
@@ -2137,13 +2147,26 @@ func _dex_to_save() -> Dictionary:
 	return out
 
 
-func _load_save() -> void:
-	if not save_enabled or not FileAccess.file_exists(save_path):
-		return
-	var f := FileAccess.open(save_path, FileAccess.READ)
+## 读一个存档文件，解析失败返回 null。
+func _read_save_file(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		return null
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
+		return null
+	var d: Variant = JSON.parse_string(f.get_as_text())
+	return d if d is Dictionary else null
+
+
+func _load_save() -> void:
+	if not save_enabled:
 		return
-	var data: Variant = JSON.parse_string(f.get_as_text())
+	# 主档解析失败（截断/损坏）时回退到 .bak，最大限度保住进度
+	var data: Variant = _read_save_file(save_path)
+	if data == null:
+		data = _read_save_file(save_path + ".bak")
+		if data != null:
+			push_warning("主存档损坏，已从 .bak 恢复")
 	if not (data is Dictionary):
 		return
 	coins = int(data.get("coins", 0))
