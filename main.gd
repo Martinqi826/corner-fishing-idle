@@ -258,10 +258,10 @@ func _do_catch() -> void:
 		_toast("%s钓到 %s（%.2fkg，%d 金币）" % [
 			(FishData.TIER_NAMES[tier] + "！") if tier >= 3 else "",
 			fname, c["w"], c["v"]], 2.4, col)
-	elif _is_daily_order_target(str(c["id"])):
+	elif not bool(daily_order.get("done", false)) and _order_matches(c):
 		var need := int(daily_order.get("need", 1))
 		var have := mini(_daily_order_indices().size(), need)
-		_toast("订单鱼入篓：%s %d/%d" % [FishData.display_name(c["id"]), have, need],
+		_toast("订单进度：%s %d/%d" % [_order_short(), have, need],
 			2.0, Color(0.96, 0.78, 0.38))
 	if tier >= 4 or q >= 3:
 		_flash()
@@ -326,10 +326,9 @@ func _update_order_chip() -> void:
 		order_chip.text = "今日订单 ✓ 已完成"
 		order_chip.add_theme_color_override("font_color", Color(0.55, 0.78, 0.50))
 		return
-	var fid := str(daily_order.get("fish", ""))
 	var need := int(daily_order.get("need", 1))
 	var have := mini(_daily_order_indices().size(), need)
-	order_chip.text = "订单  %s  %d/%d" % [FishData.display_name(fid), have, need]
+	order_chip.text = "订单  %s  %d/%d" % [_order_short(), have, need]
 	order_chip.add_theme_color_override("font_color",
 		Color(0.95, 0.85, 0.5) if have >= need else Color(0.80, 0.73, 0.55))
 
@@ -779,6 +778,8 @@ func _ensure_daily_order() -> void:
 	daily_order = _make_daily_order(today)
 
 
+## 生成每日订单。kind ∈ species/tier/weight/perfect（perfect 需鱼饵≥2 才出，避免难以达成）。
+## fish 字段恒为一个有效鱼 id（作图标与 species 目标），保证旧存档守卫兼容。
 func _make_daily_order(date_key: String) -> Dictionary:
 	var local := RandomNumberGenerator.new()
 	local.seed = int(abs(("%s:%d" % [date_key, rod_level]).hash()))
@@ -792,18 +793,82 @@ func _make_daily_order(date_key: String) -> Dictionary:
 	if candidates.is_empty():
 		candidates = FishData.FISH.keys()
 	var fish_id: String = candidates[local.randi() % candidates.size()]
-	var tier := FishData.tier_of(fish_id)
-	var need := 1
-	match tier:
-		0:
-			need = local.randi_range(3, 5)
-		1:
-			need = local.randi_range(2, 3)
-		2:
-			need = local.randi_range(1, 2)
+	var kinds := ["species", "species", "species", "tier", "weight"]
+	if bait_level >= 2:
+		kinds.append("perfect")
+	var kind: String = kinds[local.randi() % kinds.size()]
+	var order := {"date": date_key, "kind": kind, "fish": fish_id, "done": false,
+		"need": 1, "tier": 1, "minw": 1.0}
+	match kind:
+		"tier":
+			var mt := local.randi_range(1, max_tier)
+			order["tier"] = mt
+			order["need"] = clampi(4 - mt, 1, 3)
+			order["fish"] = _rep_fish_of_tier(mt, local)
+		"weight":
+			order["minw"] = [1.0, 2.0, 3.0][local.randi_range(0, 2)]
+			order["need"] = local.randi_range(1, 2)
+		"perfect":
+			order["need"] = 1
+		_:  # species
+			match FishData.tier_of(fish_id):
+				0: order["need"] = local.randi_range(3, 5)
+				1: order["need"] = local.randi_range(2, 3)
+				2: order["need"] = local.randi_range(1, 2)
+				_: order["need"] = 1
+	return order
+
+
+## 取某品阶的代表鱼 id（仅用于订单图标）。
+func _rep_fish_of_tier(t: int, local: RandomNumberGenerator) -> String:
+	var pool: Array = []
+	for id in FishData.FISH:
+		if FishData.tier_of(str(id)) == t:
+			pool.append(str(id))
+	if pool.is_empty():
+		return str(FishData.FISH.keys()[0])
+	pool.sort()
+	return str(pool[local.randi() % pool.size()])
+
+
+## 一条渔获是否满足当前订单（不含上锁判定）。
+func _order_matches(c: Dictionary) -> bool:
+	match str(daily_order.get("kind", "species")):
+		"tier":
+			return FishData.tier_of(str(c.get("id", ""))) >= int(daily_order.get("tier", 1))
+		"weight":
+			return float(c.get("w", 0.0)) >= float(daily_order.get("minw", 1.0))
+		"perfect":
+			return int(c.get("q", 0)) >= 3
 		_:
-			need = 1
-	return {"date": date_key, "fish": fish_id, "need": need, "done": false}
+			return str(c.get("id", "")) == str(daily_order.get("fish", ""))
+
+
+## 订单一句话标题。
+func _order_title() -> String:
+	var need := int(daily_order.get("need", 1))
+	match str(daily_order.get("kind", "species")):
+		"tier":
+			return "收 %d 条 %s及以上" % [need, FishData.TIER_NAMES[int(daily_order.get("tier", 1))]]
+		"weight":
+			return "收 %d 条 ≥%.1fkg 的鱼" % [need, float(daily_order.get("minw", 1.0))]
+		"perfect":
+			return "收 %d 条 完美★★★渔获" % need
+		_:
+			return "收 %d 条 %s" % [need, FishData.display_name(str(daily_order.get("fish", "")))]
+
+
+## HUD 用的订单短标签。
+func _order_short() -> String:
+	match str(daily_order.get("kind", "species")):
+		"tier":
+			return "%s+" % FishData.TIER_NAMES[int(daily_order.get("tier", 1))]
+		"weight":
+			return "≥%.1fkg" % float(daily_order.get("minw", 1.0))
+		"perfect":
+			return "完美★"
+		_:
+			return FishData.display_name(str(daily_order.get("fish", "")))
 
 
 func _is_daily_order_target(id: String) -> bool:
@@ -814,10 +879,9 @@ func _is_daily_order_target(id: String) -> bool:
 func _daily_order_indices() -> Array:
 	_ensure_daily_order()
 	var out: Array = []
-	var target := str(daily_order.get("fish", ""))
 	for i in inventory.size():
 		var c: Dictionary = inventory[i]
-		if str(c.get("id", "")) == target and not bool(c.get("lock", false)):
+		if _order_matches(c) and not bool(c.get("lock", false)):
 			out.append(i)
 	out.sort_custom(func(a, b):
 		return int(inventory[int(a)]["v"]) > int(inventory[int(b)]["v"]))
@@ -846,7 +910,7 @@ func _fill_order_tab(v: VBoxContainer) -> void:
 	var indices := _daily_order_indices()
 	var have := indices.size()
 	var reward := _daily_order_reward(indices)
-	var tier := FishData.tier_of(target)
+	var kind := str(daily_order.get("kind", "species"))
 
 	var stat := Label.new()
 	stat.text = "每日订单 · %s" % str(daily_order.get("date", ""))
@@ -869,14 +933,14 @@ func _fill_order_tab(v: VBoxContainer) -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 3)
 	var title := Label.new()
-	title.text = "收 %d 条 %s" % [need, FishData.display_name(target)]
+	title.text = _order_title()
 	title.add_theme_font_size_override("font_size", 17)
 	title.add_theme_color_override("font_color",
 		Color(0.28, 0.25, 0.20) if not done else Color(0.74, 0.70, 0.62))
 	info.add_child(title)
+	var kind_label: String = {"species": "指定鱼种", "tier": "指定品阶", "weight": "大物", "perfect": "完美品质"}.get(kind, "")
 	var desc := Label.new()
-	desc.text = "%s订单 · 交付未上锁渔获，按鱼价 ×%.1f 结算" % [
-		FishData.TIER_NAMES[tier], DAILY_ORDER_MULT]
+	desc.text = "%s订单 · 交付未上锁的符合渔获，按鱼价 ×%.1f 结算" % [kind_label, DAILY_ORDER_MULT]
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(220, 0)
 	desc.add_theme_font_size_override("font_size", 12)
@@ -1720,8 +1784,11 @@ func _load_save() -> void:
 		if FishData.FISH.has(fish_id):
 			daily_order = {
 				"date": str(od.get("date", "")),
+				"kind": str(od.get("kind", "species")),  # 旧档无 kind → 指定鱼种
 				"fish": fish_id,
 				"need": max(1, int(od.get("need", 1))),
+				"tier": clampi(int(od.get("tier", 1)), 1, 5),
+				"minw": float(od.get("minw", 1.0)),
 				"done": bool(od.get("done", false)),
 			}
 	_opacity = float(data.get("opacity", 1.0))

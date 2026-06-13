@@ -340,7 +340,23 @@ func _check_daily_order() -> void:
 	game._catch_tab = 2
 	game._open_panel("catch")
 	_assert(is_instance_valid(game._panel), "订单页签应能正常打开")
-	print("  每日订单：生成 / 锁定跳过 / 交付 ×2.5 / 跨日刷新 通过")
+	# 多类型订单匹配
+	game.inventory = [
+		{"id": "koi", "w": 4.0, "v": 300, "q": 3},
+		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
+		{"id": "carp", "w": 2.5, "v": 30, "q": 1},
+	]
+	game.daily_order = {"date": game._today_key(), "kind": "tier", "fish": "koi", "tier": 3, "need": 1, "minw": 1.0, "done": false}
+	var ti: Array = game._daily_order_indices()
+	_assert(ti.size() == 1 and ti[0] == 0, "品阶订单应只匹配 ≥tier3 的 koi")
+	game.daily_order = {"date": game._today_key(), "kind": "weight", "fish": "carp", "tier": 1, "need": 1, "minw": 2.0, "done": false}
+	var wi: Array = game._daily_order_indices()
+	_assert(wi.size() == 2, "重量订单应匹配 ≥2.0kg 的 koi+carp，实际 %d" % wi.size())
+	game.daily_order = {"date": game._today_key(), "kind": "perfect", "fish": "koi", "tier": 1, "need": 1, "minw": 1.0, "done": false}
+	var pi: Array = game._daily_order_indices()
+	_assert(pi.size() == 1 and int(game.inventory[pi[0]]["q"]) == 3, "完美订单应只匹配 q3")
+	_assert(game._order_short() == "完美★" and game._order_title().begins_with("收"), "订单标题/短标签应可生成")
+	print("  每日订单：生成 / 锁定跳过 / 交付 ×2.5 / 跨日刷新 / 多类型匹配 通过")
 	game.queue_free()
 	await process_frame
 
