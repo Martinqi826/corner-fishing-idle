@@ -1540,7 +1540,16 @@ func _ach_done(a: Dictionary) -> bool:
 		"rod": return rod_level >= int(a["n"])
 		"bait": return bait_level >= int(a["n"])
 		"hook": return hook_level >= int(a["n"])
+		"maxweight": return _dex_max_weight() >= float(a["n"])
 	return false
+
+
+## 图鉴里记录到的最大单条体重（用于重量里程碑成就）。
+func _dex_max_weight() -> float:
+	var m := 0.0
+	for id in dex:
+		m = maxf(m, float(dex[id]["w"]))
+	return m
 
 
 func _best_tier_caught() -> int:

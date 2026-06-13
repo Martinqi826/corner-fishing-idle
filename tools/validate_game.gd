@@ -501,6 +501,14 @@ func _check_achievements_feature() -> void:
 	game._check_achievements()
 	_assert(game.achievements_done.has("species_10"), "图鉴 10 种应解锁")
 	_assert(game.coins == before + 500, "species_10 应发 500 奖励，实得 %d" % (game.coins - before))
+	# 重量里程碑成就（maxweight 扫图鉴最大体重）
+	game.dex["koi"] = {"n": 1, "w": 12.0, "big": true, "perf": false}
+	game._check_achievements()
+	_assert(game.achievements_done.has("whopper"), "≥10kg 应解锁大鱼出水")
+	_assert(not game.achievements_done.has("leviathan"), "12kg 不应解锁深渊巨怪(需100kg)")
+	game.dex["koi"]["w"] = 150.0
+	game._check_achievements()
+	_assert(game.achievements_done.has("leviathan"), "≥100kg 应解锁深渊巨怪")
 	game.queue_free()
 	await process_frame
 	# 静默补登：老存档（无 ach 字段）回屏不应触发成就 toast，但应标记已达成

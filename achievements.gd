@@ -20,4 +20,11 @@ const LIST := [
 	{"id": "rod_5", "name": "精良渔具", "desc": "鱼竿升到 Lv.5", "kind": "rod", "n": 5, "reward": 0},
 	{"id": "bait_master", "name": "秘饵传人", "desc": "用上秘制饵", "kind": "bait", "n": 3, "reward": 0},
 	{"id": "hook_master", "name": "一线双钩", "desc": "用上双叉钩", "kind": "hook", "n": 3, "reward": 0},
+	# —— 长期里程碑（围绕深度进程）——
+	{"id": "catch_5000", "name": "钓鱼宗师", "desc": "累计钓到 5,000 条鱼", "kind": "catches", "n": 5000, "reward": 10000},
+	{"id": "coin_500k", "name": "腰缠万贯", "desc": "累计卖鱼赚 500,000 金币", "kind": "coins", "n": 500000, "reward": 20000},
+	{"id": "rod_10", "name": "如臂使指", "desc": "鱼竿升到 Lv.10", "kind": "rod", "n": 10, "reward": 0},
+	{"id": "bag_max", "name": "巨型鱼篓", "desc": "鱼篓扩到 55 格", "kind": "bag", "n": 8, "reward": 0},
+	{"id": "whopper", "name": "大鱼出水", "desc": "钓到一条 ≥10kg 的鱼", "kind": "maxweight", "n": 10, "reward": 2000},
+	{"id": "leviathan", "name": "深渊巨怪", "desc": "钓到一条 ≥100kg 的鱼", "kind": "maxweight", "n": 100, "reward": 8000},
 ]
