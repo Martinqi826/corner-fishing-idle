@@ -1,0 +1,86 @@
+{
+  "style_guide": "Quiet premium hand-painted winter fishing idle game. Natural Foley, soft wood, cold river water, subtle reward magic. Avoid chiptune, arcade bleeps, sci-fi tones, synthetic beeps, harsh UI pings, cartoon boings, vocals, melody-heavy stingers, and busy music.",
+  "output_root": "assets/audio",
+  "assets": [
+    {
+      "id": "ui_click",
+      "path": "ui/ui_click.mp3",
+      "duration_seconds": 0.5,
+      "loop": false,
+      "prompt_influence": 0.7,
+      "prompt": "A soft wooden button click for a cozy hand-painted fishing idle game UI, gentle tactile tap, light bamboo or carved wood, warm and natural, very short, no electronic beep, no arcade sound."
+    },
+    {
+      "id": "ui_error",
+      "path": "ui/ui_error.mp3",
+      "duration_seconds": 0.65,
+      "loop": false,
+      "prompt_influence": 0.75,
+      "prompt": "A restrained invalid action sound for a calm cozy fishing game UI, soft dull wooden knock with a tiny muted rattle, polite feedback, not alarming, no buzzer, no synthetic tone."
+    },
+    {
+      "id": "cast",
+      "path": "fishing/cast.mp3",
+      "duration_seconds": 1.2,
+      "loop": false,
+      "prompt_influence": 0.75,
+      "prompt": "Natural fishing rod cast in a quiet winter riverside scene, line whipping softly through cold air, light reel movement, subtle clothing rustle, realistic Foley, calm and delicate, no music."
+    },
+    {
+      "id": "bobber_splash",
+      "path": "fishing/bobber_splash.mp3",
+      "duration_seconds": 1.0,
+      "loop": false,
+      "prompt_influence": 0.8,
+      "prompt": "Small fishing bobber landing in a cold quiet river, gentle plop and tiny water ripples, crisp winter air, natural close Foley, soft and believable, no exaggerated splash."
+    },
+    {
+      "id": "bite",
+      "path": "fishing/bite.mp3",
+      "duration_seconds": 0.9,
+      "loop": false,
+      "prompt_influence": 0.78,
+      "prompt": "A fish bites the line in a quiet cozy fishing game, small bobber twitch, quick water ripple, subtle fishing line tension, alert but natural, no electronic notification, no melody."
+    },
+    {
+      "id": "catch_common",
+      "path": "fishing/catch_common.mp3",
+      "duration_seconds": 1.1,
+      "loop": false,
+      "prompt_influence": 0.65,
+      "prompt": "Common fish caught reward sound for a cozy fishing idle game, small water lift, soft fish flop, tiny pouch or basket rustle, satisfying but understated, natural Foley with a very light warm sparkle, no arcade jingle."
+    },
+    {
+      "id": "catch_rare",
+      "path": "fishing/catch_rare.mp3",
+      "duration_seconds": 1.8,
+      "loop": false,
+      "prompt_influence": 0.62,
+      "prompt": "Rare fish caught reward sound for a premium cozy winter fishing game, graceful water lift, soft fish movement, delicate magical shimmer like ice crystals, satisfying discovery moment, elegant and restrained, no loud fanfare, no chiptune."
+    },
+    {
+      "id": "coin",
+      "path": "economy/coin.mp3",
+      "duration_seconds": 0.7,
+      "loop": false,
+      "prompt_influence": 0.72,
+      "prompt": "Soft coin reward sound for a cozy fishing idle game, a few small old brass coins dropped into a cloth pouch, warm muted clinks, tactile and satisfying, no slot machine, no arcade sparkle."
+    },
+    {
+      "id": "upgrade",
+      "path": "economy/upgrade.mp3",
+      "duration_seconds": 1.6,
+      "loop": false,
+      "prompt_influence": 0.62,
+      "prompt": "Upgrade purchased sound for a calm hand-painted fishing idle game, gentle wooden tool improvement, soft metal fitting click, warm satisfying confirmation, faint magical polish shimmer, premium but quiet, no triumphant music."
+    },
+    {
+      "id": "ambience_water_loop",
+      "path": "ambience/ambience_water_loop.mp3",
+      "duration_seconds": 30.0,
+      "loop": true,
+      "prompt_influence": 0.7,
+      "prompt": "Seamless looping ambience for a quiet winter riverside fishing spot, slow cold river water movement, tiny ripples near a bank, faint distant wind through reeds, calm empty morning, natural realistic ambience, no birds in foreground, no music, no people."
+    }
+  ]
+}

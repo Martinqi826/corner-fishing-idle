@@ -1,0 +1,42 @@
+[
+  {
+    "id": "rod_wood",
+    "runtime": "assets/art/equipment/rod_wood.png",
+    "source": "assets/art/equipment/source/rod_wood.png"
+  },
+  {
+    "id": "rod_carbon",
+    "runtime": "assets/art/equipment/rod_carbon.png",
+    "source": "assets/art/equipment/source/rod_carbon.png"
+  },
+  {
+    "id": "hook_basic",
+    "runtime": "assets/art/equipment/hook_basic.png",
+    "source": "assets/art/equipment/source/hook_basic.png"
+  },
+  {
+    "id": "line_spool",
+    "runtime": "assets/art/equipment/line_spool.png",
+    "source": "assets/art/equipment/source/line_spool.png"
+  },
+  {
+    "id": "bait_jar",
+    "runtime": "assets/art/equipment/bait_jar.png",
+    "source": "assets/art/equipment/source/bait_jar.png"
+  },
+  {
+    "id": "tackle_box",
+    "runtime": "assets/art/equipment/tackle_box.png",
+    "source": "assets/art/equipment/source/tackle_box.png"
+  },
+  {
+    "id": "fish_basket",
+    "runtime": "assets/art/equipment/fish_basket.png",
+    "source": "assets/art/equipment/source/fish_basket.png"
+  },
+  {
+    "id": "coin_pouch",
+    "runtime": "assets/art/equipment/coin_pouch.png",
+    "source": "assets/art/equipment/source/coin_pouch.png"
+  }
+]

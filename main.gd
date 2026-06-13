@@ -82,6 +82,7 @@ func _ready() -> void:
 	_update_hud()
 	_begin_wait()
 	_started = true
+	Audio.start_ambience()
 	if _pending_offline != "":
 		_toast(_pending_offline, 4.5, Color(0.55, 0.85, 0.55))
 		_pending_offline = ""
@@ -145,12 +146,15 @@ func _begin_wait() -> void:
 	_state = ST_WAIT
 	var w := rng.randf_range(3.5, 7.0) * maxf(0.4, 1.0 - float(rod_level - 1) * 0.06)
 	_state_t = w
+	Audio.play_sfx("cast")
+	get_tree().create_timer(0.45).timeout.connect(func() -> void: Audio.play_sfx("bobber_splash"))
 
 
 func _begin_bite() -> void:
 	_state = ST_BITE
 	_state_t = 0.9
 	painter.add_ripple(painter.bobber_pos(), 22.0)
+	Audio.play_sfx("bite")
 
 
 ## 更新图鉴纪录（捕获数 +1、最大体重取大）。返回是否打破"既有"纪录：
@@ -190,6 +194,7 @@ func _do_catch() -> void:
 		caught_giant = true
 	var broke_record := _dex_record(c["id"], float(c["w"]))
 	var col: Color = FishData.TIER_COLORS[tier]
+	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2) else "catch_common")
 	_popup("%s %.2fkg" % [fname, c["w"]], painter.bobber_pos() + Vector2(-22, -8), col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
 	if broke_record:
@@ -362,6 +367,7 @@ func _round_button(txt: String) -> Button:
 
 
 func _toggle_panel(kind: String) -> void:
+	Audio.play_ui("ui_click")
 	if _panel_kind == kind:
 		_close_panel()
 	else:
@@ -457,6 +463,8 @@ func _apply_button_skin(b: Button, primary := false) -> void:
 	b.add_theme_stylebox_override("disabled", normal)
 	b.add_theme_color_override("font_color", Color(0.96, 0.91, 0.80) if not primary else Color(0.18, 0.15, 0.10))
 	b.add_theme_color_override("font_disabled_color", Color(0.55, 0.52, 0.46, 0.75))
+	# 统一按钮点击音（带功能音的按钮会在其逻辑里再叠加 coin/upgrade，听感上 click=按下、后者=结果）
+	b.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
 
 
 func _fish_icon(id: String, size := 42) -> TextureRect:
@@ -511,6 +519,7 @@ func _make_card(title: String) -> Control:
 	cb.flat = true
 	cb.focus_mode = Control.FOCUS_NONE
 	cb.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+	cb.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
 	cb.pressed.connect(_close_panel)
 	hb.add_child(cb)
 	v.add_child(hb)
@@ -815,6 +824,7 @@ func _sell_one(idx: int) -> void:
 	var v := _sell_value(c)
 	coins += v
 	lifetime_coins += v
+	Audio.play_sfx("coin")
 	_toast("卖出 %s +%d%s" % [FishData.display_name(c["id"]), v,
 		"（鱼贩×1.5）" if _merchant_active else ""], 1.5, Color(0.85, 0.7, 0.35))
 	_check_achievements()
@@ -838,6 +848,7 @@ func _sell_all() -> void:
 	inventory = keep
 	coins += total
 	lifetime_coins += total
+	Audio.play_sfx("coin")
 	var msg := "卖出 %d 条鱼 +%d 金币%s" % [n, total, "（鱼贩×1.5）" if _merchant_active else ""]
 	if not keep.is_empty():
 		msg += "（%d 条收藏留着）" % keep.size()
@@ -871,10 +882,12 @@ func _try_expand_bag() -> void:
 		return
 	var cost: int = BAG_COSTS[bag_level - 1]
 	if coins < cost:
+		Audio.play_ui("ui_error")
 		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
 		return
 	coins -= cost
 	bag_level += 1
+	Audio.play_sfx("upgrade")
 	_toast("鱼篓扩到 %d 格！" % _bag_capacity(), 2.2, Color(0.5, 0.8, 1.0))
 	_check_achievements()
 	_update_hud()
@@ -987,6 +1000,23 @@ func _fill_upgrades(v: VBoxContainer) -> void:
 		v.add_child(bbtn)
 
 
+## 设置面板用的「标签 + 滑条」一行；value_changed 直连 Audio 的 setter。
+func _audio_slider(v: VBoxContainer, label: String, value: float, setter: Callable) -> void:
+	var lbl := Label.new()
+	lbl.text = label
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
+	v.add_child(lbl)
+	var sl := HSlider.new()
+	sl.min_value = 0.0
+	sl.max_value = 1.0
+	sl.step = 0.05
+	sl.value = value
+	sl.custom_minimum_size = Vector2(220, 18)
+	sl.value_changed.connect(func(x: float) -> void: setter.call(x))
+	v.add_child(sl)
+
+
 func _fill_settings(v: VBoxContainer) -> void:
 	# 高级功能占位（锁定）：自动卖鱼
 	var auto_row := HBoxContainer.new()
@@ -1001,8 +1031,28 @@ func _fill_settings(v: VBoxContainer) -> void:
 	auto_tag.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
 	auto_row.add_child(auto_tag)
 	v.add_child(auto_row)
-	var sep := HSeparator.new()
-	v.add_child(sep)
+	v.add_child(HSeparator.new())
+	# 音频
+	var mute_row := HBoxContainer.new()
+	mute_row.add_theme_constant_override("separation", 8)
+	var mute_lbl := Label.new()
+	mute_lbl.text = "静音"
+	mute_lbl.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
+	mute_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mute_row.add_child(mute_lbl)
+	var mute_btn := CheckButton.new()
+	mute_btn.button_pressed = Audio.muted
+	mute_btn.focus_mode = Control.FOCUS_NONE
+	mute_btn.toggled.connect(func(on: bool) -> void:
+		Audio.set_muted(on)
+		if not on:
+			Audio.start_ambience())
+	mute_row.add_child(mute_btn)
+	v.add_child(mute_row)
+	_audio_slider(v, "主音量", Audio.master_volume, Audio.set_master_volume)
+	_audio_slider(v, "音效", Audio.sfx_volume, Audio.set_sfx_volume)
+	_audio_slider(v, "环境音", Audio.ambience_volume, Audio.set_ambience_volume)
+	v.add_child(HSeparator.new())
 	var ol := Label.new()
 	ol.text = "不透明度"
 	ol.add_theme_color_override("font_color", Color(0.35, 0.35, 0.32))
@@ -1039,10 +1089,12 @@ func _rod_cost() -> int:
 func _try_upgrade_rod() -> void:
 	var cost := _rod_cost()
 	if coins < cost:
+		Audio.play_ui("ui_error")
 		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
 		return
 	coins -= cost
 	rod_level += 1
+	Audio.play_sfx("upgrade")
 	_check_achievements()
 	_update_hud()
 	_toast("鱼竿升到 Lv.%d！" % rod_level, 2.0, Color(0.5, 0.8, 1.0))
@@ -1055,10 +1107,12 @@ func _try_upgrade_bait() -> void:
 	var nxt: Dictionary = FishData.BAITS[bait_level + 1]
 	var cost := int(nxt["cost"])
 	if coins < cost:
+		Audio.play_ui("ui_error")
 		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
 		return
 	coins -= cost
 	bait_level += 1
+	Audio.play_sfx("upgrade")
 	_check_achievements()
 	_update_hud()
 	_toast("换上了%s，星级渔获概率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))

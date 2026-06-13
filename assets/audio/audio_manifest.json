@@ -1,52 +1,62 @@
 {
   "ui_click": {
     "path": "res://assets/audio/ui/ui_click.wav",
-    "duration_seconds": 0.12,
-    "description": "Button click / tab tap."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "A soft wooden button click for a cozy hand-painted fishing idle game UI, gentle tactile tap, light bamboo or carved wood, warm and natural, very short, no electronic beep, no arcade sound."
   },
   "ui_error": {
     "path": "res://assets/audio/ui/ui_error.wav",
-    "duration_seconds": 0.28,
-    "description": "Invalid action or insufficient coins."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "A restrained invalid action sound for a calm cozy fishing game UI, soft dull wooden knock with a tiny muted rattle, polite feedback, not alarming, no buzzer, no synthetic tone."
   },
   "cast": {
     "path": "res://assets/audio/fishing/cast.wav",
-    "duration_seconds": 0.42,
-    "description": "Rod cast and line movement."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Natural fishing rod cast in a quiet winter riverside scene, line whipping softly through cold air, light reel movement, subtle clothing rustle, realistic Foley, calm and delicate, no music."
   },
   "bobber_splash": {
     "path": "res://assets/audio/fishing/bobber_splash.wav",
-    "duration_seconds": 0.52,
-    "description": "Bobber entering water."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Small fishing bobber landing in a cold quiet river, gentle plop and tiny water ripples, crisp winter air, natural close Foley, soft and believable, no exaggerated splash."
   },
   "bite": {
     "path": "res://assets/audio/fishing/bite.wav",
-    "duration_seconds": 0.34,
-    "description": "Fish bite prompt."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "A fish bites the line in a quiet cozy fishing game, small bobber twitch, quick water ripple, subtle fishing line tension, alert but natural, no electronic notification, no melody."
   },
   "catch_common": {
     "path": "res://assets/audio/fishing/catch_common.wav",
-    "duration_seconds": 0.46,
-    "description": "Common catch reward."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Common fish caught reward sound for a cozy fishing idle game, small water lift, soft fish flop, tiny pouch or basket rustle, satisfying but understated, natural Foley with a very light warm sparkle, no arcade jingle."
   },
   "catch_rare": {
     "path": "res://assets/audio/fishing/catch_rare.wav",
-    "duration_seconds": 0.86,
-    "description": "Rare catch reward."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Rare fish caught reward sound for a premium cozy winter fishing game, graceful water lift, soft fish movement, delicate magical shimmer like ice crystals, satisfying discovery moment, elegant and restrained, no loud fanfare, no chiptune."
   },
   "coin": {
     "path": "res://assets/audio/economy/coin.wav",
-    "duration_seconds": 0.22,
-    "description": "Coins gained."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Soft coin reward sound for a cozy fishing idle game, a few small old brass coins dropped into a cloth pouch, warm muted clinks, tactile and satisfying, no slot machine, no arcade sparkle."
   },
   "upgrade": {
     "path": "res://assets/audio/economy/upgrade.wav",
-    "duration_seconds": 0.92,
-    "description": "Upgrade purchased."
+    "duration_seconds": 2.0,
+    "loop": false,
+    "description": "Upgrade purchased sound for a calm hand-painted fishing idle game, gentle wooden tool improvement, soft metal fitting click, warm satisfying confirmation, faint magical polish shimmer, premium but quiet, no triumphant music."
   },
   "ambience_water_loop": {
     "path": "res://assets/audio/ambience/ambience_water_loop.wav",
-    "duration_seconds": 8.0,
-    "description": "Low-volume looping water ambience."
+    "duration_seconds": 30.0,
+    "loop": true,
+    "description": "Seamless looping ambience for a quiet winter riverside fishing spot, slow cold river water movement, tiny ripples near a bank, faint distant wind through reeds, calm empty morning, natural realistic ambience, no birds in foreground, no music, no people."
   }
 }
