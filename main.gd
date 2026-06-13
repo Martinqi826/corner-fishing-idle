@@ -60,6 +60,7 @@ var _panel: Control = null
 var _panel_kind := ""
 var _opacity := 1.0
 var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
+var seen_intro := false          # 是否看过首次引导
 var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
 
 # 存档路径用变量：测试可改用独立文件，避免覆盖真实存档。
@@ -127,7 +128,9 @@ func _ready() -> void:
 	_begin_wait()
 	_started = true
 	Audio.start_ambience()
-	if not _offline_report.is_empty():
+	if not seen_intro and lifetime_catches == 0 and DisplayServer.get_name() != "headless":
+		_open_panel("intro")  # 全新玩家首启引导（无头测试不弹）
+	elif not _offline_report.is_empty():
 		_open_panel("offline")
 	elif _pending_offline != "":
 		_toast(_pending_offline, 4.5, Color(0.55, 0.85, 0.55))
@@ -529,9 +532,9 @@ func _open_panel(kind: String) -> void:
 	if is_instance_valid(_panel):
 		_panel_saved_pos = _panel.position
 	_close_panel()
-	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结"}
+	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结", "intro": "欢迎来到角落垂钓"}
 	var card := _make_card(str(titles.get(kind, "")))
-	if kind != "offline" and _panel_saved_pos != null:
+	if kind != "offline" and kind != "intro" and _panel_saved_pos != null:
 		card.position = _clamp_panel_position(_panel_saved_pos, card.custom_minimum_size)
 	var v: VBoxContainer = card.get_node("M/V")
 	match kind:
@@ -539,6 +542,7 @@ func _open_panel(kind: String) -> void:
 		"rod": _fill_upgrades(v)
 		"set": _fill_settings(v)
 		"offline": _fill_offline_report(v)
+		"intro": _fill_intro(v)
 	ui_root.add_child(card)
 	_panel = card
 	_panel_kind = kind
@@ -1892,6 +1896,38 @@ func _fill_settings(v: VBoxContainer) -> void:
 
 
 ## 离线小结面板：欢迎回来 + 时长/渔获/最值钱一条/合计可卖/稀有清单。
+## 首次引导卡：讲清核心循环，看过即记入存档不再弹。
+func _fill_intro(v: VBoxContainer) -> void:
+	var tips := [
+		"· 浮标会自动钓鱼，钓到的鱼进「鱼篓」。",
+		"· 点右下角 🐟 鱼篓：卖鱼换金币，还能看图鉴 / 订单 / 成就 / 统计。",
+		"· 点 🎣 鱼竿：升级鱼竿(稀有度)、鱼饵(星级)、鱼钩(双钩)。",
+		"· 点 ⚙ 设置：调音量、专注模式、退出。",
+		"· 按住场景空白处，可把窗口拖到屏幕任意角落。",
+		"· 留意金色「收鱼郎」和蓝色「鱼汛」——限时高收益时刻！",
+	]
+	for t in tips:
+		var l := Label.new()
+		l.text = t
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(360, 0)
+		l.add_theme_color_override("font_color", Color(0.34, 0.32, 0.28))
+		v.add_child(l)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 8)
+	v.add_child(gap)
+	var btn := Button.new()
+	btn.text = "开始钓鱼"
+	btn.focus_mode = Control.FOCUS_NONE
+	btn.custom_minimum_size = Vector2(0, 36)
+	_apply_button_skin(btn, true)
+	btn.pressed.connect(func() -> void:
+		seen_intro = true
+		_save()
+		_close_panel())
+	v.add_child(btn)
+
+
 func _fill_offline_report(v: VBoxContainer) -> void:
 	var rep := _offline_report
 	var hi := Label.new()
@@ -2080,6 +2116,7 @@ func _save() -> void:
 		"ach": achievements_done.keys(),
 		"opacity": _opacity,
 		"focus": focus_mode,
+		"seen_intro": seen_intro,
 		"ts": Time.get_unix_time_from_system(),
 	}
 	if DisplayServer.get_name() != "headless":
@@ -2167,6 +2204,7 @@ func _load_save() -> void:
 		}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
+	seen_intro = bool(data.get("seen_intro", true))  # 有存档=老玩家，默认已看过引导
 	if bool(data.get("focus", false)):
 		_set_focus(true)
 	var wp: Variant = data.get("win_pos", null)
