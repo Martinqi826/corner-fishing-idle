@@ -36,6 +36,9 @@ var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占
 var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
 var dex := {}  # id -> {"n": 累计捕获数, "w": 最大体重纪录}（图鉴纪录轴）
+var best_quality := 0      # 历史最高星级（成就用）
+var caught_giant := false  # 是否钓到过「巨物」（成就用）
+var achievements_done := {}  # id -> true，已达成的成就（toast 只触发一次）
 
 # 背包容量与扩容费用（bag_level 1 起步；费用 = 升到下一级）。
 # 调研定标：起始 20 格（Melvor 同款），整档 +5 格，费用走 1-2-5 阶梯（首扩几分钟产出可买）。
@@ -172,6 +175,9 @@ func _do_catch() -> void:
 		+ FishData.display_name(c["id"])
 	inventory.append(c)
 	lifetime_catches += 1
+	best_quality = maxi(best_quality, q)
+	if FishData.size_tag(c["id"], c["w"]) == "巨物·":
+		caught_giant = true
 	var broke_record := _dex_record(c["id"], float(c["w"]))
 	var col: Color = FishData.TIER_COLORS[tier]
 	_popup("%s %.2fkg" % [fname, c["w"]], painter.bobber_pos() + Vector2(-22, -8), col)
@@ -187,6 +193,7 @@ func _do_catch() -> void:
 		_flash()
 	if _bag_full():
 		_toast("鱼篓满了，先去卖鱼或扩容～", 3.0, Color(1.0, 0.75, 0.4))
+	_check_achievements()
 	_update_hud()
 	_refresh_panel()
 	_begin_wait()
@@ -503,20 +510,84 @@ func _set_catch_tab(tab: int) -> void:
 func _fill_bag_panel(v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴"]
-	for i in range(2):
+	var names := ["背包", "图鉴", "成就"]
+	for i in range(3):
 		var tb := Button.new()
 		tb.text = names[i]
-		tb.custom_minimum_size = Vector2(86, 28)
+		tb.custom_minimum_size = Vector2(58, 28)
 		_apply_button_skin(tb, i == _catch_tab)
 		if i != _catch_tab:
 			tb.pressed.connect(_set_catch_tab.bind(i))
 		tabs.add_child(tb)
 	v.add_child(tabs)
-	if _catch_tab == 0:
-		_fill_bag_tab(v)
-	else:
-		_fill_dex_tab(v)
+	match _catch_tab:
+		0: _fill_bag_tab(v)
+		1: _fill_dex_tab(v)
+		_: _fill_ach_tab(v)
+
+
+func _fill_ach_tab(v: VBoxContainer) -> void:
+	var stat := Label.new()
+	stat.text = "已达成 %d/%d" % [achievements_done.size(), AchievementData.LIST.size()]
+	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+	v.add_child(stat)
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(0, 252)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 5)
+	# 已达成的排前面
+	var sorted: Array = AchievementData.LIST.duplicate()
+	sorted.sort_custom(func(a, b):
+		return achievements_done.has(a["id"]) and not achievements_done.has(b["id"]))
+	for a in sorted:
+		list.add_child(_ach_row(a))
+	sc.add_child(list)
+	v.add_child(sc)
+
+
+func _ach_row(a: Dictionary) -> Control:
+	var done: bool = achievements_done.has(a["id"])
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _paper_style(0.88) if done else _dark_row_style(0.42))
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 7 if side in ["left", "right"] else 5)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	margin.add_child(row)
+	var mark := Label.new()
+	mark.text = "✓" if done else "○"
+	mark.custom_minimum_size = Vector2(20, 0)
+	mark.add_theme_color_override("font_color",
+		Color(0.45, 0.72, 0.40) if done else Color(0.5, 0.48, 0.43))
+	row.add_child(mark)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 0)
+	var nm := Label.new()
+	nm.text = str(a["name"])
+	nm.add_theme_font_size_override("font_size", 14)
+	nm.add_theme_color_override("font_color",
+		Color(0.28, 0.27, 0.24) if done else Color(0.74, 0.70, 0.62))
+	info.add_child(nm)
+	var ds := Label.new()
+	ds.text = str(a["desc"])
+	ds.add_theme_font_size_override("font_size", 11)
+	ds.add_theme_color_override("font_color",
+		Color(0.5, 0.47, 0.40) if done else Color(0.55, 0.52, 0.46))
+	info.add_child(ds)
+	row.add_child(info)
+	var rw := int(a.get("reward", 0))
+	if rw > 0:
+		var rwl := Label.new()
+		rwl.text = "+%d" % rw
+		rwl.add_theme_font_size_override("font_size", 12)
+		rwl.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
+		row.add_child(rwl)
+	return panel
 
 
 func _fill_bag_tab(v: VBoxContainer) -> void:
@@ -721,6 +792,7 @@ func _sell_one(idx: int) -> void:
 	coins += int(c["v"])
 	lifetime_coins += int(c["v"])
 	_toast("卖出 %s +%d" % [FishData.display_name(c["id"]), c["v"]], 1.5, Color(0.85, 0.7, 0.35))
+	_check_achievements()
 	_update_hud()
 	_refresh_panel()
 	_save()
@@ -745,6 +817,7 @@ func _sell_all() -> void:
 	if not keep.is_empty():
 		msg += "（%d 条收藏留着）" % keep.size()
 	_toast(msg, 2.2, Color(0.85, 0.7, 0.35))
+	_check_achievements()
 	_update_hud()
 	_refresh_panel()
 	_save()
@@ -760,9 +833,55 @@ func _try_expand_bag() -> void:
 	coins -= cost
 	bag_level += 1
 	_toast("鱼篓扩到 %d 格！" % _bag_capacity(), 2.2, Color(0.5, 0.8, 1.0))
+	_check_achievements()
 	_update_hud()
 	_refresh_panel()
 	_save()
+
+
+# ============================ 成就 ============================
+
+## 判定单条成就是否达成（对照当前状态）。
+func _ach_done(a: Dictionary) -> bool:
+	match str(a["kind"]):
+		"catches": return lifetime_catches >= int(a["n"])
+		"coins": return lifetime_coins >= int(a["n"])
+		"species": return dex.size() >= int(a["n"])
+		"species_all": return dex.size() >= FishData.FISH.size()
+		"tier": return _best_tier_caught() >= int(a["n"])
+		"giant": return caught_giant
+		"quality": return best_quality >= int(a["n"])
+		"bag": return bag_level >= int(a["n"])
+		"rod": return rod_level >= int(a["n"])
+		"bait": return bait_level >= int(a["n"])
+	return false
+
+
+func _best_tier_caught() -> int:
+	var best := -1
+	for id in dex:
+		best = maxi(best, FishData.tier_of(str(id)))
+	return best
+
+
+## 扫描所有未达成成就，新达成的发 toast + 发奖励。
+## silent=true 用于载入老存档时静默补登已满足的成就（不发 toast / 不补发奖励）。
+func _check_achievements(silent := false) -> void:
+	for a in AchievementData.LIST:
+		var id: String = a["id"]
+		if achievements_done.has(id):
+			continue
+		if _ach_done(a):
+			achievements_done[id] = true
+			if silent:
+				continue
+			var reward := int(a.get("reward", 0))
+			if reward > 0:
+				coins += reward
+			var msg := "成就达成：%s" % a["name"]
+			if reward > 0:
+				msg += "（+%d 金币）" % reward
+			_toast(msg, 3.0, Color(0.98, 0.85, 0.45))
 
 
 func _fill_upgrades(v: VBoxContainer) -> void:
@@ -881,6 +1000,7 @@ func _try_upgrade_rod() -> void:
 		return
 	coins -= cost
 	rod_level += 1
+	_check_achievements()
 	_update_hud()
 	_toast("鱼竿升到 Lv.%d！" % rod_level, 2.0, Color(0.5, 0.8, 1.0))
 	_open_panel("rod")
@@ -896,6 +1016,7 @@ func _try_upgrade_bait() -> void:
 		return
 	coins -= cost
 	bait_level += 1
+	_check_achievements()
 	_update_hud()
 	_toast("换上了%s，星级渔获概率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
 	_save()
@@ -918,7 +1039,7 @@ func _save() -> void:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0])
 	var data := {
-		"ver": 4,
+		"ver": 5,
 		"coins": coins,
 		"rod_level": rod_level,
 		"bag_level": bag_level,
@@ -927,6 +1048,9 @@ func _save() -> void:
 		"lt_coins": lifetime_coins,
 		"lt_catches": lifetime_catches,
 		"dex": _dex_to_save(),
+		"best_q": best_quality,
+		"giant": caught_giant,
+		"ach": achievements_done.keys(),
 		"opacity": _opacity,
 		"ts": Time.get_unix_time_from_system(),
 	}
@@ -963,6 +1087,11 @@ func _load_save() -> void:
 				"lock": e.size() >= 5 and int(e[4]) == 1}) # v3 及更早 → 未锁定
 	lifetime_coins = int(data.get("lt_coins", 0))
 	lifetime_catches = int(data.get("lt_catches", 0))
+	best_quality = int(data.get("best_q", 0))
+	caught_giant = bool(data.get("giant", false))
+	achievements_done = {}
+	for id in data.get("ach", []):
+		achievements_done[str(id)] = true
 	dex = {}
 	var dex_raw: Variant = data.get("dex", [])
 	if dex_raw is Dictionary:                # v4：{id: [n, w_max]}
@@ -975,6 +1104,9 @@ func _load_save() -> void:
 				dex[str(id)] = {"n": 1, "w": 0.0}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
+	# 老存档（v4 及更早，无 ach 字段）静默补登已满足的成就，避免回屏刷屏
+	if not (data.get("ach", null) is Array):
+		_check_achievements(true)
 	# 离线渔获：按时长估算上鱼数，逐条入篓直到装满
 	var elapsed: float = Time.get_unix_time_from_system() - float(data.get("ts", 0))
 	elapsed = clampf(elapsed, 0.0, OFFLINE_CAP)

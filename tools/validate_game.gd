@@ -32,6 +32,9 @@ func _run() -> void:
 	print("=== 鱼饵 / 星级品质 ===")
 	_check_quality()
 
+	print("=== 成就系统 ===")
+	await _check_achievements_feature()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -118,11 +121,11 @@ func _check_gameplay() -> void:
 	_assert(game.inventory.is_empty(), "起始背包应为空")
 	_assert(game._bag_capacity() == 20, "初始容量应为 20")
 
-	# 上鱼入包，不产金币
+	# 上鱼入包，不产金币（lifetime_coins 只统计卖鱼；成就奖励单独计 coins 不计此）
 	for i in 5:
 		game._do_catch()
 	_assert(game.inventory.size() == 5, "钓 5 条应入包 5 条，实际 %d" % game.inventory.size())
-	_assert(game.coins == 0, "钓鱼不应直接产金币")
+	_assert(game.lifetime_coins == 0, "钓鱼不应产生卖鱼收入")
 	_assert(game.lifetime_catches == 5, "终身渔获应为 5")
 	_assert(game.dex.size() >= 1, "图鉴应有收录")
 
@@ -166,11 +169,11 @@ func _check_sell_expand() -> void:
 	for c in game.inventory:
 		if not bool(c.get("lock", false)):
 			total += int(c["v"])
-	var coins_before: int = game.coins
 	game._sell_one(0)
-	_assert(game.coins == coins_before and game.inventory.size() == 6, "锁定的鱼不应被单卖")
+	_assert(game.inventory.size() == 6, "锁定的鱼不应被单卖")
 	game._sell_all()
-	_assert(game.coins == total, "全卖应只卖未锁定，金币应为 %d，实际 %d" % [total, game.coins])
+	# 用 lifetime_coins 校验卖鱼收入（不含成就奖励），避免被成就金币干扰
+	_assert(game.lifetime_coins == total, "全卖应只卖未锁定，卖鱼收入应为 %d，实际 %d" % [total, game.lifetime_coins])
 	_assert(game.inventory.size() == 2, "全卖后应留 2 条收藏，实际 %d" % game.inventory.size())
 	_assert(str(game.inventory[0]["id"]) == locked_id, "留下的应是锁定那条")
 	_assert(game.lifetime_coins == total, "累计卖鱼金额应为 %d" % total)
@@ -238,6 +241,69 @@ func _check_quality() -> void:
 		v3 += int(FishData.roll_catch(rng, 1, 3)["v"])
 	_assert(v3 > v0, "高级饵整体产出应更高")
 	print("  均价：蚯蚓 %.1f → 秘制饵 %.1f" % [v0 / 1500.0, v3 / 1500.0])
+
+
+func _check_achievements_feature() -> void:
+	_assert(AchievementData.LIST.size() >= 12, "成就至少 12 项")
+	var ids := {}
+	for a in AchievementData.LIST:
+		_assert(not ids.has(a["id"]), "成就 id 不应重复：%s" % a["id"])
+		ids[a["id"]] = true
+		for k in ["name", "desc", "kind", "n"]:
+			_assert(a.has(k), "成就 %s 缺字段 %s" % [a["id"], k])
+	var game: Node = load("res://main.tscn").instantiate()
+	game.save_enabled = false
+	root.add_child(game)
+	await process_frame
+	_assert(game.achievements_done.is_empty(), "起始无成就")
+	# 钓一条 → first_cast 达成
+	game._do_catch()
+	_assert(game.achievements_done.has("first_cast"), "钓第一条应解锁初次垂钓")
+	# 累计渔获里程碑（直接设计数，避开背包上限）
+	game.lifetime_catches = 60
+	game._check_achievements()
+	_assert(game.achievements_done.has("catch_50"), "渔获 50+ 应解锁")
+	# 鱼竿/鱼饵里程碑
+	game.coins = 999999
+	game.rod_level = 4
+	game._try_upgrade_rod()  # → 5
+	_assert(game.achievements_done.has("rod_5"), "鱼竿 Lv.5 应解锁")
+	game.bait_level = 2
+	game._try_upgrade_bait()  # → 3 秘制饵
+	_assert(game.achievements_done.has("bait_master"), "秘制饵应解锁")
+	# 奖励发放：清掉 species_10 已达成态，凑满 10 种再校验恰好 +500
+	game.achievements_done.erase("species_10")
+	game.dex.clear()
+	for id in FishData.FISH.keys().slice(0, 10):
+		game.dex[id] = {"n": 1, "w": 1.0}
+	var before: int = game.coins
+	game._check_achievements()
+	_assert(game.achievements_done.has("species_10"), "图鉴 10 种应解锁")
+	_assert(game.coins == before + 500, "species_10 应发 500 奖励，实得 %d" % (game.coins - before))
+	game.queue_free()
+	await process_frame
+	# 静默补登：老存档（无 ach 字段）回屏不应触发成就 toast，但应标记已达成
+	var path := ProjectSettings.globalize_path(TEST_SAVE)
+	var old := {
+		"ver": 4, "coins": 0, "rod_level": 6, "bag_level": 5, "bait": 0, "inv": [],
+		"lt_coins": 0, "lt_catches": 400, "dex": {}, "opacity": 1.0,
+		"ts": Time.get_unix_time_from_system() - 5.0,
+	}
+	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f = null
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(g2.achievements_done.has("catch_300") and g2.achievements_done.has("rod_5"),
+		"老存档回屏应静默补登已满足成就")
+	_assert(g2.coins == 0, "静默补登不应补发奖励（金币应仍为 0）")
+	print("  成就：解锁/奖励/老存档静默补登 通过（共 %d 项）" % AchievementData.LIST.size())
+	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
 
 
 func _check_save_v2() -> void:
