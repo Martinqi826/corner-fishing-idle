@@ -247,18 +247,29 @@ func _refresh_panel() -> void:
 		_open_panel(kind)
 
 
+# 把工程化的高饱和色调柔化为水彩气质：降饱和 + 提亮 + 轻混奶油色。
+# 飘字/toast 统一过这道滤镜，整体色调与柔和场景一致。
+func _soft(c: Color) -> Color:
+	var s: float = c.s * 0.62
+	var val: float = clampf(c.v * 0.95 + 0.08, 0.0, 1.0)
+	var out := Color.from_hsv(c.h, s, val, 1.0)
+	return out.lerp(Color(0.96, 0.92, 0.83), 0.14)
+
+
 func _popup(text: String, pos: Vector2, color: Color) -> void:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
-	l.add_theme_constant_override("outline_size", 3)
+	l.add_theme_color_override("font_color", _soft(color))
+	# 柔和的暖墨描边代替生硬纯黑，保证场景上可读又不突兀
+	l.add_theme_color_override("font_outline_color", Color(0.16, 0.13, 0.10, 0.42))
+	l.add_theme_constant_override("outline_size", 4)
 	l.position = pos
 	l.z_index = 20
 	ui_root.add_child(l)
 	var tw := create_tween()
-	tw.tween_property(l, "position:y", pos.y - 28.0, 0.9)
-	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.9).set_delay(0.25)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(l, "position:y", pos.y - 30.0, 1.0)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 1.0).set_delay(0.3)
 	tw.tween_callback(l.queue_free)
 
 
@@ -266,7 +277,9 @@ func _toast(text: String, duration: float, color := Color.WHITE) -> void:
 	_msg_id += 1
 	var id := _msg_id
 	toast_label.text = text
-	toast_label.add_theme_color_override("font_color", color)
+	toast_label.add_theme_color_override("font_color", _soft(color))
+	toast_label.add_theme_color_override("font_outline_color", Color(0.16, 0.13, 0.10, 0.40))
+	toast_label.add_theme_constant_override("outline_size", 4)
 	toast_label.modulate.a = 1.0
 	toast_label.visible = true
 	await get_tree().create_timer(duration).timeout
