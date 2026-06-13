@@ -149,11 +149,34 @@ func _setup_window() -> void:
 	w.borderless = true
 	w.always_on_top = true
 	await get_tree().process_frame
-	if _saved_win_pos != null:
-		DisplayServer.window_set_position(_saved_win_pos)
+	if _saved_win_pos != null and _pos_on_screen(_saved_win_pos):
+		DisplayServer.window_set_position(_clamp_win_to_screen(_saved_win_pos))
 	else:
-		_place_corner()
+		_place_corner()  # 无存档位置 / 存档位置离屏(换了显示器等) → 回到右下角
 	_update_passthrough()
+
+
+# 探针取可见场景内一点（窗口右下角附近），判断挂件是否落在某块屏幕可见区内。
+func _pos_on_screen(pos: Vector2i) -> bool:
+	var ws := DisplayServer.window_get_size()
+	var probe := pos + Vector2i(int(ws.x) - 40, int(ws.y) - 40)
+	for i in DisplayServer.get_screen_count():
+		if DisplayServer.screen_get_usable_rect(i).has_point(probe):
+			return true
+	return false
+
+
+# 把窗口位置钳到所在屏可见区：透明左/上边可溢出，但保证右下角可见场景不被切到屏外。
+func _clamp_win_to_screen(pos: Vector2i) -> Vector2i:
+	var ws := DisplayServer.window_get_size()
+	var probe := pos + Vector2i(int(ws.x) - 40, int(ws.y) - 40)
+	for i in DisplayServer.get_screen_count():
+		var r := DisplayServer.screen_get_usable_rect(i)
+		if r.has_point(probe):
+			return Vector2i(
+				clampi(pos.x, r.position.x - int(SCENE_OFF.x), r.position.x + r.size.x - ws.x),
+				clampi(pos.y, r.position.y - int(SCENE_OFF.y), r.position.y + r.size.y - ws.y))
+	return pos
 
 
 func _place_corner() -> void:
