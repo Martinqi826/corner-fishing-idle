@@ -73,8 +73,24 @@ func _run() -> void:
 		print("  %s 花费 %d ｜ %.1f 金/分（比蚯蚓 +%.1f）｜回本 %.1f 分" % [
 			str(b["name"]), int(b["cost"]), gain, delta, payback])
 
+	print("=== 鱼钩回本（rod=5 秘制饵基准）===")
+	var hbase := _base_ev(5) * _quality_mult(3) * 60.0 / _avg_interval(5)
+	for hk in range(FishData.HOOKS.size()):
+		var h: Dictionary = FishData.HOOKS[hk]
+		var gain := hbase * (1.0 + float(h["double"]))
+		var delta := gain - hbase
+		var payback := float(int(h["cost"])) / maxf(delta, 0.01) if hk > 0 else 0.0
+		print("  %s 花费 %d ｜双钩 %d%% ｜ %.0f 金/分（+%.0f）｜回本 %.1f 分" % [
+			str(h["name"]), int(h["cost"]), int(float(h["double"]) * 100.0), gain, delta, payback])
+
 	print("=== 背包扩容 vs 离线 8h 产出（rod=3 蚯蚓）===")
 	var off8 := _base_ev(3) * _quality_mult(0) * (8.0 * 3600.0 / _avg_interval(3)) * 0.5
 	print("  离线 8h 估值上限 ≈ %d 金币（实际受背包格数截断）" % int(off8))
 	print("  背包容量/扩容费：20→25(100) 25→30(250) ... 50→55(25000)")
+
+	print("=== 全装满 vs 全裸 产出对比 ===")
+	var bare := _base_ev(1) * _quality_mult(0) * 60.0 / _avg_interval(1)
+	var maxed := _base_ev(10) * _quality_mult(3) * (1.0 + float(FishData.HOOKS[FishData.HOOKS.size() - 1]["double"])) * 60.0 / _avg_interval(10)
+	print("  全裸(rod1/蚯蚓/基础钩) %.0f 金/分 → 全满(rod10/秘制/双叉) %.0f 金/分（×%.1f）" % [
+		bare, maxed, maxed / bare])
 	quit()
