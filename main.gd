@@ -102,6 +102,7 @@ var daily_order := {}  # {"date": yyyy-mm-dd, "fish": id, "need": int, "done": b
 
 # —— 周目标：滚动 7 天大挑战（累计渔获或卖鱼达标领大奖），日常之上的长期层 ——
 var weekly := {}  # {week:int, kind:"catches"/"coins", target, base, reward, done}
+var day_stat := {}  # {date, catches, coins} 当日起点快照，用于"今日渔获/收入"
 
 
 func _ready() -> void:
@@ -346,6 +347,7 @@ func _setup_theme() -> void:
 
 
 func _update_hud() -> void:
+	_ensure_day_stat()  # 跨天即时重置当日统计
 	var bag := "鱼篓 %d/%d" % [inventory.size(), _bag_capacity()]
 	if _bag_full():
 		bag += "（满）"
@@ -780,6 +782,8 @@ func _fill_stats_tab(v: VBoxContainer) -> void:
 	var q := best_quality
 	var q_txt: String = (str(FishData.QUALITY_NAMES[clampi(q, 0, 3)]) + "★".repeat(q)) if q > 0 else "普通"
 	var rows := [
+		["今日渔获", "%d 条" % _today_catches()],
+		["今日卖鱼收入", "%d 金币" % _today_income()],
 		["终身渔获", "%d 条" % lifetime_catches],
 		["终身卖鱼收入", "%d 金币" % lifetime_coins],
 		["当前金币", "%d" % coins],
@@ -893,6 +897,23 @@ func _ach_row(a: Dictionary) -> Control:
 func _today_key() -> String:
 	var d := Time.get_date_dict_from_system()
 	return "%04d-%02d-%02d" % [int(d["year"]), int(d["month"]), int(d["day"])]
+
+
+## 维护当日起点快照（跨天自动重置）。用于统计页"今日渔获/收入"。
+func _ensure_day_stat() -> void:
+	var today := _today_key()
+	if str(day_stat.get("date", "")) != today:
+		day_stat = {"date": today, "catches": lifetime_catches, "coins": lifetime_coins}
+
+
+func _today_catches() -> int:
+	_ensure_day_stat()
+	return maxi(0, lifetime_catches - int(day_stat.get("catches", 0)))
+
+
+func _today_income() -> int:
+	_ensure_day_stat()
+	return maxi(0, lifetime_coins - int(day_stat.get("coins", 0)))
 
 
 func _ensure_daily_order() -> void:
@@ -2134,6 +2155,7 @@ func _save() -> void:
 		"dex": _dex_to_save(),
 		"daily_order": daily_order,
 		"weekly": weekly,
+		"day_stat": day_stat,
 		"best_q": best_quality,
 		"giant": caught_giant,
 		"ach": achievements_done.keys(),
@@ -2247,6 +2269,13 @@ func _load_save() -> void:
 			"base": int(wk_raw.get("base", 0)),
 			"reward": int(wk_raw.get("reward", 0)),
 			"done": bool(wk_raw.get("done", false)),
+		}
+	var ds_raw: Variant = data.get("day_stat", {})  # 旧档无 → _ensure_day_stat 现生成
+	if ds_raw is Dictionary and ds_raw.has("date"):
+		day_stat = {
+			"date": str(ds_raw.get("date", "")),
+			"catches": int(ds_raw.get("catches", 0)),
+			"coins": int(ds_raw.get("coins", 0)),
 		}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)

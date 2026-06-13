@@ -50,6 +50,9 @@ func _run() -> void:
 	print("=== 周目标 ===")
 	await _check_weekly()
 
+	print("=== 今日统计 ===")
+	await _check_day_stat()
+
 	print("=== 每日订单 ===")
 	await _check_daily_order()
 
@@ -220,6 +223,28 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_day_stat() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.lifetime_catches = 10
+	g.lifetime_coins = 200
+	g.day_stat = {"date": g._today_key(), "catches": 10, "coins": 200}
+	_assert(g._today_catches() == 0 and g._today_income() == 0, "当日起点应为 0")
+	g.lifetime_catches = 35
+	g.lifetime_coins = 950
+	_assert(g._today_catches() == 25, "今日渔获应为 25，实际 %d" % g._today_catches())
+	_assert(g._today_income() == 750, "今日收入应为 750，实际 %d" % g._today_income())
+	# 跨天重置：把快照日期改成旧日期，访问应重新以当前为起点
+	g.day_stat["date"] = "2000-01-01"
+	_assert(g._today_catches() == 0 and g._today_income() == 0, "跨天应重置今日统计为 0")
+	_assert(str(g.day_stat["date"]) == g._today_key(), "跨天应刷新快照日期")
+	print("  今日统计：增量/跨天重置 通过")
+	g.queue_free()
 	await process_frame
 
 
