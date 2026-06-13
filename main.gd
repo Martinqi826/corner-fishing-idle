@@ -7,7 +7,13 @@ extends Node2D
 @onready var coins_label: Label = $HUD/Root/Coins
 @onready var toast_label: Label = $HUD/Root/Toast
 
-# 可交互区：右下角可见场景 + 按钮；其余透明区点击穿透到桌面。
+# 窗口比美术画布(520x400)更大，多出的空间透明、留给弹出面板自由展开；
+# 场景靠 SCENE_OFF 偏移钉在窗口右下角（视觉上仍是角落小挂件）。
+const WIN := Vector2i(760, 560)
+const ART := Vector2(520, 400)
+const SCENE_OFF := Vector2(240, 160)  # = WIN - ART，场景绘制/按钮/落水点统一加此偏移
+
+# 可交互区（美术画布坐标，绘制时加 SCENE_OFF）：右下角可见场景 + 按钮；其余透明区穿透。
 const INTERACT_RECT := Rect2(160, 148, 360, 252)
 
 # —— UI 布局契约 ——
@@ -60,6 +66,14 @@ const OFFLINE_EFFICIENCY := 0.5       # 离线效率 50%
 var _save_t := 10.0
 var _pending_offline := ""
 
+# —— 窗口拖动（默认右下角，可拖到任意位置）——
+var _dragging := false
+var _drag_grab := Vector2i.ZERO
+var _saved_win_pos = null   # Variant：Vector2i 或 null（无存档位置则用右下角默认）
+var _panel_dragging := false
+var _panel_drag_offset := Vector2.ZERO
+var _panel_saved_pos = null  # Variant：Vector2 或 null，记住弹出面板被拖到的位置
+
 # —— 流动鱼贩（动森 CJ 模式）：随机出现的限时收购，卖价 ×1.5 ——
 const MERCHANT_MULT := 1.5
 const MERCHANT_DUR := Vector2(60.0, 90.0)        # 停留时长区间(秒)
@@ -68,15 +82,26 @@ const MERCHANT_FIRST := Vector2(180.0, 360.0)    # 首次出现(秒)，让玩家
 var _merchant_active := false
 var _merchant_t := 0.0                            # 当前阶段剩余秒数
 
+# —— 每日订单：每天 1 单，交付指定鱼种，按原价 ×2.5 结算 ——
+const DAILY_ORDER_MULT := 2.5
+var daily_order := {}  # {"date": yyyy-mm-dd, "fish": id, "need": int, "done": bool}
+
 
 func _ready() -> void:
 	rng.randomize()
 	Engine.max_fps = 30  # 挂件省电
 	get_tree().set_auto_accept_quit(false)  # 退出前存档
 	_setup_theme()
+	painter.position = SCENE_OFF
+	if painter.material is ShaderMaterial:
+		(painter.material as ShaderMaterial).set_shader_parameter("center", Vector2(478, 388) + SCENE_OFF)
+	coins_label.position = SCENE_OFF + Vector2(22, 96)
+	toast_label.position = SCENE_OFF + Vector2(40, 112)
+	toast_label.size = Vector2(440, 28)
 	_setup_window()
 	_load_ui_layout()
 	_load_save()
+	_ensure_daily_order()
 	_build_buttons()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
 	_update_hud()
@@ -100,7 +125,10 @@ func _setup_window() -> void:
 	w.borderless = true
 	w.always_on_top = true
 	await get_tree().process_frame
-	_place_corner()
+	if _saved_win_pos != null:
+		DisplayServer.window_set_position(_saved_win_pos)
+	else:
+		_place_corner()
 	_update_passthrough()
 
 
@@ -111,12 +139,28 @@ func _place_corner() -> void:
 	DisplayServer.window_set_position(Vector2i(
 		usable.position.x + usable.size.x - ws.x,
 		usable.position.y + usable.size.y - ws.y))
+	_saved_win_pos = null
 
 
 func _update_passthrough() -> void:
-	var r := INTERACT_RECT
+	var r := Rect2(INTERACT_RECT.position + SCENE_OFF, INTERACT_RECT.size)
 	DisplayServer.window_set_mouse_passthrough(PackedVector2Array([
 		r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]))
+
+
+# 拖动窗口：在场景空白处按住左键拖拽（按钮/面板会先消费事件，不会误触发）。
+func _unhandled_input(event: InputEvent) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_dragging = true
+			_drag_grab = DisplayServer.mouse_get_position() - DisplayServer.window_get_position()
+		elif _dragging:
+			_dragging = false
+			_save()
+	elif event is InputEventMouseMotion and _dragging:
+		DisplayServer.window_set_position(DisplayServer.mouse_get_position() - _drag_grab)
 
 
 # ============================ 钓鱼循环 ============================
@@ -195,7 +239,7 @@ func _do_catch() -> void:
 	var broke_record := _dex_record(c["id"], float(c["w"]))
 	var col: Color = FishData.TIER_COLORS[tier]
 	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2) else "catch_common")
-	_popup("%s %.2fkg" % [fname, c["w"]], painter.bobber_pos() + Vector2(-22, -8), col)
+	_popup("%s %.2fkg" % [fname, c["w"]], painter.position + painter.bobber_pos() + Vector2(-22, -8), col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
 	if broke_record:
 		_toast("破纪录！%s %.2fkg，刷新个人最大" % [FishData.display_name(c["id"]), c["w"]],
@@ -204,6 +248,11 @@ func _do_catch() -> void:
 		_toast("%s钓到 %s（%.2fkg，%d 金币）" % [
 			(FishData.TIER_NAMES[tier] + "！") if tier >= 3 else "",
 			fname, c["w"], c["v"]], 2.4, col)
+	elif _is_daily_order_target(str(c["id"])):
+		var need := int(daily_order.get("need", 1))
+		var have := mini(_daily_order_indices().size(), need)
+		_toast("订单鱼入篓：%s %d/%d" % [FishData.display_name(c["id"]), have, need],
+			2.0, Color(0.96, 0.78, 0.38))
 	if tier >= 4 or q >= 3:
 		_flash()
 	if _bag_full():
@@ -337,7 +386,7 @@ func _build_hit_areas() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(30, 32)
 		b.size = Vector2(30, 32)
-		b.position = (btn_centers[k] as Vector2) - Vector2(15, 16)
+		b.position = (btn_centers[k] as Vector2) + SCENE_OFF - Vector2(15, 16)
 		b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 		b.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 		var hov := StyleBoxFlat.new()
@@ -354,7 +403,7 @@ func _build_round_buttons() -> void:
 	var x := 404.0
 	for d in defs:
 		var b := _round_button(d[0])
-		b.position = Vector2(x, 362)
+		b.position = Vector2(x, 362) + SCENE_OFF
 		b.pressed.connect(_toggle_panel.bind(d[1]))
 		ui_root.add_child(b)
 		x += 38.0
@@ -391,9 +440,13 @@ var _catch_tab := 0  # 0=鱼篓 1=图鉴
 
 
 func _open_panel(kind: String) -> void:
+	if is_instance_valid(_panel):
+		_panel_saved_pos = _panel.position
 	_close_panel()
 	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置"}
 	var card := _make_card(str(titles.get(kind, "")))
+	if _panel_saved_pos != null:
+		card.position = _clamp_panel_position(_panel_saved_pos, card.custom_minimum_size)
 	var v: VBoxContainer = card.get_node("M/V")
 	match kind:
 		"catch": _fill_bag_panel(v)
@@ -407,9 +460,11 @@ func _open_panel(kind: String) -> void:
 
 func _close_panel() -> void:
 	if is_instance_valid(_panel):
+		_panel_saved_pos = _panel.position
 		_panel.queue_free()
 	_panel = null
 	_panel_kind = ""
+	_panel_dragging = false
 	_set_interactive_full(false)
 
 
@@ -503,8 +558,10 @@ func _ui_tier_color(tier: int, on_paper := false) -> Color:
 func _make_card(title: String) -> Control:
 	var p := PanelContainer.new()
 	p.z_index = 50
-	p.position = Vector2(218, 42)
-	p.custom_minimum_size = Vector2(278, 332)
+	# 居中在更大的窗口里，面板更宽更高、不再受角落小窗约束
+	var card := Vector2(520, 476)
+	p.position = ((Vector2(WIN) - card) * 0.5).round()
+	p.custom_minimum_size = card
 	p.add_theme_stylebox_override("panel", _panel_bg_style())
 	var m := MarginContainer.new()
 	m.name = "M"
@@ -518,25 +575,54 @@ func _make_card(title: String) -> Control:
 	v.add_theme_constant_override("separation", 10)
 	m.add_child(v)
 	var hb := HBoxContainer.new()
+	hb.mouse_filter = Control.MOUSE_FILTER_STOP
+	hb.custom_minimum_size = Vector2(0, 26)
 	hb.add_theme_constant_override("separation", 8)
+	hb.gui_input.connect(_panel_drag_input.bind(p))
 	var tl := Label.new()
 	tl.text = title
 	tl.add_theme_font_size_override("font_size", 20)
 	tl.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
+	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hb.add_child(tl)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hb.add_child(sp)
 	var cb := Button.new()
-	cb.text = "?"
+	cb.text = "×"
 	cb.flat = true
 	cb.focus_mode = Control.FOCUS_NONE
+	cb.tooltip_text = "关闭"
+	cb.custom_minimum_size = Vector2(28, 26)
+	cb.add_theme_font_size_override("font_size", 18)
 	cb.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	cb.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
 	cb.pressed.connect(_close_panel)
 	hb.add_child(cb)
 	v.add_child(hb)
 	return p
+
+
+func _clamp_panel_position(pos: Vector2, size: Vector2) -> Vector2:
+	var max_pos := Vector2(WIN) - size
+	return Vector2(clampf(pos.x, 0.0, maxf(0.0, max_pos.x)),
+		clampf(pos.y, 0.0, maxf(0.0, max_pos.y)))
+
+
+func _panel_drag_input(event: InputEvent, panel: Control) -> void:
+	if not is_instance_valid(panel):
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			_panel_dragging = true
+			_panel_drag_offset = panel.get_global_mouse_position() - panel.position
+		else:
+			_panel_dragging = false
+			_panel_saved_pos = panel.position
+	elif event is InputEventMouseMotion and _panel_dragging:
+		panel.position = _clamp_panel_position(panel.get_global_mouse_position() - _panel_drag_offset,
+			panel.custom_minimum_size)
 
 
 func _set_catch_tab(tab: int) -> void:
@@ -547,8 +633,8 @@ func _set_catch_tab(tab: int) -> void:
 func _fill_bag_panel(v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴", "成就"]
-	for i in range(3):
+	var names := ["背包", "图鉴", "订单", "成就"]
+	for i in range(names.size()):
 		var tb := Button.new()
 		tb.text = names[i]
 		tb.custom_minimum_size = Vector2(58, 28)
@@ -560,6 +646,7 @@ func _fill_bag_panel(v: VBoxContainer) -> void:
 	match _catch_tab:
 		0: _fill_bag_tab(v)
 		1: _fill_dex_tab(v)
+		2: _fill_order_tab(v)
 		_: _fill_ach_tab(v)
 
 
@@ -569,7 +656,7 @@ func _fill_ach_tab(v: VBoxContainer) -> void:
 	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	v.add_child(stat)
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(0, 252)
+	sc.custom_minimum_size = Vector2(0, 330)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -625,6 +712,179 @@ func _ach_row(a: Dictionary) -> Control:
 		rwl.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
 		row.add_child(rwl)
 	return panel
+
+
+# ============================ 每日订单 ============================
+
+func _today_key() -> String:
+	var d := Time.get_date_dict_from_system()
+	return "%04d-%02d-%02d" % [int(d["year"]), int(d["month"]), int(d["day"])]
+
+
+func _ensure_daily_order() -> void:
+	var today := _today_key()
+	if daily_order.has("date") and str(daily_order.get("date", "")) == today \
+			and FishData.FISH.has(str(daily_order.get("fish", ""))) \
+			and int(daily_order.get("need", 0)) > 0:
+		return
+	daily_order = _make_daily_order(today)
+
+
+func _make_daily_order(date_key: String) -> Dictionary:
+	var local := RandomNumberGenerator.new()
+	local.seed = int(abs(("%s:%d" % [date_key, rod_level]).hash()))
+	var max_tier := clampi(1 + int(float(rod_level - 1) / 3.0), 1, 3)
+	var candidates: Array = []
+	var ids := FishData.FISH.keys()
+	ids.sort()
+	for id in ids:
+		if FishData.tier_of(str(id)) <= max_tier:
+			candidates.append(str(id))
+	if candidates.is_empty():
+		candidates = FishData.FISH.keys()
+	var fish_id: String = candidates[local.randi() % candidates.size()]
+	var tier := FishData.tier_of(fish_id)
+	var need := 1
+	match tier:
+		0:
+			need = local.randi_range(3, 5)
+		1:
+			need = local.randi_range(2, 3)
+		2:
+			need = local.randi_range(1, 2)
+		_:
+			need = 1
+	return {"date": date_key, "fish": fish_id, "need": need, "done": false}
+
+
+func _is_daily_order_target(id: String) -> bool:
+	_ensure_daily_order()
+	return not bool(daily_order.get("done", false)) and id == str(daily_order.get("fish", ""))
+
+
+func _daily_order_indices() -> Array:
+	_ensure_daily_order()
+	var out: Array = []
+	var target := str(daily_order.get("fish", ""))
+	for i in inventory.size():
+		var c: Dictionary = inventory[i]
+		if str(c.get("id", "")) == target and not bool(c.get("lock", false)):
+			out.append(i)
+	out.sort_custom(func(a, b):
+		return int(inventory[int(a)]["v"]) > int(inventory[int(b)]["v"]))
+	return out
+
+
+func _daily_order_reward(indices: Array) -> int:
+	var need := int(daily_order.get("need", 0))
+	var total := 0
+	for i in mini(need, indices.size()):
+		total += int(inventory[int(indices[i])]["v"])
+	return int(ceil(float(total) * DAILY_ORDER_MULT))
+
+
+func _fill_order_tab(v: VBoxContainer) -> void:
+	_ensure_daily_order()
+	var target := str(daily_order.get("fish", ""))
+	if not FishData.FISH.has(target):
+		var bad := Label.new()
+		bad.text = "今日订单生成失败。"
+		bad.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+		v.add_child(bad)
+		return
+	var done := bool(daily_order.get("done", false))
+	var need := int(daily_order.get("need", 1))
+	var indices := _daily_order_indices()
+	var have := indices.size()
+	var reward := _daily_order_reward(indices)
+	var tier := FishData.tier_of(target)
+
+	var stat := Label.new()
+	stat.text = "每日订单 · %s" % str(daily_order.get("date", ""))
+	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+	v.add_child(stat)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, 150)
+	panel.add_theme_stylebox_override("panel", _paper_style(0.90) if not done else _dark_row_style(0.44))
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 10 if side in ["left", "right"] else 9)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	margin.add_child(row)
+	row.add_child(_fish_icon(target, 64))
+
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 3)
+	var title := Label.new()
+	title.text = "收 %d 条 %s" % [need, FishData.display_name(target)]
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color",
+		Color(0.28, 0.25, 0.20) if not done else Color(0.74, 0.70, 0.62))
+	info.add_child(title)
+	var desc := Label.new()
+	desc.text = "%s订单 · 交付未上锁渔获，按鱼价 ×%.1f 结算" % [
+		FishData.TIER_NAMES[tier], DAILY_ORDER_MULT]
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size = Vector2(220, 0)
+	desc.add_theme_font_size_override("font_size", 12)
+	desc.add_theme_color_override("font_color",
+		Color(0.46, 0.42, 0.34) if not done else Color(0.64, 0.60, 0.54))
+	info.add_child(desc)
+	var progress := Label.new()
+	if done:
+		progress.text = "今日已完成"
+	else:
+		progress.text = "可交付 %d/%d%s" % [have, need, " · 预计 +%d 金币" % reward if have >= need else ""]
+	progress.add_theme_color_override("font_color",
+		Color(0.84, 0.58, 0.18) if have >= need and not done else Color(0.56, 0.51, 0.42))
+	info.add_child(progress)
+	row.add_child(info)
+
+	var btn := Button.new()
+	btn.text = "已完成" if done else "交付"
+	btn.custom_minimum_size = Vector2(64, 34)
+	btn.disabled = done or have < need
+	_apply_button_skin(btn, have >= need and not done)
+	btn.pressed.connect(_try_complete_daily_order)
+	row.add_child(btn)
+	v.add_child(panel)
+
+	var hint := Label.new()
+	hint.text = "锁定的目标鱼会留在鱼篓里，不会被订单交付。"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.70, 0.66, 0.58))
+	v.add_child(hint)
+
+
+func _try_complete_daily_order() -> void:
+	_ensure_daily_order()
+	if bool(daily_order.get("done", false)):
+		_toast("今日订单已经完成", 1.6, Color(0.76, 0.72, 0.64))
+		return
+	var need := int(daily_order.get("need", 0))
+	var indices := _daily_order_indices()
+	if indices.size() < need:
+		_toast("目标鱼还不够", 1.6, Color(1.0, 0.5, 0.4))
+		return
+	var reward := _daily_order_reward(indices)
+	var chosen := indices.slice(0, need)
+	chosen.sort_custom(func(a, b): return int(a) > int(b))
+	for idx in chosen:
+		inventory.remove_at(int(idx))
+	coins += reward
+	lifetime_coins += reward
+	daily_order["done"] = true
+	Audio.play_sfx("coin")
+	_toast("每日订单完成：+%d 金币" % reward, 2.6, Color(0.98, 0.82, 0.40))
+	_check_achievements()
+	_update_hud()
+	_refresh_panel()
+	_save()
 
 
 func _fill_bag_tab(v: VBoxContainer) -> void:
@@ -683,38 +943,36 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 		v.add_child(empty_panel)
 		return
 
-	var featured: Dictionary = inventory[inventory.size() - 1]
-	v.add_child(_fish_entry(featured, inventory.size() - 1, true))
-
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(0, 148)
+	sc.custom_minimum_size = Vector2(0, 336)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	list.add_theme_constant_override("separation", 5)
-	for i in inventory.size():
-		if i == inventory.size() - 1:
-			continue
-		list.add_child(_fish_entry(inventory[i], i, false))
-	sc.add_child(list)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_theme_constant_override("h_separation", 7)
+	grid.add_theme_constant_override("v_separation", 7)
+	for n in inventory.size():
+		var i := inventory.size() - 1 - n
+		grid.add_child(_fish_entry(inventory[i], i, false, true))
+	sc.add_child(grid)
 	v.add_child(sc)
 
 
-func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
+func _fish_entry(c: Dictionary, idx: int, featured := false, compact := false) -> Control:
 	var tier := FishData.tier_of(c["id"])
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(0, 76 if featured else 52)
+	panel.custom_minimum_size = Vector2(232 if compact else 0, 58 if compact else (76 if featured else 52))
 	panel.add_theme_stylebox_override("panel", _paper_style(0.92) if featured else _dark_row_style(0.48))
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8 if featured else 6)
-	margin.add_theme_constant_override("margin_top", 6 if featured else 3)
-	margin.add_theme_constant_override("margin_right", 8 if featured else 5)
-	margin.add_theme_constant_override("margin_bottom", 6 if featured else 3)
+	margin.add_theme_constant_override("margin_left", 7 if compact else (8 if featured else 6))
+	margin.add_theme_constant_override("margin_top", 5 if compact else (6 if featured else 3))
+	margin.add_theme_constant_override("margin_right", 6 if compact else (8 if featured else 5))
+	margin.add_theme_constant_override("margin_bottom", 5 if compact else (6 if featured else 3))
 	panel.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 7)
+	row.add_theme_constant_override("separation", 5 if compact else 7)
 	margin.add_child(row)
-	row.add_child(_fish_icon(str(c["id"]), 58 if featured else 38))
+	row.add_child(_fish_icon(str(c["id"]), 34 if compact else (58 if featured else 38)))
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 0)
@@ -722,12 +980,13 @@ func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
 	nm.text = "%s %s%s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(c["id"], c["w"]),
 		FishData.display_name(c["id"]), "★".repeat(int(c.get("q", 0)))]
 	nm.clip_text = true
-	nm.add_theme_font_size_override("font_size", 15 if featured else 13)
+	nm.add_theme_font_size_override("font_size", 12 if compact else (15 if featured else 13))
 	nm.add_theme_color_override("font_color", _ui_tier_color(tier, featured) if featured else _ui_tier_color(tier, false))
 	info.add_child(nm)
 	var meta := Label.new()
-	meta.text = "%.2fkg    %d 金币" % [c["w"], c["v"]]
-	meta.add_theme_font_size_override("font_size", 13 if featured else 12)
+	meta.text = "%.2fkg  %d 金币" % [c["w"], c["v"]]
+	meta.clip_text = true
+	meta.add_theme_font_size_override("font_size", 11 if compact else (13 if featured else 12))
 	meta.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42) if featured else Color(0.78, 0.68, 0.45))
 	info.add_child(meta)
 	row.add_child(info)
@@ -735,7 +994,7 @@ func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
 	var lk := Button.new()
 	lk.text = "解" if locked else "锁"
 	lk.tooltip_text = "解除收藏锁" if locked else "上锁收藏（不会被卖出）"
-	lk.custom_minimum_size = Vector2(30, 32 if featured else 30)
+	lk.custom_minimum_size = Vector2(28, 32 if featured else 30)
 	lk.focus_mode = Control.FOCUS_NONE
 	_apply_button_skin(lk, false)
 	if locked:
@@ -745,7 +1004,7 @@ func _fish_entry(c: Dictionary, idx: int, featured := false) -> Control:
 	var sell := Button.new()
 	sell.text = "藏" if locked else "卖"
 	sell.disabled = locked
-	sell.custom_minimum_size = Vector2(38 if featured else 30, 32 if featured else 30)
+	sell.custom_minimum_size = Vector2(34 if featured else 28, 32 if featured else 30)
 	_apply_button_skin(sell, featured)
 	sell.pressed.connect(_sell_one.bind(idx))
 	row.add_child(sell)
@@ -758,10 +1017,10 @@ func _fill_dex_tab(v: VBoxContainer) -> void:
 	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	v.add_child(stat)
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(0, 252)
+	sc.custom_minimum_size = Vector2(0, 330)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	var ids := FishData.FISH.keys()
@@ -1144,12 +1403,13 @@ func _set_opacity(val: float) -> void:
 func _save() -> void:
 	if not save_enabled:
 		return
+	_ensure_daily_order()
 	var inv: Array = []
 	for c in inventory:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0])
 	var data := {
-		"ver": 5,
+		"ver": 6,
 		"coins": coins,
 		"rod_level": rod_level,
 		"bag_level": bag_level,
@@ -1158,12 +1418,16 @@ func _save() -> void:
 		"lt_coins": lifetime_coins,
 		"lt_catches": lifetime_catches,
 		"dex": _dex_to_save(),
+		"daily_order": daily_order,
 		"best_q": best_quality,
 		"giant": caught_giant,
 		"ach": achievements_done.keys(),
 		"opacity": _opacity,
 		"ts": Time.get_unix_time_from_system(),
 	}
+	if DisplayServer.get_name() != "headless":
+		var wp := DisplayServer.window_get_position()
+		data["win_pos"] = [wp.x, wp.y]
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(data))
@@ -1212,8 +1476,23 @@ func _load_save() -> void:
 		for id in dex_raw:
 			if FishData.FISH.has(str(id)):   # 老存档里已改名/移除的鱼种直接丢弃
 				dex[str(id)] = {"n": 1, "w": 0.0}
+	daily_order = {}
+	var order_raw: Variant = data.get("daily_order", {})
+	if order_raw is Dictionary:
+		var od: Dictionary = order_raw
+		var fish_id := str(od.get("fish", ""))
+		if FishData.FISH.has(fish_id):
+			daily_order = {
+				"date": str(od.get("date", "")),
+				"fish": fish_id,
+				"need": max(1, int(od.get("need", 1))),
+				"done": bool(od.get("done", false)),
+			}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
+	var wp: Variant = data.get("win_pos", null)
+	if wp is Array and wp.size() >= 2:
+		_saved_win_pos = Vector2i(int(wp[0]), int(wp[1]))
 	# 老存档（v4 及更早，无 ach 字段）静默补登已满足的成就，避免回屏刷屏
 	if not (data.get("ach", null) is Array):
 		_check_achievements(true)

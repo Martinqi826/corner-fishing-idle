@@ -1,89 +1,571 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Corner Fishing Idle - 项目说明与美术资源</title>
+  <title>Corner Fishing Idle - 项目白皮书看板</title>
   <style>
-    :root { color-scheme: light; --ink:#2f3432; --muted:#6f7169; --paper:#eee8dc; --line:#c9c2b5; --water:#476f78; --pine:#3f4d45; --gold:#d6a85d; }
+    :root {
+      color-scheme: light;
+      --ink: #2f3432;
+      --muted: #686d67;
+      --paper: #eee8dc;
+      --paper-2: #f7f3eb;
+      --line: #c9c2b5;
+      --water: #476f78;
+      --pine: #3f4d45;
+      --gold: #d6a85d;
+      --red: #ad5f4d;
+      --shadow: rgba(43, 48, 44, .16);
+    }
+
     * { box-sizing: border-box; }
-    body { margin:0; font-family:"Microsoft YaHei", "Segoe UI", sans-serif; background:#d8d2c4; color:var(--ink); }
-    header { min-height:72vh; display:flex; align-items:flex-end; background:linear-gradient(180deg,#d8d2c4 0%,#cfc8bb 100%); position:relative; overflow:hidden; }
-    header::after { content:""; position:absolute; inset:0; background:url('../assets/art/background/corner_scene_winter_base.png') right bottom / min(720px, 70vw) auto no-repeat; }
-    .hero { position:relative; z-index:1; width:min(1040px,92vw); margin:0 auto; padding:72px 0 56px; }
-    h1 { font-size:42px; line-height:1.05; margin:0 0 12px; font-weight:700; letter-spacing:0; }
-    p { line-height:1.8; color:var(--muted); max-width:760px; }
-    main { width:min(1040px,92vw); margin:0 auto; padding:42px 0 72px; }
-    section { margin:0 0 42px; }
-    h2 { font-size:22px; margin:0 0 16px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
-    .asset { background:rgba(238,232,220,.68); border:1px solid var(--line); border-radius:8px; padding:14px; min-height:170px; display:flex; flex-direction:column; gap:12px; }
-    .preview { height:96px; display:grid; place-items:center; background:linear-gradient(135deg,rgba(255,255,255,.32),rgba(71,111,120,.16)); border-radius:6px; overflow:hidden; }
-    .preview img { max-width:100%; max-height:100%; image-rendering:auto; }
-    .wide .preview { height:220px; }
-    code { color:var(--water); font-family:Consolas, monospace; font-size:13px; word-break:break-all; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; }
-    .chip { border:1px solid var(--line); border-radius:999px; padding:6px 10px; color:var(--muted); background:rgba(255,255,255,.28); }
-    .swatches { display:flex; gap:8px; flex-wrap:wrap; }
-    .swatch { width:44px; height:28px; border-radius:6px; border:1px solid rgba(0,0,0,.14); }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background: #d8d2c4;
+      color: var(--ink);
+    }
+
+    header {
+      min-height: 76vh;
+      display: flex;
+      align-items: flex-end;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(238,232,220,.92) 0%, rgba(207,200,187,.82) 64%, rgba(216,210,196,.96) 100%),
+        url("../assets/art/background/corner_scene_winter_base.png") right bottom / min(760px, 76vw) auto no-repeat;
+    }
+
+    .hero {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 72px 0 52px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--water);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      max-width: 760px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h2 { margin: 0 0 16px; font-size: 24px; }
+    h3 { margin: 0 0 10px; font-size: 17px; }
+    p { margin: 0; line-height: 1.76; color: var(--muted); }
+    code {
+      color: var(--water);
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    main {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 42px 0 76px;
+    }
+
+    section { margin: 0 0 48px; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: rgba(238, 232, 220, .92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(201, 194, 181, .8);
+    }
+
+    nav .inner {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    nav a {
+      flex: 0 0 auto;
+      text-decoration: none;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: rgba(255,255,255,.35);
+      font-size: 13px;
+    }
+
+    .lead {
+      max-width: 780px;
+      font-size: 18px;
+      color: #555b55;
+    }
+
+    .chips, .stats, .grid, .two, .three, .asset-grid, .timeline, .resource-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      color: #59605a;
+      background: rgba(255,255,255,.36);
+      font-size: 13px;
+    }
+
+    .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .two { grid-template-columns: 1fr 1fr; }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    .asset-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    .resource-list { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+    .card, .stat, .asset, .wide-asset, .table-wrap {
+      background: rgba(238,232,220,.72);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 12px 30px var(--shadow);
+    }
+
+    .card, .stat, .table-wrap { padding: 16px; }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 32px;
+      line-height: 1;
+      color: var(--pine);
+    }
+
+    .stat span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .card ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .asset, .wide-asset {
+      padding: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preview {
+      min-height: 108px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(255,255,255,.38), rgba(71,111,120,.14));
+    }
+
+    .wide-asset .preview { min-height: 240px; }
+    .preview img { max-width: 100%; max-height: 100%; image-rendering: auto; }
+    .preview.scene img { width: 100%; height: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(201,194,181,.78);
+      vertical-align: top;
+    }
+
+    th { color: var(--pine); font-size: 13px; }
+    td { color: var(--muted); line-height: 1.55; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(255,255,255,.42);
+      border: 1px solid var(--line);
+      color: #535a54;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .swatch {
+      width: 52px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,.14);
+    }
+
+    .fish-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .fish-strip img {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      padding: 5px;
+      border-radius: 7px;
+      background: rgba(255,255,255,.28);
+      border: 1px solid rgba(201,194,181,.8);
+    }
+
+    .timeline {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      counter-reset: step;
+    }
+
+    .step {
+      position: relative;
+      padding: 16px;
+      border-left: 3px solid var(--water);
+      background: rgba(247,243,235,.6);
+      border-radius: 8px;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--water);
+      color: white;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    footer {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 0 0 34px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      .stats, .two, .three, .timeline { grid-template-columns: 1fr; }
+      header { min-height: 70vh; background-size: 680px auto; }
+      .wide-asset .preview { min-height: 170px; }
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="hero">
+      <p class="eyebrow">Project Whitepaper Dashboard</p>
       <h1>Corner Fishing Idle</h1>
-      <p>一个贴在桌面右下角的透明挂机钓鱼小场景。画面以冬日雪山、松林、河面和安静钓鱼人为核心，左上方向使用雾化透明边缘融入桌面。当前主视觉以正式精修插画品质为标准，不以占位图或程序绘制图作为最终交付。</p>
-      <div class="chips"><span class="chip">Godot 透明窗口</span><span class="chip">右下角构图</span><span class="chip">手绘微写实</span><span class="chip">低干扰动效</span></div>
+      <p class="lead">贴在桌面右下角的透明挂机钓鱼小场景。它不是传统全屏游戏，而是一个低打扰桌面伴侣：自动钓鱼、收集图鉴、升级鱼竿与鱼饵，在冬日河岸插画里用轻量动效和柔和音频制造持续陪伴感。</p>
+      <div class="chips">
+        <span class="chip">Godot 4.x</span>
+        <span class="chip">2D 插画风</span>
+        <span class="chip">透明窗口</span>
+        <span class="chip">挂机放置</span>
+        <span class="chip">鱼类收集</span>
+        <span class="chip">低干扰音频</span>
+      </div>
     </div>
   </header>
+
+  <nav>
+    <div class="inner">
+      <a href="#overview">项目定位</a>
+      <a href="#gameplay">玩法系统</a>
+      <a href="#economy">经济与成长</a>
+      <a href="#art">美术资源</a>
+      <a href="#audio">音频资源</a>
+      <a href="#tech">技术结构</a>
+      <a href="#roadmap">看板</a>
+    </div>
+  </nav>
+
   <main>
-    <section>
-      <h2>美术方向</h2>
-      <p>资源遵循 <code>docs/art_direction.md</code>、<code>docs/art_asset_audit.md</code>、<code>docs/dynamic_art_plan.md</code> 和 <code>docs/fish_icon_manifest.md</code>：柔和冬日色彩、主体集中在右下角、边缘透明羽化、UI 像小型桌面组件。动画以水波、浮漂、灯光、雾雪和偶发小动物为主。</p>
-      <div class="swatches"><span class="swatch" style="background:#d8d2c4"></span><span class="swatch" style="background:#9aa8ae"></span><span class="swatch" style="background:#3f4d45"></span><span class="swatch" style="background:#476f78"></span><span class="swatch" style="background:#d6a85d"></span></div>
+    <section id="overview">
+      <h2>项目总览</h2>
+      <div class="stats">
+        <div class="stat"><strong>28</strong><span>正式鱼种，覆盖 6 个稀有度档位。</span></div>
+        <div class="stat"><strong>10</strong><span>运行时音频，含 1 条水声环境循环。</span></div>
+        <div class="stat"><strong>8</strong><span>鱼篓容量等级，20 格起步，最高 55 格。</span></div>
+        <div class="stat"><strong>16</strong><span>成就目标，覆盖捕获、财富、图鉴、品相和装备。</span></div>
+      </div>
+      <div class="two" style="margin-top:14px">
+        <div class="card">
+          <h3>产品一句话</h3>
+          <p>一个在桌面角落持续运转的冬日钓鱼摆件，玩家不需要高频操作，只需要偶尔打开鱼篓、升级装备、查看图鉴和领取成长反馈。</p>
+        </div>
+        <div class="card">
+          <h3>当前性质</h3>
+          <p>运行时是纯 2D：`Node2D` 主场景、`CanvasLayer` HUD、PNG 图层、Canvas 绘制和 2D shader。美术目标是手绘微写实，不是三渲二管线。</p>
+        </div>
+      </div>
     </section>
-    <section class="wide">
-      <h2>资源总览</h2>
-      <div class="asset"><div class="preview"><img src="img/art_asset_contact_sheet.png" alt="当前美术资源总览"></div><code>docs/img/art_asset_contact_sheet.png</code><p>当前运行时美术资源的总览图，用于快速检查风格一致性和透明边缘质量。</p></div>
+
+    <section id="gameplay">
+      <h2>核心玩法</h2>
+      <div class="timeline">
+        <div class="step"><h3>抛竿</h3><p>进入等待状态，播放轻柔抛竿声和浮漂入水声。</p></div>
+        <div class="step"><h3>等待</h3><p>鱼竿等级越高，等待时间越短；鱼篓满时自动暂停。</p></div>
+        <div class="step"><h3>咬钩</h3><p>浮漂下沉、涟漪触发，播放 bite 提示音。</p></div>
+        <div class="step"><h3>上鱼</h3><p>按鱼竿、鱼饵和权重抽取鱼种、重量、星级品相。</p></div>
+        <div class="step"><h3>结算</h3><p>进入鱼篓、更新图鉴纪录、触发成就、可卖出换金币。</p></div>
+      </div>
+
+      <div class="three" style="margin-top:14px">
+        <div class="card">
+          <h3>鱼篓</h3>
+          <p>展示最近捕获、库存容量、单条出售、批量出售和锁定保留。收鱼郎出现时，卖鱼收益提升至 1.5 倍。</p>
+        </div>
+        <div class="card">
+          <h3>图鉴</h3>
+          <p>按稀有度展示 28 种鱼。已发现鱼会记录捕获次数和最大体重，未发现鱼保持隐藏状态。</p>
+        </div>
+        <div class="card">
+          <h3>每日订单</h3>
+          <p>每日生成目标鱼种和需求数量。交付指定鱼获可获得 2.5 倍订单奖励，优先消耗较低价值个体。</p>
+        </div>
+      </div>
     </section>
-    <section class="wide">
-      <h2>动态资源</h2>
-      <div class="asset"><div class="preview"><img src="img/dynamic_asset_contact_sheet.png" alt="动态美术资源总览"></div><code>docs/img/dynamic_asset_contact_sheet.png</code><p>水光、雾气、雪粒、浮漂涟漪、灯光和小动物事件的透明叠加资源。</p></div>
+
+    <section id="economy">
+      <h2>经济与成长</h2>
+      <div class="two">
+        <div class="table-wrap">
+          <h3>成长系统</h3>
+          <table>
+            <thead><tr><th>系统</th><th>当前规则</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pill">鱼竿</span></td><td>费用 `40 * 1.8^(等级-1)`；缩短等待，提高高阶鱼权重，鱼价每级 +8%。</td></tr>
+              <tr><td><span class="pill">鱼饵</span></td><td>4 档永久升级：蚯蚓、红虫、活虾、秘制饵。提高上品、极品、完美星级通过率。</td></tr>
+              <tr><td><span class="pill">鱼篓</span></td><td>容量从 20 到 55，升级费用为 100、250、600、1500、4000、10000、25000。</td></tr>
+              <tr><td><span class="pill">离线收益</span></td><td>最多结算 8 小时，效率 50%，受鱼篓剩余空间限制。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-wrap">
+          <h3>鱼类稀有度</h3>
+          <table>
+            <thead><tr><th>档位</th><th>数量</th><th>基础权重</th><th>价值跨度</th></tr></thead>
+            <tbody>
+              <tr><td>普通</td><td>6</td><td>58.0</td><td>1 - 18 金币</td></tr>
+              <tr><td>优良</td><td>5</td><td>25.0</td><td>14 - 55 金币</td></tr>
+              <tr><td>稀有</td><td>5</td><td>11.0</td><td>55 - 190 金币</td></tr>
+              <tr><td>史诗</td><td>6</td><td>4.5</td><td>200 - 560 金币</td></tr>
+              <tr><td>传说</td><td>4</td><td>1.3</td><td>750 - 2200 金币</td></tr>
+              <tr><td>神话</td><td>2</td><td>0.2</td><td>4500 - 11000 金币</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>品相与个体</h3>
+        <p>每条鱼会抽重量、价值和星级品相。星级倍率为 1.0、1.8、4.0、8.0；同种鱼中大个体会标记“大”，顶级个体会标记“巨物”。这些规则给挂机收益制造长期波动，也让图鉴纪录有追求空间。</p>
+      </div>
     </section>
-    <section class="wide">
-      <h2>动态预览</h2>
-      <div class="asset"><div class="preview"><img src="img/dynamic_scene_preview.png" alt="动态叠加预览"></div><code>docs/img/dynamic_scene_preview.png</code><p>深色桌面背景上的动态叠加预览。实际游戏中建议降低雪和雾的透明度，保持安静感。</p></div>
+
+    <section id="art">
+      <h2>美术资源</h2>
+      <div class="two">
+        <div class="card">
+          <h3>美术方向</h3>
+          <p>柔和冬日、微写实手绘、低饱和水彩质感。主体集中在右下角，左上透明羽化融入桌面；避免像普通矩形游戏窗口。</p>
+          <div class="swatches">
+            <span class="swatch" style="background:#d8d2c4"></span>
+            <span class="swatch" style="background:#9aa8ae"></span>
+            <span class="swatch" style="background:#3f4d45"></span>
+            <span class="swatch" style="background:#476f78"></span>
+            <span class="swatch" style="background:#d6a85d"></span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>运行时资源规模</h3>
+          <ul>
+            <li>背景 3 张，主场景为 520 x 400 alpha PNG。</li>
+            <li>鱼类运行时图标 28 张，另含调试/占位鱼图。</li>
+            <li>角色 3 帧，道具 4 张，装备 8 张。</li>
+            <li>水光 6 帧、雾 3 帧、雪 3 帧、涟漪 4 帧、灯光 4 帧。</li>
+            <li>UI kit、稀有度徽章、按钮和图标已拆分。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="wide-asset" style="margin-top:14px">
+        <div class="preview"><img src="img/art_asset_contact_sheet.png" alt="当前美术资源总览"></div>
+        <code>docs/img/art_asset_contact_sheet.png</code>
+        <p>当前运行时美术资源总览，用于快速检查风格一致性、透明边缘和资源覆盖。</p>
+      </div>
+
+      <div class="resource-list" style="margin-top:14px">
+        <div class="wide-asset">
+          <div class="preview scene"><img src="../assets/art/background/corner_scene_winter_base.png" alt="主场景"></div>
+          <code>assets/art/background/corner_scene_winter_base.png</code>
+          <p>Godot 接入用主场景图，负责窗口边缘融合和第一视觉。</p>
+        </div>
+        <div class="wide-asset">
+          <div class="preview"><img src="img/dynamic_asset_contact_sheet.png" alt="动态资源"></div>
+          <code>docs/img/dynamic_asset_contact_sheet.png</code>
+          <p>水光、雾气、雪粒、涟漪、灯光和小动物事件资源。</p>
+        </div>
+        <div class="wide-asset">
+          <div class="preview"><img src="img/fish_icon_contact_sheet.png" alt="鱼类图标"></div>
+          <code>docs/img/fish_icon_contact_sheet.png</code>
+          <p>与 `FishData.FISH` 对齐的鱼类图标总览。</p>
+        </div>
+      </div>
+
+      <div class="asset-grid" style="margin-top:14px">
+        <div class="asset"><div class="preview"><img src="../assets/art/character/fisher_idle.png" alt="钓鱼人"></div><code>character/fisher_idle.png</code><p>待机主角色。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/rod.png" alt="钓竿"></div><code>props/rod.png</code><p>钓竿道具。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/props/bobber_idle.png" alt="浮漂"></div><code>props/bobber_idle.png</code><p>浮漂待机。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/effects/light/lantern_glow_01.png" alt="灯光"></div><code>effects/light/*</code><p>灯光脉冲。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/wildlife/bird_fly_01.png" alt="飞鸟"></div><code>wildlife/*</code><p>偶发小动物。</p></div>
+        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_fish.png" alt="UI按钮"></div><code>ui/ui_button_fish.png</code><p>角落入口按钮。</p></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>鱼类样张</h3>
+        <p>以下为运行时鱼类图标抽样，完整清单见 `assets/art/fish/fish_art_manifest.json`。</p>
+        <div class="fish-strip">
+          <img src="../assets/art/fish/whitebait.png" alt="whitebait">
+          <img src="../assets/art/fish/carp.png" alt="carp">
+          <img src="../assets/art/fish/bass.png" alt="bass">
+          <img src="../assets/art/fish/snakehead.png" alt="snakehead">
+          <img src="../assets/art/fish/koi.png" alt="koi">
+          <img src="../assets/art/fish/chinese_sturgeon.png" alt="chinese sturgeon">
+          <img src="../assets/art/fish/kaluga.png" alt="kaluga">
+        </div>
+      </div>
     </section>
-    <section class="wide">
-      <h2>鱼类图标</h2>
-      <div class="asset"><div class="preview"><img src="img/fish_icon_contact_sheet.png" alt="鱼类图标总览"></div><code>docs/img/fish_icon_contact_sheet.png</code><p>与 <code>fish_data.gd</code> 对齐的 28 种鱼图标，运行时资源位于 <code>assets/art/fish/{fish_id}.png</code>。</p></div>
+
+    <section id="audio">
+      <h2>音频资源</h2>
+      <div class="two">
+        <div class="card">
+          <h3>音频定位</h3>
+          <p>声音服务于“低打扰桌面伴侣”：短促、轻柔、低音量、避免强提示音。环境水声默认循环，SFX 用播放器池播放，并带冷却避免连续触发造成刺耳堆叠。</p>
+        </div>
+        <div class="card">
+          <h3>混音默认值</h3>
+          <ul>
+            <li>主音量：0.80</li>
+            <li>音效音量：0.85</li>
+            <li>环境音量：0.42</li>
+            <li>SFX 播放器池：8 个</li>
+            <li>音量和静音状态保存至 `user://audio_settings.json`</li>
+          </ul>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:14px">
+        <h3>运行时音频清单</h3>
+        <table>
+          <thead><tr><th>ID</th><th>类型</th><th>时长</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>ui_click</code></td><td>UI</td><td>0.10s</td><td>按钮点击。</td></tr>
+            <tr><td><code>ui_error</code></td><td>UI</td><td>0.11s</td><td>金币不足或无效操作。</td></tr>
+            <tr><td><code>cast</code></td><td>Fishing</td><td>0.397s</td><td>抛竿/线组轻响。</td></tr>
+            <tr><td><code>bobber_splash</code></td><td>Fishing</td><td>0.36s</td><td>浮漂入水。</td></tr>
+            <tr><td><code>bite</code></td><td>Fishing</td><td>0.36s</td><td>咬钩提示。</td></tr>
+            <tr><td><code>catch_common</code></td><td>Fishing</td><td>0.457s</td><td>普通捕获。</td></tr>
+            <tr><td><code>catch_rare</code></td><td>Fishing</td><td>1.381s</td><td>稀有或高品相捕获。</td></tr>
+            <tr><td><code>coin</code></td><td>Economy</td><td>0.241s</td><td>出售、订单、成就金币反馈。</td></tr>
+            <tr><td><code>upgrade</code></td><td>Economy</td><td>0.29s</td><td>鱼竿、鱼饵、鱼篓升级。</td></tr>
+            <tr><td><code>ambience_water_loop</code></td><td>Ambience</td><td>28.0s</td><td>柔和循环水声。</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
-    <section class="wide">
-      <h2>主场景</h2>
-      <div class="asset"><div class="preview"><img src="../assets/art/background/corner_scene_winter_base.png" alt="右下角冬日钓鱼主场景"></div><code>assets/art/background/corner_scene_winter_base.png</code><p>520 x 400，带 alpha，正式 Godot 接入用主场景图，已按右下角透明窗口适配。</p></div>
-    </section>
-    <section class="wide">
-      <h2>概念参考</h2>
-      <div class="asset"><div class="preview"><img src="../assets/art/source/corner_scene_winter_final_source.png" alt="冬日钓鱼正式源图"></div><code>assets/art/source/corner_scene_winter_final_source.png</code><p>正式主视觉源图，作为后续切图、局部重绘、动画拆层和同风格资源扩展的质量基准。</p></div>
-    </section>
-    <section>
-      <h2>资源展示</h2>
+
+    <section id="tech">
+      <h2>技术结构</h2>
       <div class="grid">
-        <div class="asset"><div class="preview"><img src="../assets/art/background/water_highlight_overlay.png" alt="水面高光"></div><code>background/water_highlight_overlay.png</code><p>水面循环高光叠层。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/character/fisher_idle.png" alt="钓鱼人待机"></div><code>character/fisher_idle.png</code><p>钓鱼人待机帧。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/character/fisher_pull_01.png" alt="收竿帧1"></div><code>character/fisher_pull_01.png</code><p>收竿动画帧。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/props/rod.png" alt="钓竿"></div><code>props/rod.png</code><p>可旋转或独立挂接的钓竿。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/props/bobber_idle.png" alt="浮漂待机"></div><code>props/bobber_idle.png</code><p>浮漂待机状态。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/props/bobber_bite.png" alt="浮漂咬钩"></div><code>props/bobber_bite.png</code><p>咬钩时下沉状态。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/props/lantern.png" alt="灯"></div><code>props/lantern.png</code><p>小灯与暖色发光点。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/fish/fish_common_01.png" alt="普通鱼1"></div><code>fish/fish_common_01.png</code><p>普通鱼图标。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/fish/fish_rare_01.png" alt="稀有鱼"></div><code>fish/fish_rare_01.png</code><p>稀有鱼图标。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_fish.png" alt="鱼按钮"></div><code>ui/ui_button_fish.png</code><p>鱼获/图鉴入口。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_rod.png" alt="钓竿按钮"></div><code>ui/ui_button_rod.png</code><p>装备/钓竿入口。</p></div>
-        <div class="asset"><div class="preview"><img src="../assets/art/ui/ui_button_coin.png" alt="金币按钮"></div><code>ui/ui_button_coin.png</code><p>收益/商店入口。</p></div>
+        <div class="card">
+          <h3>窗口与交互</h3>
+          <p>窗口目标尺寸 760 x 560，主美术区域 520 x 400 偏移到右下。透明区域鼠标穿透，仅可见场景和按钮参与交互。</p>
+        </div>
+        <div class="card">
+          <h3>场景渲染</h3>
+          <p>`main.tscn` 使用 `Node2D` + `ScenePainter` + `CanvasLayer`。`scene_painter.gd` 负责背景、雾雪、水光、浮漂、涟漪、灯光和偶发 wildlife 绘制。</p>
+        </div>
+        <div class="card">
+          <h3>数据</h3>
+          <p>`fish_data.gd` 是鱼类、稀有度、鱼饵、抽取和估价的核心数据源；`achievements.gd` 是成就配置。</p>
+        </div>
+        <div class="card">
+          <h3>存档</h3>
+          <p>存档路径为 `user://corner_fishing_save.json`。保存金币、装备、库存、图鉴、累计数据、订单、窗口位置和时间戳。</p>
+        </div>
+        <div class="card">
+          <h3>验证工具</h3>
+          <p>`tools/validate_game.gd` 用于无头数据和经济验证；`tools/dev_screenshot.gd` 用于引擎内截图和透明窗口检查。</p>
+        </div>
+        <div class="card">
+          <h3>资源入口</h3>
+          <p>美术 manifest 位于 `assets/art/fish/` 与 `assets/art/equipment/`，音频 manifest 位于 `assets/audio/audio_manifest.json`。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2>总体看板</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>模块</th><th>当前状态</th><th>下一步建议</th></tr></thead>
+          <tbody>
+            <tr><td>核心挂机循环</td><td><span class="pill">已实现</span></td><td>继续调等待节奏、咬钩反馈和鱼篓满时提示。</td></tr>
+            <tr><td>鱼类与经济</td><td><span class="pill">已实现</span></td><td>用长时模拟检查高阶鱼、订单和收鱼郎对通胀的影响。</td></tr>
+            <tr><td>图鉴/成就</td><td><span class="pill">已实现</span></td><td>补齐更明确的奖励节奏和未发现鱼剪影表现。</td></tr>
+            <tr><td>美术资源</td><td><span class="pill">已接入</span></td><td>继续拆分前景/角色/水面层，减少整图依赖，提升局部动画空间。</td></tr>
+            <tr><td>音频资源</td><td><span class="pill">已接入</span></td><td>实机调混音，重点检查长时间挂机时环境音疲劳度。</td></tr>
+            <tr><td>打包发行</td><td><span class="pill">待推进</span></td><td>准备 Windows 导出、透明窗口兼容性测试、itch.io/Steam 页面素材。</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>
+
+  <footer>
+    <p>资料来源：当前 Godot 工程、`main.gd`、`fish_data.gd`、`achievements.gd`、`audio_manager.gd`、`assets/audio/audio_manifest.json`、`assets/art/*_manifest.json`、`docs/art_direction.md`、`docs/dynamic_art_plan.md`。最后整理日期：2026-06-13。</p>
+  </footer>
 </body>
 </html>
-

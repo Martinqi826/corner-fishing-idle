@@ -1,6 +1,16 @@
 # Audio Generation
 
-This folder is reserved for generated game audio.
+This folder contains the current runtime audio assets.
+
+The active set is built from free CC0 source packs and processed for a soft, healing game tone. See `docs/audio_asset_rules.md` for source mapping, playback rules, and Claude-facing integration guidance.
+
+Regenerate the current free-SFX set with:
+
+```powershell
+E:\ai-audio\stable-audio-open\.venv\Scripts\python.exe tools\prepare_free_sfx_assets.py
+```
+
+## Deprecated AI Generation
 
 The previous procedural placeholder `.wav` files were removed because they sounded too synthetic for the game's art direction. Use the ElevenLabs workflow instead:
 

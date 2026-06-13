@@ -38,6 +38,9 @@ func _run() -> void:
 	print("=== 流动鱼贩 ===")
 	await _check_merchant()
 
+	print("=== 每日订单 ===")
+	await _check_daily_order()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -277,6 +280,45 @@ func _check_merchant() -> void:
 	await process_frame
 
 
+func _check_daily_order() -> void:
+	var game: Node = load("res://main.tscn").instantiate()
+	game.save_enabled = false
+	root.add_child(game)
+	await process_frame
+	game.daily_order = {"date": game._today_key(), "fish": "carp", "need": 2, "done": false}
+	game.inventory = [
+		{"id": "carp", "w": 2.0, "v": 10, "q": 0},
+		{"id": "carp", "w": 3.0, "v": 100, "q": 0, "lock": true},
+		{"id": "bream", "w": 1.0, "v": 40, "q": 0},
+		{"id": "carp", "w": 4.0, "v": 30, "q": 0},
+		{"id": "carp", "w": 5.0, "v": 20, "q": 0},
+	]
+	var idx: Array = game._daily_order_indices()
+	_assert(idx.size() == 3, "每日订单应只统计未上锁目标鱼，实际 %d" % idx.size())
+	_assert(game._daily_order_reward(idx) == 125, "订单应按最高价值 2 条 ×2.5 结算为 125")
+	game._try_complete_daily_order()
+	_assert(bool(game.daily_order["done"]), "交付后今日订单应标记完成")
+	_assert(game.coins == 125 and game.lifetime_coins == 125, "订单收益应进金币和累计卖鱼收入")
+	_assert(game.inventory.size() == 3, "订单应消耗 2 条目标鱼，实际剩余 %d" % game.inventory.size())
+	_assert(bool(game.inventory[1].get("lock", false)), "锁定目标鱼不应被订单消耗")
+	_assert(str(game.inventory[0]["id"]) == "carp" and int(game.inventory[0]["v"]) == 10,
+		"订单应优先交付高价值目标鱼，低价值未锁定目标鱼应留下")
+	var before: int = game.coins
+	game._try_complete_daily_order()
+	_assert(game.coins == before, "完成后的订单不应重复领奖")
+	game.daily_order = {"date": "2000-01-01", "fish": "carp", "need": 2, "done": true}
+	game._ensure_daily_order()
+	_assert(str(game.daily_order["date"]) == game._today_key(), "跨日应刷新为今日订单")
+	_assert(not bool(game.daily_order["done"]), "新日期订单应未完成")
+	_assert(FishData.FISH.has(str(game.daily_order["fish"])), "新订单目标鱼应有效")
+	game._catch_tab = 2
+	game._open_panel("catch")
+	_assert(is_instance_valid(game._panel), "订单页签应能正常打开")
+	print("  每日订单：生成 / 锁定跳过 / 交付 ×2.5 / 跨日刷新 通过")
+	game.queue_free()
+	await process_frame
+
+
 func _check_achievements_feature() -> void:
 	_assert(AchievementData.LIST.size() >= 12, "成就至少 12 项")
 	var ids := {}
@@ -358,6 +400,7 @@ func _check_save_v2() -> void:
 		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
 	]
 	g1.dex = {"koi": {"n": 3, "w": 5.5}, "crucian": {"n": 12, "w": 0.58}}
+	g1.daily_order = {"date": g1._today_key(), "fish": "carp", "need": 2, "done": true}
 	g1._save()
 	g1.queue_free()
 	await process_frame
@@ -378,6 +421,8 @@ func _check_save_v2() -> void:
 	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
 	_assert(int(g2.dex["crucian"]["n"]) == 12 and absf(float(g2.dex["koi"]["w"]) - 5.5) < 0.01,
 		"图鉴纪录（捕获数/最大体重）应随存档恢复")
+	_assert(str(g2.daily_order["fish"]) == "carp" and int(g2.daily_order["need"]) == 2
+		and bool(g2.daily_order["done"]), "每日订单应随存档恢复")
 	print("  v2 往返：金币 %d 背包 %d 条 容量 %d" % [g2.coins, g2.inventory.size(), g2._bag_capacity()])
 	g2.queue_free()
 	await process_frame
