@@ -99,6 +99,9 @@ var _run_t := 0.0
 const DAILY_ORDER_MULT := 2.5
 var daily_order := {}  # {"date": yyyy-mm-dd, "fish": id, "need": int, "done": bool}
 
+# —— 周目标：滚动 7 天大挑战（累计渔获或卖鱼达标领大奖），日常之上的长期层 ——
+var weekly := {}  # {week:int, kind:"catches"/"coins", target, base, reward, done}
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -116,6 +119,7 @@ func _ready() -> void:
 	_load_ui_layout()
 	_load_save()
 	_ensure_daily_order()
+	_ensure_weekly()
 	_build_buttons()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
 	_run_t = rng.randf_range(RUN_FIRST.x, RUN_FIRST.y)
@@ -873,6 +877,66 @@ func _ensure_daily_order() -> void:
 	daily_order = _make_daily_order(today)
 
 
+# ============================ 周目标 ============================
+
+func _week_id() -> int:
+	return int(Time.get_unix_time_from_system() / 86400.0 / 7.0)
+
+
+func _ensure_weekly() -> void:
+	var wk := _week_id()
+	if weekly.has("week") and int(weekly.get("week", -1)) == wk \
+			and weekly.has("kind") and int(weekly.get("target", 0)) > 0:
+		return
+	weekly = _make_weekly(wk)
+
+
+func _make_weekly(wk: int) -> Dictionary:
+	var local := RandomNumberGenerator.new()
+	local.seed = int(abs(("week:%d" % wk).hash()))
+	var kind: String = "catches" if local.randi() % 2 == 0 else "coins"
+	var target := 0
+	var base := 0
+	if kind == "catches":
+		target = 120 + rod_level * 40
+		base = lifetime_catches
+	else:
+		target = 4000 + rod_level * 2500
+		base = lifetime_coins
+	return {"week": wk, "kind": kind, "target": target, "base": base,
+		"reward": 3000 + rod_level * 1500, "done": false}
+
+
+func _weekly_progress() -> int:
+	var cur := lifetime_catches if str(weekly.get("kind", "catches")) == "catches" else lifetime_coins
+	return maxi(0, cur - int(weekly.get("base", 0)))
+
+
+func _weekly_desc() -> String:
+	if str(weekly.get("kind", "catches")) == "catches":
+		return "本周累计钓到 %d 条鱼" % int(weekly.get("target", 0))
+	return "本周累计卖鱼赚 %d 金币" % int(weekly.get("target", 0))
+
+
+func _try_claim_weekly() -> void:
+	_ensure_weekly()
+	if bool(weekly.get("done", false)):
+		return
+	if _weekly_progress() < int(weekly.get("target", 0)):
+		Audio.play_ui("ui_error")
+		_toast("周目标还没达成", 1.6, Color(1.0, 0.5, 0.4))
+		return
+	var reward := int(weekly.get("reward", 0))
+	coins += reward
+	weekly["done"] = true
+	Audio.play_sfx("coin")
+	_toast("周目标达成：+%d 金币！" % reward, 3.0, Color(0.98, 0.82, 0.40))
+	_check_achievements()
+	_update_hud()
+	_refresh_panel()
+	_save()
+
+
 ## 生成每日订单。kind ∈ species/tier/weight/perfect（perfect 需鱼饵≥2 才出，避免难以达成）。
 ## fish 字段恒为一个有效鱼 id（作图标与 species 目标），保证旧存档守卫兼容。
 func _make_daily_order(date_key: String) -> Dictionary:
@@ -1072,6 +1136,60 @@ func _fill_order_tab(v: VBoxContainer) -> void:
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.add_theme_color_override("font_color", Color(0.70, 0.66, 0.58))
 	v.add_child(hint)
+	_fill_weekly_panel(v)
+
+
+## 周目标面板（接在每日订单下方）。
+func _fill_weekly_panel(v: VBoxContainer) -> void:
+	_ensure_weekly()
+	v.add_child(HSeparator.new())
+	var wdone := bool(weekly.get("done", false))
+	var prog := _weekly_progress()
+	var target := int(weekly.get("target", 1))
+	var stat := Label.new()
+	stat.text = "本周挑战"
+	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+	v.add_child(stat)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _paper_style(0.90) if not wdone else _dark_row_style(0.44))
+	var mg := MarginContainer.new()
+	for s in ["left", "right"]:
+		mg.add_theme_constant_override("margin_" + s, 10)
+	for s in ["top", "bottom"]:
+		mg.add_theme_constant_override("margin_" + s, 9)
+	panel.add_child(mg)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 5)
+	mg.add_child(box)
+	var title := Label.new()
+	title.text = _weekly_desc()
+	title.add_theme_font_size_override("font_size", 15)
+	title.add_theme_color_override("font_color",
+		Color(0.28, 0.25, 0.20) if not wdone else Color(0.74, 0.70, 0.62))
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.custom_minimum_size = Vector2(330, 0)
+	box.add_child(title)
+	var bar := ProgressBar.new()
+	bar.max_value = target
+	bar.value = mini(prog, target)
+	bar.custom_minimum_size = Vector2(0, 18)
+	box.add_child(bar)
+	var row := HBoxContainer.new()
+	var pl := Label.new()
+	pl.text = "%d / %d　奖励 %d 金币" % [mini(prog, target), target, int(weekly.get("reward", 0))]
+	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pl.add_theme_font_size_override("font_size", 12)
+	pl.add_theme_color_override("font_color", Color(0.5, 0.46, 0.4) if not wdone else Color(0.6, 0.56, 0.5))
+	row.add_child(pl)
+	var btn := Button.new()
+	btn.text = "已领取" if wdone else "领取"
+	btn.custom_minimum_size = Vector2(64, 30)
+	btn.disabled = wdone or prog < target
+	_apply_button_skin(btn, prog >= target and not wdone)
+	btn.pressed.connect(_try_claim_weekly)
+	row.add_child(btn)
+	box.add_child(row)
+	v.add_child(panel)
 
 
 func _try_complete_daily_order() -> void:
@@ -1956,6 +2074,7 @@ func _save() -> void:
 		"lt_catches": lifetime_catches,
 		"dex": _dex_to_save(),
 		"daily_order": daily_order,
+		"weekly": weekly,
 		"best_q": best_quality,
 		"giant": caught_giant,
 		"ach": achievements_done.keys(),
@@ -2036,6 +2155,16 @@ func _load_save() -> void:
 				"minw": float(od.get("minw", 1.0)),
 				"done": bool(od.get("done", false)),
 			}
+	var wk_raw: Variant = data.get("weekly", {})  # 旧档无 weekly → _ensure_weekly 现生成
+	if wk_raw is Dictionary and wk_raw.has("week") and wk_raw.has("kind"):
+		weekly = {
+			"week": int(wk_raw.get("week", -1)),
+			"kind": str(wk_raw.get("kind", "catches")),
+			"target": max(1, int(wk_raw.get("target", 1))),
+			"base": int(wk_raw.get("base", 0)),
+			"reward": int(wk_raw.get("reward", 0)),
+			"done": bool(wk_raw.get("done", false)),
+		}
 	_opacity = float(data.get("opacity", 1.0))
 	_set_opacity(_opacity)
 	if bool(data.get("focus", false)):

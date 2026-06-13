@@ -47,6 +47,9 @@ func _run() -> void:
 	print("=== 鱼汛事件 ===")
 	await _check_fish_run()
 
+	print("=== 周目标 ===")
+	await _check_weekly()
+
 	print("=== 每日订单 ===")
 	await _check_daily_order()
 
@@ -214,6 +217,34 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_weekly() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	# 造一个"卖鱼"类周目标，base 锚定当前
+	g.lifetime_coins = 1000
+	g.weekly = {"week": g._week_id(), "kind": "coins", "target": 500, "base": 1000, "reward": 7000, "done": false}
+	_assert(g._weekly_progress() == 0, "周目标进度起始应为 0")
+	g.lifetime_coins = 1400
+	g._check_achievements()  # 先消化 coin_1k 等里程碑成就，避免奖励污染领取断言
+	_assert(g._weekly_progress() == 400, "卖鱼 +400 应反映为周进度 400")
+	var before: int = g.coins
+	g._try_claim_weekly()
+	_assert(not bool(g.weekly["done"]), "未达标不应可领")
+	_assert(g.coins == before, "未达标不发奖")
+	g.lifetime_coins = 1600  # 达标(+600 ≥500)
+	g._try_claim_weekly()
+	_assert(bool(g.weekly["done"]) and g.coins == before + 7000, "达标领取应 +7000，实际 +%d" % (g.coins - before))
+	# 跨周刷新
+	g.weekly["week"] = g._week_id() - 1
+	g._ensure_weekly()
+	_assert(int(g.weekly["week"]) == g._week_id() and not bool(g.weekly["done"]), "跨周应重置周目标")
+	print("  周目标：进度/领取/跨周刷新 通过")
+	g.queue_free()
 	await process_frame
 
 
