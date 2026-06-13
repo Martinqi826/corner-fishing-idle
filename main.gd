@@ -1649,7 +1649,9 @@ func _fill_offline_report(v: VBoxContainer) -> void:
 
 
 func _rod_cost() -> int:
-	return int(round(40.0 * pow(1.8, rod_level - 1)))
+	# 陡成本曲线：让鱼竿成为真正的长期金币去向（旧 40×1.8^n 几乎零成本）。
+	# 成本增速(2.0/级) 高于产出增速(~1.25/级)，回本时间随等级递增、后期形成自然墙。
+	return int(round(200.0 * pow(2.0, rod_level - 1)))
 
 
 func _try_upgrade_rod() -> void:
