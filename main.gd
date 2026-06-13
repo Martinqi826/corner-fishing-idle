@@ -38,6 +38,7 @@ var coins := 0
 var rod_level := 1
 var bag_level := 1
 var bait_level := 0  # FishData.BAITS 下标，金币永久升级
+var hook_level := 0  # FishData.HOOKS 下标，决定双钩几率
 var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占一格
 var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
@@ -266,6 +267,20 @@ func _do_catch() -> void:
 			2.0, Color(0.96, 0.78, 0.38))
 	if tier >= 4 or q >= 3:
 		_flash()
+	# 鱼钩双钩：一定几率再上一条（受背包剩余格数限制）
+	if hook_level > 0 and not _bag_full() \
+			and rng.randf() < float(FishData.HOOKS[hook_level]["double"]):
+		var c2 := FishData.roll_catch(rng, rod_level, bait_level)
+		inventory.append(c2)
+		lifetime_catches += 1
+		best_quality = maxi(best_quality, int(c2.get("q", 0)))
+		var ib2 := FishData.size_tag(c2["id"], c2["w"]) == "巨物·"
+		if ib2:
+			caught_giant = true
+		_dex_record(c2["id"], float(c2["w"]), ib2, int(c2.get("q", 0)) >= 3)
+		_popup("双钩 +%s" % FishData.display_name(c2["id"]),
+			painter.position + painter.bobber_pos() + Vector2(24, -22), Color(0.62, 0.86, 0.74))
+		Audio.play_sfx("catch_common")
 	if _bag_full():
 		_toast("鱼篓满了，先去卖鱼或扩容～", 3.0, Color(1.0, 0.75, 0.4))
 	_check_achievements()
@@ -1428,6 +1443,7 @@ func _ach_done(a: Dictionary) -> bool:
 		"bag": return bag_level >= int(a["n"])
 		"rod": return rod_level >= int(a["n"])
 		"bait": return bait_level >= int(a["n"])
+		"hook": return hook_level >= int(a["n"])
 	return false
 
 
@@ -1516,6 +1532,35 @@ func _fill_upgrades(v: VBoxContainer) -> void:
 		_apply_button_skin(bbtn, false)
 		bbtn.pressed.connect(_try_upgrade_bait)
 		v.add_child(bbtn)
+	# —— 鱼钩（双钩几率线）——
+	v.add_child(HSeparator.new())
+	var hook: Dictionary = FishData.HOOKS[hook_level]
+	var hinfo := Label.new()
+	hinfo.text = "鱼钩：%s（%s）" % [hook["name"], hook["desc"]]
+	hinfo.add_theme_font_size_override("font_size", 16)
+	hinfo.add_theme_color_override("font_color", Color(0.3, 0.3, 0.28))
+	v.add_child(hinfo)
+	var hdesc := Label.new()
+	hdesc.text = "双钩几率 %d%%（一次钓上两条）" % int(float(hook["double"]) * 100.0)
+	hdesc.add_theme_font_size_override("font_size", 12)
+	hdesc.add_theme_color_override("font_color", Color(0.4, 0.4, 0.38))
+	v.add_child(hdesc)
+	if hook_level < FishData.HOOKS.size() - 1:
+		var hnxt: Dictionary = FishData.HOOKS[hook_level + 1]
+		var hcost := int(hnxt["cost"])
+		var hcostlbl := Label.new()
+		hcostlbl.text = "换用 %s（双钩 %d%%）：%d 金币" % [
+			hnxt["name"], int(float(hnxt["double"]) * 100.0), hcost]
+		hcostlbl.add_theme_color_override("font_color",
+			Color(0.85, 0.6, 0.2) if coins >= hcost else Color(0.7, 0.4, 0.4))
+		v.add_child(hcostlbl)
+		var hbtn := Button.new()
+		hbtn.text = "升级鱼钩"
+		hbtn.focus_mode = Control.FOCUS_NONE
+		hbtn.custom_minimum_size = Vector2(0, 34)
+		_apply_button_skin(hbtn, false)
+		hbtn.pressed.connect(_try_upgrade_hook)
+		v.add_child(hbtn)
 
 
 ## 设置面板用的「标签 + 滑条」一行；value_changed 直连 Audio 的 setter。
@@ -1743,6 +1788,25 @@ func _try_upgrade_bait() -> void:
 	_open_panel("rod")
 
 
+func _try_upgrade_hook() -> void:
+	if hook_level >= FishData.HOOKS.size() - 1:
+		return
+	var nxt: Dictionary = FishData.HOOKS[hook_level + 1]
+	var cost := int(nxt["cost"])
+	if coins < cost:
+		Audio.play_ui("ui_error")
+		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
+		return
+	coins -= cost
+	hook_level += 1
+	Audio.play_sfx("upgrade")
+	_check_achievements()
+	_update_hud()
+	_toast("换上了%s，双钩几率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
+	_save()
+	_open_panel("rod")
+
+
 func _set_opacity(val: float) -> void:
 	_opacity = val
 	painter.modulate.a = val
@@ -1775,6 +1839,7 @@ func _save() -> void:
 		"rod_level": rod_level,
 		"bag_level": bag_level,
 		"bait": bait_level,
+		"hook": hook_level,
 		"inv": inv,
 		"lt_coins": lifetime_coins,
 		"lt_catches": lifetime_catches,
@@ -1818,6 +1883,7 @@ func _load_save() -> void:
 	rod_level = max(1, int(data.get("rod_level", 1)))
 	bag_level = max(1, int(data.get("bag_level", 1)))  # v1 存档无此字段 → 默认 1
 	bait_level = clampi(int(data.get("bait", 0)), 0, FishData.BAITS.size() - 1)  # v2 及更早 → 蚯蚓
+	hook_level = clampi(int(data.get("hook", 0)), 0, FishData.HOOKS.size() - 1)  # 旧档 → 基础钩
 	inventory = []
 	for e in data.get("inv", []):           # v1 存档无此字段 → 空背包
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):

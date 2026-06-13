@@ -68,6 +68,14 @@ const BAITS := [
 	{"name": "秘制饵", "cost": 24000, "probs": [1.0, 0.70, 0.35, 0.18], "desc": "老钓翁的祖传配方"},
 ]
 
+# —— 鱼钩：第三条成长线，决定「双钩」几率（一次钓上两条）。鱼竿管稀有度、鱼饵管星级、鱼钩管产量。——
+const HOOKS := [
+	{"name": "基础鱼钩", "cost": 0, "double": 0.0, "desc": "普普通通的单钩"},
+	{"name": "宽门钩", "cost": 2000, "double": 0.10, "desc": "钩门更宽，偶尔双钩"},
+	{"name": "倒刺钩", "cost": 12000, "double": 0.20, "desc": "倒刺挂得牢，双钩更常见"},
+	{"name": "双叉钩", "cost": 60000, "double": 0.32, "desc": "一线两钩，常常成对上鱼"},
+]
+
 
 ## 星级抽取：逐级 roll，失败即停。
 static func roll_quality(bait_idx: int, rng: RandomNumberGenerator) -> int:

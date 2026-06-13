@@ -35,6 +35,9 @@ func _run() -> void:
 	print("=== 鱼饵 / 星级品质 ===")
 	_check_quality()
 
+	print("=== 鱼钩 / 双钩 ===")
+	await _check_hook()
+
 	print("=== 成就系统 ===")
 	await _check_achievements_feature()
 
@@ -208,6 +211,36 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_hook() -> void:
+	_assert(FishData.HOOKS.size() == 4, "鱼钩应 4 档")
+	_assert(float(FishData.HOOKS[0]["double"]) == 0.0, "基础钩双钩率应为 0")
+	_assert(float(FishData.HOOKS[3]["double"]) > float(FishData.HOOKS[1]["double"]), "高级钩双钩率应更高")
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	# 基础钩不双钩
+	g.hook_level = 0
+	g.inventory = []
+	g._do_catch()
+	_assert(g.inventory.size() == 1, "基础钩单次只上 1 条")
+	# 高级钩统计上应出现双钩
+	g.hook_level = 3
+	var doubles := 0
+	for i in 300:
+		g.inventory = []
+		g._do_catch()
+		if g.inventory.size() == 2:
+			doubles += 1
+	_assert(doubles > 0, "双叉钩 300 次内应触发双钩，实际 %d" % doubles)
+	# 成就
+	g._check_achievements()
+	_assert(g.achievements_done.has("hook_master"), "用上双叉钩应解锁成就")
+	print("  鱼钩：双钩触发 %d/300 · 成就 通过" % doubles)
+	g.queue_free()
 	await process_frame
 
 
@@ -473,6 +506,7 @@ func _check_save_v2() -> void:
 	g1.rod_level = 4
 	g1.bag_level = 3
 	g1.bait_level = 2
+	g1.hook_level = 2
 	g1.inventory = [
 		{"id": "koi", "w": 3.5, "v": 880, "q": 3, "lock": true},
 		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
@@ -497,6 +531,7 @@ func _check_save_v2() -> void:
 	_assert(bool(g2.inventory[0]["lock"]) and not bool(g2.inventory[1].get("lock", false)),
 		"收藏锁应随存档恢复")
 	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
+	_assert(g2.hook_level == 2, "鱼钩等级应随存档恢复")
 	_assert(bool(g2.dex["koi"].get("big", false)) and bool(g2.dex["koi"].get("perf", false)),
 		"图鉴 巨物/完美 徽章应随存档恢复")
 	_assert(not bool(g2.dex["crucian"].get("big", false)), "未达成的徽章不应误置")

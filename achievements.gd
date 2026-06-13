@@ -19,4 +19,5 @@ const LIST := [
 	{"id": "bag_40", "name": "大鱼篓", "desc": "鱼篓扩到 40 格", "kind": "bag", "n": 5, "reward": 0},
 	{"id": "rod_5", "name": "精良渔具", "desc": "鱼竿升到 Lv.5", "kind": "rod", "n": 5, "reward": 0},
 	{"id": "bait_master", "name": "秘饵传人", "desc": "用上秘制饵", "kind": "bait", "n": 3, "reward": 0},
+	{"id": "hook_master", "name": "一线双钩", "desc": "用上双叉钩", "kind": "hook", "n": 3, "reward": 0},
 ]
