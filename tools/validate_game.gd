@@ -26,6 +26,9 @@ func _run() -> void:
 	print("=== 卖鱼 / 扩容 ===")
 	await _check_sell_expand()
 
+	print("=== 鱼篓排序 / 筛选 ===")
+	await _check_bag_sort()
+
 	print("=== 鱼竿数值 ===")
 	_check_rod()
 
@@ -202,6 +205,29 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_bag_sort() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.inventory = [
+		{"id": "crucian", "w": 0.5, "v": 5, "q": 0},
+		{"id": "koi", "w": 3.0, "v": 300, "q": 0},
+		{"id": "carp", "w": 1.0, "v": 20, "q": 0},
+	]
+	g._bag_sort = 1
+	_assert(g._sorted_bag_indices("")[0] == 1, "价值排序首位应是 koi")
+	g._bag_sort = 3
+	_assert(g._sorted_bag_indices("")[0] == 1, "重量排序首位应是 koi")
+	g._bag_sort = 0
+	_assert(g._sorted_bag_indices("")[0] == 2, "最新排序首位应是最后入包")
+	var only: Array = g._sorted_bag_indices("carp")
+	_assert(only.size() == 1 and only[0] == 2, "筛选订单鱼应只剩 carp")
+	print("  排序/筛选 通过")
+	g.queue_free()
 	await process_frame
 
 

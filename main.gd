@@ -476,7 +476,10 @@ func _toggle_panel(kind: String) -> void:
 		_open_panel(kind)
 
 
-var _catch_tab := 0  # 0=鱼篓 1=图鉴
+var _catch_tab := 0  # 0=鱼篓 1=图鉴 2=订单 3=成就
+var _bag_sort := 0   # 0=最新 1=价值 2=品阶 3=重量
+var _bag_filter_order := false  # 只看订单目标鱼
+const BAG_SORT_NAMES := ["最新", "价值", "品阶", "重量"]
 
 
 func _open_panel(kind: String) -> void:
@@ -984,19 +987,83 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 		v.add_child(empty_panel)
 		return
 
+	# 排序 / 筛选 行
+	var tools := HBoxContainer.new()
+	tools.add_theme_constant_override("separation", 4)
+	var sort_lbl := Label.new()
+	sort_lbl.text = "排序"
+	sort_lbl.add_theme_font_size_override("font_size", 12)
+	sort_lbl.add_theme_color_override("font_color", Color(0.6, 0.57, 0.5))
+	tools.add_child(sort_lbl)
+	for m in BAG_SORT_NAMES.size():
+		var sb := Button.new()
+		sb.text = BAG_SORT_NAMES[m]
+		sb.custom_minimum_size = Vector2(44, 24)
+		sb.add_theme_font_size_override("font_size", 12)
+		_apply_button_skin(sb, m == _bag_sort)
+		if m != _bag_sort:
+			sb.pressed.connect(func(mm = m) -> void:
+				_bag_sort = mm
+				_open_panel("catch"))
+		tools.add_child(sb)
+	var fsp := Control.new()
+	fsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tools.add_child(fsp)
+	var filt := Button.new()
+	filt.text = "订单鱼"
+	filt.custom_minimum_size = Vector2(56, 24)
+	filt.add_theme_font_size_override("font_size", 12)
+	filt.tooltip_text = "只看今日订单的目标鱼"
+	_apply_button_skin(filt, _bag_filter_order)
+	filt.pressed.connect(func() -> void:
+		_bag_filter_order = not _bag_filter_order
+		_open_panel("catch"))
+	tools.add_child(filt)
+	v.add_child(tools)
+
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(0, 336)
+	sc.custom_minimum_size = Vector2(0, 306)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 7)
 	grid.add_theme_constant_override("v_separation", 7)
-	for n in inventory.size():
-		var i := inventory.size() - 1 - n
+	var order_target := str(daily_order.get("fish", "")) if _bag_filter_order else ""
+	var idxs := _sorted_bag_indices(order_target)
+	if idxs.is_empty():
+		var none := Label.new()
+		none.text = "没有符合条件的鱼"
+		none.add_theme_color_override("font_color", Color(0.6, 0.57, 0.5))
+		grid.add_child(none)
+	for i in idxs:
 		grid.add_child(_fish_entry(inventory[i], i, false, true))
 	sc.add_child(grid)
 	v.add_child(sc)
+
+
+## 按当前排序/筛选返回背包显示用的真实索引序列。
+func _sorted_bag_indices(order_target: String) -> Array:
+	var idxs: Array = []
+	for i in inventory.size():
+		if order_target != "" and str(inventory[i].get("id", "")) != order_target:
+			continue
+		idxs.append(i)
+	match _bag_sort:
+		1:  # 价值降序
+			idxs.sort_custom(func(a, b): return _sell_value(inventory[a]) > _sell_value(inventory[b]))
+		2:  # 品阶降序，同阶按价值
+			idxs.sort_custom(func(a, b):
+				var ta := FishData.tier_of(str(inventory[a]["id"]))
+				var tb := FishData.tier_of(str(inventory[b]["id"]))
+				if ta != tb:
+					return ta > tb
+				return _sell_value(inventory[a]) > _sell_value(inventory[b]))
+		3:  # 重量降序
+			idxs.sort_custom(func(a, b): return float(inventory[a]["w"]) > float(inventory[b]["w"]))
+		_:  # 最新（后进先出）
+			idxs.reverse()
+	return idxs
 
 
 func _fish_entry(c: Dictionary, idx: int, featured := false, compact := false) -> Control:
