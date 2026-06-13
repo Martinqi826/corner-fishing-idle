@@ -425,7 +425,7 @@ func _check_save_v2() -> void:
 		{"id": "koi", "w": 3.5, "v": 880, "q": 3, "lock": true},
 		{"id": "crucian", "w": 0.4, "v": 5, "q": 0},
 	]
-	g1.dex = {"koi": {"n": 3, "w": 5.5}, "crucian": {"n": 12, "w": 0.58}}
+	g1.dex = {"koi": {"n": 3, "w": 5.5, "big": true, "perf": true}, "crucian": {"n": 12, "w": 0.58}}
 	g1.daily_order = {"date": g1._today_key(), "fish": "carp", "need": 2, "done": true}
 	g1._save()
 	g1.queue_free()
@@ -445,6 +445,9 @@ func _check_save_v2() -> void:
 	_assert(bool(g2.inventory[0]["lock"]) and not bool(g2.inventory[1].get("lock", false)),
 		"收藏锁应随存档恢复")
 	_assert(g2.bait_level == 2, "鱼饵等级应随存档恢复")
+	_assert(bool(g2.dex["koi"].get("big", false)) and bool(g2.dex["koi"].get("perf", false)),
+		"图鉴 巨物/完美 徽章应随存档恢复")
+	_assert(not bool(g2.dex["crucian"].get("big", false)), "未达成的徽章不应误置")
 	_assert(int(g2.dex["crucian"]["n"]) == 12 and absf(float(g2.dex["koi"]["w"]) - 5.5) < 0.01,
 		"图鉴纪录（捕获数/最大体重）应随存档恢复")
 	_assert(str(g2.daily_order["fish"]) == "carp" and int(g2.daily_order["need"]) == 2

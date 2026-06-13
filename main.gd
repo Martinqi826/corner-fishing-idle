@@ -206,16 +206,20 @@ func _begin_bite() -> void:
 	Audio.play_sfx("bite")
 
 
-## 更新图鉴纪录（捕获数 +1、最大体重取大）。返回是否打破"既有"纪录：
+## 更新图鉴纪录（捕获数 +1、最大体重取大、巨物/完美徽章）。返回是否打破"既有"纪录：
 ## 该鱼种此前已钓 ≥5 条且新体重超过旧纪录才算（避免前期每条都播报）。
-func _dex_record(id: String, w: float) -> bool:
+func _dex_record(id: String, w: float, is_big := false, is_perfect := false) -> bool:
 	if not dex.has(id):
-		dex[id] = {"n": 1, "w": w}
+		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect}
 		return false
 	var r: Dictionary = dex[id]
 	var broke: bool = int(r["n"]) >= 5 and w > float(r["w"])
 	r["n"] = int(r["n"]) + 1
 	r["w"] = maxf(float(r["w"]), w)
+	if is_big:
+		r["big"] = true
+	if is_perfect:
+		r["perf"] = true
 	return broke
 
 
@@ -239,9 +243,10 @@ func _do_catch() -> void:
 	inventory.append(c)
 	lifetime_catches += 1
 	best_quality = maxi(best_quality, q)
-	if FishData.size_tag(c["id"], c["w"]) == "巨物·":
+	var is_big := FishData.size_tag(c["id"], c["w"]) == "巨物·"
+	if is_big:
 		caught_giant = true
-	var broke_record := _dex_record(c["id"], float(c["w"]))
+	var broke_record := _dex_record(c["id"], float(c["w"]), is_big, q >= 3)
 	var col: Color = FishData.TIER_COLORS[tier]
 	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2) else "catch_common")
 	_popup("%s %.2fkg" % [fname, c["w"]], painter.position + painter.bobber_pos() + Vector2(-22, -8), col)
@@ -1143,7 +1148,7 @@ func _dex_card(id: String) -> Control:
 	var known := dex.has(id)
 	var tier := FishData.tier_of(id)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(112, 82)
+	panel.custom_minimum_size = Vector2(112, 98)
 	panel.add_theme_stylebox_override("panel", _paper_style(0.88) if known else _dark_row_style(0.40))
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 6)
@@ -1174,7 +1179,38 @@ func _dex_card(id: String) -> Control:
 		rec.add_theme_font_size_override("font_size", 10)
 		rec.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42))
 		box.add_child(rec)
+		box.add_child(_dex_badges(r))
 	return panel
+
+
+## 图鉴长期目标徽章行：集齐(10条)/巨物/完美。已达成亮色，未达成淡色提示进度。
+func _dex_badges(r: Dictionary) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 4)
+	var n := int(r["n"])
+	var col10 := Label.new()
+	col10.add_theme_font_size_override("font_size", 10)
+	if n >= 10:
+		col10.text = "✦集齐"
+		col10.add_theme_color_override("font_color", Color(0.95, 0.80, 0.35))
+	else:
+		col10.text = "%d/10" % n
+		col10.add_theme_color_override("font_color", Color(0.52, 0.49, 0.43))
+	row.add_child(col10)
+	if bool(r.get("big", false)):
+		var b := Label.new()
+		b.text = "巨"
+		b.add_theme_font_size_override("font_size", 10)
+		b.add_theme_color_override("font_color", Color(0.90, 0.66, 0.34))
+		row.add_child(b)
+	if bool(r.get("perf", false)):
+		var p := Label.new()
+		p.text = "完★"
+		p.add_theme_font_size_override("font_size", 10)
+		p.add_theme_color_override("font_color", Color(0.80, 0.62, 0.92))
+		row.add_child(p)
+	return row
 
 
 func _toggle_lock(idx: int) -> void:
@@ -1630,7 +1666,10 @@ func _save() -> void:
 func _dex_to_save() -> Dictionary:
 	var out := {}
 	for id in dex:
-		out[id] = [int(dex[id]["n"]), float(dex[id]["w"])]
+		var r: Dictionary = dex[id]
+		out[id] = [int(r["n"]), float(r["w"]),
+			1 if bool(r.get("big", false)) else 0,
+			1 if bool(r.get("perf", false)) else 0]
 	return out
 
 
@@ -1662,14 +1701,17 @@ func _load_save() -> void:
 		achievements_done[str(id)] = true
 	dex = {}
 	var dex_raw: Variant = data.get("dex", [])
-	if dex_raw is Dictionary:                # v4：{id: [n, w_max]}
+	if dex_raw is Dictionary:                # v4+：{id: [n, w_max, big?, perf?]}（后两位 v7 新增）
 		for id in dex_raw:
 			if FishData.FISH.has(str(id)) and dex_raw[id] is Array and (dex_raw[id] as Array).size() >= 2:
-				dex[str(id)] = {"n": int(dex_raw[id][0]), "w": float(dex_raw[id][1])}
+				var e: Array = dex_raw[id]
+				dex[str(id)] = {"n": int(e[0]), "w": float(e[1]),
+					"big": e.size() >= 3 and int(e[2]) == 1,
+					"perf": e.size() >= 4 and int(e[3]) == 1}
 	elif dex_raw is Array:                   # v1~v3：仅 id 列表 → 纪录从头积累
 		for id in dex_raw:
 			if FishData.FISH.has(str(id)):   # 老存档里已改名/移除的鱼种直接丢弃
-				dex[str(id)] = {"n": 1, "w": 0.0}
+				dex[str(id)] = {"n": 1, "w": 0.0, "big": false, "perf": false}
 	daily_order = {}
 	var order_raw: Variant = data.get("daily_order", {})
 	if order_raw is Dictionary:
@@ -1716,10 +1758,11 @@ func _offline_catch(elapsed: float) -> int:
 	for i in n:
 		var c := FishData.roll_catch(rng, rod_level, bait_level)
 		inventory.append(c)
-		_dex_record(c["id"], float(c["w"]))
+		var ib := FishData.size_tag(c["id"], c["w"]) == "巨物·"
+		_dex_record(c["id"], float(c["w"]), ib, int(c.get("q", 0)) >= 3)
 		lifetime_catches += 1
 		best_quality = maxi(best_quality, int(c.get("q", 0)))
-		if FishData.size_tag(c["id"], c["w"]) == "巨物·":
+		if ib:
 			caught_giant = true
 		total_v += int(c["v"])
 		if top.is_empty() or int(c["v"]) > int(top["v"]):
