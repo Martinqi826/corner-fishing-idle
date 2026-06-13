@@ -425,6 +425,9 @@ func _check_daily_order() -> void:
 	var idx: Array = game._daily_order_indices()
 	_assert(idx.size() == 3, "每日订单应只统计未上锁目标鱼，实际 %d" % idx.size())
 	_assert(game._daily_order_reward(idx) == 125, "订单应按最高价值 2 条 ×2.5 结算为 125")
+	game._merchant_active = true
+	_assert(game._daily_order_reward(idx) == 188, "收鱼郎在场订单应再 ×1.5 = 188，实际 %d" % game._daily_order_reward(idx))
+	game._merchant_active = false
 	game._try_complete_daily_order()
 	_assert(bool(game.daily_order["done"]), "交付后今日订单应标记完成")
 	_assert(game.coins == 125 and game.lifetime_coins == 125, "订单收益应进金币和累计卖鱼收入")

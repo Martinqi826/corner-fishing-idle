@@ -988,7 +988,10 @@ func _daily_order_reward(indices: Array) -> int:
 	var total := 0
 	for i in mini(need, indices.size()):
 		total += int(inventory[int(indices[i])]["v"])
-	return int(ceil(float(total) * DAILY_ORDER_MULT))
+	var mult := DAILY_ORDER_MULT
+	if _merchant_active:
+		mult *= MERCHANT_MULT  # 收鱼郎在场：订单结算再 ×1.5（黄金时刻）
+	return int(ceil(float(total) * mult))
 
 
 func _fill_order_tab(v: VBoxContainer) -> void:
@@ -1035,12 +1038,14 @@ func _fill_order_tab(v: VBoxContainer) -> void:
 	info.add_child(title)
 	var kind_label: String = {"species": "指定鱼种", "tier": "指定品阶", "weight": "大物", "perfect": "完美品质"}.get(kind, "")
 	var desc := Label.new()
-	desc.text = "%s订单 · 交付未上锁的符合渔获，按鱼价 ×%.1f 结算" % [kind_label, DAILY_ORDER_MULT]
+	var mtxt := "（收鱼郎在场 ×%.1f！）" % MERCHANT_MULT if _merchant_active else ""
+	desc.text = "%s订单 · 交付未上锁的符合渔获，按鱼价 ×%.1f 结算%s" % [kind_label, DAILY_ORDER_MULT, mtxt]
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.custom_minimum_size = Vector2(220, 0)
 	desc.add_theme_font_size_override("font_size", 12)
 	desc.add_theme_color_override("font_color",
-		Color(0.46, 0.42, 0.34) if not done else Color(0.64, 0.60, 0.54))
+		Color(0.85, 0.6, 0.2) if _merchant_active and not done
+		else (Color(0.46, 0.42, 0.34) if not done else Color(0.64, 0.60, 0.54)))
 	info.add_child(desc)
 	var progress := Label.new()
 	if done:
@@ -1088,7 +1093,8 @@ func _try_complete_daily_order() -> void:
 	lifetime_coins += reward
 	daily_order["done"] = true
 	Audio.play_sfx("coin")
-	_toast("每日订单完成：+%d 金币" % reward, 2.6, Color(0.98, 0.82, 0.40))
+	_toast("每日订单完成：+%d 金币%s" % [reward, "（收鱼郎×1.5）" if _merchant_active else ""],
+		2.6, Color(0.98, 0.82, 0.40))
 	_check_achievements()
 	_update_hud()
 	_refresh_panel()
