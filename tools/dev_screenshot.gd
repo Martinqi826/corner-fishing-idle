@@ -19,6 +19,8 @@ func _run() -> void:
 	for i in 30:
 		await process_frame
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
+	_main.seen_intro = true
+	_main._close_panel()  # 关掉首启引导，场景展示图保持干净
 
 	# 1) 场景 + 按钮 + 一次上鱼反馈
 	_main.coins = 1234
