@@ -1016,10 +1016,21 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	head.add_child(sp)
 	var total := 0
 	var unlocked := 0
+	var junk := 0
 	for c in inventory:
 		if not bool(c.get("lock", false)):
 			total += _sell_value(c)
 			unlocked += 1
+			if not _order_matches(c):
+				junk += 1
+	var sell_junk := Button.new()
+	sell_junk.text = "卖杂鱼"
+	sell_junk.custom_minimum_size = Vector2(64, 28)
+	sell_junk.disabled = junk == 0
+	sell_junk.tooltip_text = "卖出 %d 条非订单、非收藏的鱼（保留订单目标鱼与锁定）" % junk
+	_apply_button_skin(sell_junk, false)
+	sell_junk.pressed.connect(_sell_junk)
+	head.add_child(sell_junk)
 	var sell_all := Button.new()
 	sell_all.text = "全部卖出"
 	sell_all.custom_minimum_size = Vector2(76, 28)
@@ -1336,6 +1347,30 @@ func _sell_all() -> void:
 	if not keep.is_empty():
 		msg += "（%d 条收藏留着）" % keep.size()
 	_toast(msg, 2.2, Color(0.85, 0.7, 0.35))
+	_check_achievements()
+	_update_hud()
+	_refresh_panel()
+	_save()
+
+
+## 卖杂鱼：卖出未上锁且非当前订单目标的鱼，保留订单进度与收藏。
+func _sell_junk() -> void:
+	var total := 0
+	var n := 0
+	var keep: Array = []
+	for c in inventory:
+		if bool(c.get("lock", false)) or _order_matches(c):
+			keep.append(c)
+		else:
+			total += _sell_value(c)
+			n += 1
+	if n == 0:
+		return
+	inventory = keep
+	coins += total
+	lifetime_coins += total
+	Audio.play_sfx("coin")
+	_toast("卖出杂鱼 %d 条 +%d 金币（订单鱼与收藏保留）" % [n, total], 2.2, Color(0.85, 0.7, 0.35))
 	_check_achievements()
 	_update_hud()
 	_refresh_panel()

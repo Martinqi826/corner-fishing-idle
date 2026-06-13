@@ -246,7 +246,23 @@ func _check_bag_sort() -> void:
 	_assert(g._sorted_bag_indices("")[0] == 2, "最新排序首位应是最后入包")
 	var only: Array = g._sorted_bag_indices("carp")
 	_assert(only.size() == 1 and only[0] == 2, "筛选订单鱼应只剩 carp")
-	print("  排序/筛选 通过")
+	# 卖杂鱼：保留订单目标鱼与锁定
+	g.daily_order = {"date": g._today_key(), "kind": "species", "fish": "koi", "tier": 1, "need": 1, "minw": 1.0, "done": false}
+	g.inventory = [
+		{"id": "koi", "w": 3.0, "v": 300, "q": 0},
+		{"id": "crucian", "w": 0.5, "v": 5, "q": 0, "lock": true},
+		{"id": "carp", "w": 1.0, "v": 20, "q": 0},
+	]
+	g.lifetime_coins = 0
+	g._sell_junk()
+	_assert(g.inventory.size() == 2, "卖杂鱼应只卖非订单非锁定，剩 koi+锁定鲫，实际 %d" % g.inventory.size())
+	_assert(g.lifetime_coins == 20, "卖杂鱼收入应为 carp 的 20，实际 %d" % g.lifetime_coins)
+	var has_koi := false
+	for c in g.inventory:
+		if str(c["id"]) == "koi":
+			has_koi = true
+	_assert(has_koi, "订单目标鱼应保留")
+	print("  排序/筛选/卖杂鱼 通过")
 	g.queue_free()
 	await process_frame
 
