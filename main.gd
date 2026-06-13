@@ -716,11 +716,11 @@ func _set_catch_tab(tab: int) -> void:
 func _fill_bag_panel(v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴", "订单", "成就"]
+	var names := ["背包", "图鉴", "订单", "成就", "统计"]
 	for i in range(names.size()):
 		var tb := Button.new()
 		tb.text = names[i]
-		tb.custom_minimum_size = Vector2(58, 28)
+		tb.custom_minimum_size = Vector2(50, 28)
 		_apply_button_skin(tb, i == _catch_tab)
 		if i != _catch_tab:
 			tb.pressed.connect(_set_catch_tab.bind(i))
@@ -730,7 +730,67 @@ func _fill_bag_panel(v: VBoxContainer) -> void:
 		0: _fill_bag_tab(v)
 		1: _fill_dex_tab(v)
 		2: _fill_order_tab(v)
-		_: _fill_ach_tab(v)
+		3: _fill_ach_tab(v)
+		_: _fill_stats_tab(v)
+
+
+## 统计页：长期成长看板（只读）。
+func _fill_stats_tab(v: VBoxContainer) -> void:
+	# 找最大一条（图鉴每种存了最大体重纪录）
+	var big_id := ""
+	var big_w := 0.0
+	for id in dex:
+		if float(dex[id]["w"]) > big_w:
+			big_w = float(dex[id]["w"])
+			big_id = str(id)
+	var biggest := "—"
+	if big_id != "":
+		biggest = "%s %.2fkg" % [FishData.display_name(big_id), big_w]
+	var q := best_quality
+	var q_txt: String = (str(FishData.QUALITY_NAMES[clampi(q, 0, 3)]) + "★".repeat(q)) if q > 0 else "普通"
+	var rows := [
+		["终身渔获", "%d 条" % lifetime_catches],
+		["终身卖鱼收入", "%d 金币" % lifetime_coins],
+		["当前金币", "%d" % coins],
+		["图鉴收集", "%d / %d 种" % [dex.size(), FishData.FISH.size()]],
+		["成就达成", "%d / %d" % [achievements_done.size(), AchievementData.LIST.size()]],
+		["最高品相", q_txt],
+		["最大渔获", biggest],
+		["巨物纪录", "已钓到" if caught_giant else "尚无"],
+		["鱼篓容量", "%d 格" % _bag_capacity()],
+		["当前装备", "鱼竿 Lv.%d · %s · %s" % [
+			rod_level, FishData.BAITS[bait_level]["name"], FishData.HOOKS[hook_level]["name"]]],
+	]
+	var sc0 := ScrollContainer.new()
+	sc0.custom_minimum_size = Vector2(0, 360)
+	sc0.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 4)
+	for r in rows:
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", _paper_style(0.86))
+		var mg := MarginContainer.new()
+		for s in ["left", "right"]:
+			mg.add_theme_constant_override("margin_" + s, 10)
+		for s in ["top", "bottom"]:
+			mg.add_theme_constant_override("margin_" + s, 5)
+		panel.add_child(mg)
+		var row := HBoxContainer.new()
+		mg.add_child(row)
+		var nm := Label.new()
+		nm.text = str(r[0])
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nm.add_theme_color_override("font_color", Color(0.46, 0.43, 0.37))
+		row.add_child(nm)
+		var val := Label.new()
+		val.text = str(r[1])
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		val.add_theme_color_override("font_color", Color(0.26, 0.25, 0.22))
+		row.add_child(val)
+		list.add_child(panel)
+	sc0.add_child(list)
+	v.add_child(sc0)
 
 
 func _fill_ach_tab(v: VBoxContainer) -> void:
