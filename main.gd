@@ -64,7 +64,8 @@ var save_path := "user://corner_fishing_save.json"
 const OFFLINE_CAP := 8.0 * 3600.0     # 离线最多结算 8 小时
 const OFFLINE_EFFICIENCY := 0.5       # 离线效率 50%
 var _save_t := 10.0
-var _pending_offline := ""
+var _pending_offline := ""               # 仅"满篓没钓到"等无渔获情况用 toast
+var _offline_report := {}                # 离线小结：{dur,count,full,value,top,notable[]}
 
 # —— 窗口拖动（默认右下角，可拖到任意位置）——
 var _dragging := false
@@ -108,7 +109,9 @@ func _ready() -> void:
 	_begin_wait()
 	_started = true
 	Audio.start_ambience()
-	if _pending_offline != "":
+	if not _offline_report.is_empty():
+		_open_panel("offline")
+	elif _pending_offline != "":
 		_toast(_pending_offline, 4.5, Color(0.55, 0.85, 0.55))
 		_pending_offline = ""
 
@@ -443,15 +446,16 @@ func _open_panel(kind: String) -> void:
 	if is_instance_valid(_panel):
 		_panel_saved_pos = _panel.position
 	_close_panel()
-	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置"}
+	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结"}
 	var card := _make_card(str(titles.get(kind, "")))
-	if _panel_saved_pos != null:
+	if kind != "offline" and _panel_saved_pos != null:
 		card.position = _clamp_panel_position(_panel_saved_pos, card.custom_minimum_size)
 	var v: VBoxContainer = card.get_node("M/V")
 	match kind:
 		"catch": _fill_bag_panel(v)
 		"rod": _fill_upgrades(v)
 		"set": _fill_settings(v)
+		"offline": _fill_offline_report(v)
 	ui_root.add_child(card)
 	_panel = card
 	_panel_kind = kind
@@ -1354,6 +1358,92 @@ func _fill_settings(v: VBoxContainer) -> void:
 	v.add_child(quit)
 
 
+## 离线小结面板：欢迎回来 + 时长/渔获/最值钱一条/合计可卖/稀有清单。
+func _fill_offline_report(v: VBoxContainer) -> void:
+	var rep := _offline_report
+	var hi := Label.new()
+	hi.text = "欢迎回来，钓友"
+	hi.add_theme_font_size_override("font_size", 16)
+	hi.add_theme_color_override("font_color", Color(0.30, 0.30, 0.27))
+	v.add_child(hi)
+	var line := Label.new()
+	line.text = "离线 %s，挂竿钓得 %d 条入篓%s" % [
+		str(rep.get("dur", "")), int(rep.get("count", 0)),
+		"（鱼篓已满）" if bool(rep.get("full", false)) else ""]
+	line.add_theme_color_override("font_color", Color(0.42, 0.42, 0.38))
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.custom_minimum_size = Vector2(360, 0)
+	v.add_child(line)
+	# 最值钱一条
+	var top: Dictionary = rep.get("top", {})
+	if not top.is_empty():
+		var card := PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _paper_style(0.9))
+		var mg := MarginContainer.new()
+		for s in ["left", "top", "right", "bottom"]:
+			mg.add_theme_constant_override("margin_" + s, 8 if s in ["left", "right"] else 6)
+		card.add_child(mg)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		mg.add_child(row)
+		row.add_child(_fish_icon(str(top["id"]), 48))
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.add_theme_constant_override("separation", 0)
+		var t := FishData.tier_of(str(top["id"]))
+		var nm := Label.new()
+		nm.text = "最值钱 · %s %s%s" % [FishData.TIER_NAMES[t],
+			FishData.size_tag(str(top["id"]), float(top["w"])), FishData.display_name(str(top["id"]))]
+		nm.add_theme_color_override("font_color", _ui_tier_color(t, true))
+		info.add_child(nm)
+		var meta := Label.new()
+		meta.text = "%.2fkg · %d 金币" % [float(top["w"]), int(top["v"])]
+		meta.add_theme_font_size_override("font_size", 12)
+		meta.add_theme_color_override("font_color", Color(0.5, 0.46, 0.4))
+		info.add_child(meta)
+		row.add_child(info)
+		v.add_child(card)
+	var total := Label.new()
+	total.text = "合计可卖 ≈ %d 金币（已入鱼篓，去卖出变现）" % int(rep.get("value", 0))
+	total.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
+	total.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	total.custom_minimum_size = Vector2(360, 0)
+	v.add_child(total)
+	# 稀有清单
+	var notable: Array = rep.get("notable", [])
+	if not notable.is_empty():
+		var nlbl := Label.new()
+		nlbl.text = "其中珍稀 %d 条：" % notable.size()
+		nlbl.add_theme_font_size_override("font_size", 12)
+		nlbl.add_theme_color_override("font_color", Color(0.5, 0.47, 0.42))
+		v.add_child(nlbl)
+		var shown := 0
+		for c in notable:
+			if shown >= 6:
+				break
+			var t2 := FishData.tier_of(str(c["id"]))
+			var rl := Label.new()
+			rl.text = "· %s%s%s %.2fkg" % [FishData.quality_label(int(c.get("q", 0))),
+				FishData.TIER_NAMES[t2] + "·", FishData.display_name(str(c["id"])), float(c["w"])]
+			rl.add_theme_font_size_override("font_size", 12)
+			rl.add_theme_color_override("font_color", _ui_tier_color(t2, false))
+			v.add_child(rl)
+			shown += 1
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 6)
+	v.add_child(gap)
+	var go := Button.new()
+	go.text = "去鱼篓看看"
+	go.focus_mode = Control.FOCUS_NONE
+	go.custom_minimum_size = Vector2(0, 34)
+	_apply_button_skin(go, true)
+	go.pressed.connect(func() -> void:
+		_offline_report = {}
+		_catch_tab = 0
+		_open_panel("catch"))
+	v.add_child(go)
+
+
 func _rod_cost() -> int:
 	return int(round(40.0 * pow(1.8, rod_level - 1)))
 
@@ -1502,24 +1592,38 @@ func _load_save() -> void:
 	if elapsed > 30.0:
 		var caught := _offline_catch(elapsed)
 		if caught > 0:
-			_pending_offline = "离线 %s，钓得 %d 条鱼入篓%s" % [
-				_fmt_dur(elapsed), caught, "（已装满）" if _bag_full() else ""]
+			_offline_report["dur"] = _fmt_dur(elapsed)
+			_offline_report["full"] = _bag_full()
 		elif _bag_full():
 			_pending_offline = "离线 %s，鱼篓是满的，一条都装不下啦" % _fmt_dur(elapsed)
 
 
-## 离线钓鱼：上鱼数 = 时长/平均间隔×效率，受背包剩余格数限制。返回实际入篓条数。
+## 离线钓鱼：上鱼数 = 时长/平均间隔×效率，受背包剩余格数限制。
+## 同时汇总成 _offline_report 供回屏小结面板展示。返回实际入篓条数。
 func _offline_catch(elapsed: float) -> int:
 	var wait_factor: float = maxf(0.4, 1.0 - float(rod_level - 1) * 0.06)
 	var avg_interval := 5.25 * wait_factor + 0.9
 	var est := int(elapsed / avg_interval * OFFLINE_EFFICIENCY)
 	var free := _bag_capacity() - inventory.size()
 	var n: int = clampi(est, 0, free)
+	var total_v := 0
+	var top: Dictionary = {}
+	var notable: Array = []
 	for i in n:
 		var c := FishData.roll_catch(rng, rod_level, bait_level)
 		inventory.append(c)
 		_dex_record(c["id"], float(c["w"]))
 		lifetime_catches += 1
+		best_quality = maxi(best_quality, int(c.get("q", 0)))
+		if FishData.size_tag(c["id"], c["w"]) == "巨物·":
+			caught_giant = true
+		total_v += int(c["v"])
+		if top.is_empty() or int(c["v"]) > int(top["v"]):
+			top = c
+		if FishData.tier_of(c["id"]) >= 3 or int(c.get("q", 0)) >= 2:
+			notable.append(c)
+	if n > 0:
+		_offline_report = {"count": n, "value": total_v, "top": top, "notable": notable}
 	return n
 
 
