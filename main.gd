@@ -1332,8 +1332,7 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 7)
 	grid.add_theme_constant_override("v_separation", 7)
-	var order_target := str(daily_order.get("fish", "")) if _bag_filter_order else ""
-	var idxs := _sorted_bag_indices(order_target)
+	var idxs := _sorted_bag_indices(_bag_filter_order)
 	if idxs.is_empty():
 		var none := Label.new()
 		none.text = "没有符合条件的鱼"
@@ -1345,11 +1344,12 @@ func _fill_bag_tab(v: VBoxContainer) -> void:
 	v.add_child(sc)
 
 
-## 按当前排序/筛选返回背包显示用的真实索引序列。
-func _sorted_bag_indices(order_target: String) -> Array:
+## 按当前排序返回背包显示用的真实索引序列。filter_order=true 时只保留符合当前订单的鱼
+## （按 _order_matches，兼容指定鱼种/品阶/大物/完美各类订单，而非仅图标代表鱼）。
+func _sorted_bag_indices(filter_order: bool) -> Array:
 	var idxs: Array = []
 	for i in inventory.size():
-		if order_target != "" and str(inventory[i].get("id", "")) != order_target:
+		if filter_order and not _order_matches(inventory[i]):
 			continue
 		idxs.append(i)
 	match _bag_sort:

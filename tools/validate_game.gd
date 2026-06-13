@@ -301,6 +301,15 @@ func _check_hook() -> void:
 		if g.inventory.size() == 2:
 			doubles += 1
 	_assert(doubles > 0, "双叉钩 300 次内应触发双钩，实际 %d" % doubles)
+	# 边界：满篓附近双钩不应溢出容量
+	g.bag_level = 1  # cap 20
+	var cap: int = g._bag_capacity()
+	g.inventory = []
+	for i in cap - 1:
+		g.inventory.append({"id": "carp", "w": 1.0, "v": 10, "q": 0})
+	for i in 50:
+		g._do_catch()
+		_assert(g.inventory.size() <= cap, "双钩不应超出鱼篓容量 %d，实际 %d" % [cap, g.inventory.size()])
 	# 成就
 	g._check_achievements()
 	_assert(g.achievements_done.has("hook_master"), "用上双叉钩应解锁成就")
@@ -337,13 +346,19 @@ func _check_bag_sort() -> void:
 		{"id": "carp", "w": 1.0, "v": 20, "q": 0},
 	]
 	g._bag_sort = 1
-	_assert(g._sorted_bag_indices("")[0] == 1, "价值排序首位应是 koi")
+	_assert(g._sorted_bag_indices(false)[0] == 1, "价值排序首位应是 koi")
 	g._bag_sort = 3
-	_assert(g._sorted_bag_indices("")[0] == 1, "重量排序首位应是 koi")
+	_assert(g._sorted_bag_indices(false)[0] == 1, "重量排序首位应是 koi")
 	g._bag_sort = 0
-	_assert(g._sorted_bag_indices("")[0] == 2, "最新排序首位应是最后入包")
-	var only: Array = g._sorted_bag_indices("carp")
-	_assert(only.size() == 1 and only[0] == 2, "筛选订单鱼应只剩 carp")
+	_assert(g._sorted_bag_indices(false)[0] == 2, "最新排序首位应是最后入包")
+	# 订单鱼筛选按 _order_matches：species 订单只留该种
+	g.daily_order = {"date": g._today_key(), "kind": "species", "fish": "carp", "tier": 1, "need": 1, "minw": 1.0, "done": false}
+	var only: Array = g._sorted_bag_indices(true)
+	_assert(only.size() == 1 and only[0] == 2, "species 订单筛选应只剩 carp")
+	# 品阶订单筛选：留所有 ≥tier3 的鱼（koi 是史诗+，crucian/carp 不是）
+	g.daily_order = {"date": g._today_key(), "kind": "tier", "fish": "koi", "tier": 3, "need": 1, "minw": 1.0, "done": false}
+	var tonly: Array = g._sorted_bag_indices(true)
+	_assert(tonly.size() == 1 and tonly[0] == 1, "tier 订单筛选应按品阶匹配(只剩 koi)，实际 %d" % tonly.size())
 	# 卖杂鱼：保留订单目标鱼与锁定
 	g.daily_order = {"date": g._today_key(), "kind": "species", "fish": "koi", "tier": 1, "need": 1, "minw": 1.0, "done": false}
 	g.inventory = [
