@@ -86,6 +86,15 @@ const MERCHANT_FIRST := Vector2(180.0, 360.0)    # 首次出现(秒)，让玩家
 var _merchant_active := false
 var _merchant_t := 0.0                            # 当前阶段剩余秒数
 
+# —— 鱼汛：随机限时事件，咬钩更快 + 高阶鱼概率大增（仿宠物游戏流星雨）——
+const RUN_LUCK := 7                                # 鱼汛期间品阶运气加成（高潮事件，大鱼明显变多）
+const RUN_WAIT_MULT := 0.5                         # 鱼汛期间等待时长系数
+const RUN_DUR := Vector2(45.0, 70.0)
+const RUN_GAP := Vector2(900.0, 1800.0)
+const RUN_FIRST := Vector2(240.0, 480.0)
+var _run_active := false
+var _run_t := 0.0
+
 # —— 每日订单：每天 1 单，交付指定鱼种，按原价 ×2.5 结算 ——
 const DAILY_ORDER_MULT := 2.5
 var daily_order := {}  # {"date": yyyy-mm-dd, "fish": id, "need": int, "done": bool}
@@ -109,6 +118,7 @@ func _ready() -> void:
 	_ensure_daily_order()
 	_build_buttons()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
+	_run_t = rng.randf_range(RUN_FIRST.x, RUN_FIRST.y)
 	_update_hud()
 	_begin_wait()
 	_started = true
@@ -181,6 +191,7 @@ func _process(delta: float) -> void:
 			_save_t = 10.0
 			_save()
 	_tick_merchant(delta)
+	_tick_fish_run(delta)
 	_state_t -= delta
 	match _state:
 		ST_WAIT:
@@ -196,6 +207,8 @@ func _process(delta: float) -> void:
 func _begin_wait() -> void:
 	_state = ST_WAIT
 	var w := rng.randf_range(3.5, 7.0) * maxf(0.4, 1.0 - float(rod_level - 1) * 0.06)
+	if _run_active:
+		w *= RUN_WAIT_MULT  # 鱼汛期间咬钩更勤
 	_state_t = w
 	Audio.play_sfx("cast")
 	get_tree().create_timer(0.45).timeout.connect(func() -> void: Audio.play_sfx("bobber_splash"))
@@ -237,7 +250,8 @@ func _do_catch() -> void:
 	if _bag_full():
 		_begin_wait()
 		return
-	var c := FishData.roll_catch(rng, rod_level, bait_level)
+	var luck := RUN_LUCK if _run_active else 0
+	var c := FishData.roll_catch(rng, rod_level, bait_level, luck)
 	var tier := FishData.tier_of(c["id"])
 	var q := int(c.get("q", 0))
 	var fname := FishData.quality_label(q) + FishData.size_tag(c["id"], c["w"]) \
@@ -270,7 +284,7 @@ func _do_catch() -> void:
 	# 鱼钩双钩：一定几率再上一条（受背包剩余格数限制）
 	if hook_level > 0 and not _bag_full() \
 			and rng.randf() < float(FishData.HOOKS[hook_level]["double"]):
-		var c2 := FishData.roll_catch(rng, rod_level, bait_level)
+		var c2 := FishData.roll_catch(rng, rod_level, bait_level, luck)
 		inventory.append(c2)
 		lifetime_catches += 1
 		best_quality = maxi(best_quality, int(c2.get("q", 0)))
@@ -306,9 +320,12 @@ func _update_hud() -> void:
 	if _bag_full():
 		bag += "（满）"
 	var mer := "　收鱼郎×1.5" if _merchant_active else ""
-	coins_label.text = "金币 %d　%s%s" % [coins, bag, mer]
+	var run := "　🌊鱼汛!" if _run_active else ""
+	coins_label.text = "金币 %d　%s%s%s" % [coins, bag, mer, run]
 	var col := Color(0.92, 0.92, 0.9)
-	if _merchant_active:
+	if _run_active:
+		col = Color(0.55, 0.80, 0.96)
+	elif _merchant_active:
 		col = Color(0.98, 0.82, 0.40)
 	elif _bag_full():
 		col = Color(1.0, 0.78, 0.45)
@@ -1408,6 +1425,25 @@ func _tick_merchant(delta: float) -> void:
 		_toast("收鱼郎来了！限时收购，全部卖价 ×1.5", 3.5, Color(0.98, 0.82, 0.40))
 	_update_hud()
 	_refresh_panel()
+
+
+## 鱼汛：限时高潮事件，咬钩更快 + 高阶鱼概率大增。
+func _tick_fish_run(delta: float) -> void:
+	_run_t -= delta
+	if _run_t > 0.0:
+		return
+	if _run_active:
+		_run_active = false
+		_run_t = rng.randf_range(RUN_GAP.x, RUN_GAP.y)
+		_toast("鱼汛退了，水面又归于平静。", 2.4, Color(0.62, 0.70, 0.74))
+	else:
+		_run_active = true
+		_run_t = rng.randf_range(RUN_DUR.x, RUN_DUR.y)
+		if not focus_mode:
+			_flash()
+		_toast("🌊 鱼汛来了！咬钩更勤，大鱼更多！", 3.5, Color(0.5, 0.78, 0.95))
+		_begin_wait()  # 立刻按更快节奏重排下一口
+	_update_hud()
 
 
 func _try_expand_bag() -> void:

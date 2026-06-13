@@ -44,6 +44,9 @@ func _run() -> void:
 	print("=== 流动鱼贩 ===")
 	await _check_merchant()
 
+	print("=== 鱼汛事件 ===")
+	await _check_fish_run()
+
 	print("=== 每日订单 ===")
 	await _check_daily_order()
 
@@ -211,6 +214,37 @@ func _check_sell_expand() -> void:
 	print("  卖鱼/扩容 通过（容量 20→25，费用 100）")
 
 	game.queue_free()
+	await process_frame
+
+
+func _check_fish_run() -> void:
+	# 鱼汛 luck 抬高高阶占比
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var hi_norm := 0
+	var hi_run := 0
+	for i in 4000:
+		if FishData.tier_of(FishData.roll_catch(rng, 1, 0, 0)["id"]) >= 3:
+			hi_norm += 1
+		if FishData.tier_of(FishData.roll_catch(rng, 1, 0, 7)["id"]) >= 3:
+			hi_run += 1
+	_assert(hi_run > hi_norm * 1.4, "鱼汛应显著提高高阶鱼占比（普通 %d vs 鱼汛 %d）" % [hi_norm, hi_run])
+	# 事件状态机：到点切换 + 等待提速
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	_assert(not g._run_active, "起始鱼汛不在场")
+	g._run_t = 0.0
+	g._tick_fish_run(0.016)
+	_assert(g._run_active, "到点应触发鱼汛")
+	g._begin_wait()
+	_assert(g._state_t <= 7.0 * g.RUN_WAIT_MULT + 0.01, "鱼汛期间等待应提速")
+	g._run_t = 0.0
+	g._tick_fish_run(0.016)
+	_assert(not g._run_active, "时长结束应退去鱼汛")
+	print("  鱼汛：高阶占比 普通 %d→鱼汛 %d · 状态机 通过" % [hi_norm, hi_run])
+	g.queue_free()
 	await process_frame
 
 

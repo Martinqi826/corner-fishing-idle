@@ -131,8 +131,9 @@ static func weights_for_rod(rod_level: int) -> Dictionary:
 
 ## 钓一条鱼：抽种 + 抽体重 + 抽星级 + 算价值。返回 {"id", "w"(kg), "v"(金币), "q"(星级)}。
 ## 体重 roll 偏向小个体（k²），卖价与体重线性挂钩（Fisch 模型）再乘星级倍率。
-static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0) -> Dictionary:
-	var id := roll_fish(weights_for_rod(rod_level), rng)
+## luck：额外品阶运气（如鱼汛事件 +N），仅抬高高阶权重，不影响鱼价基准。
+static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0, luck := 0) -> Dictionary:
+	var id := roll_fish(weights_for_rod(rod_level + luck), rng)
 	var f: Dictionary = FISH[id]
 	var k := rng.randf()
 	k = k * k  # 偏向小体型，大鱼稀罕
