@@ -2138,153 +2138,21 @@ func _save() -> void:
 	if not save_enabled:
 		return
 	_ensure_daily_order()
-	var inv: Array = []
-	for c in inventory:
-		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
-			1 if bool(c.get("lock", false)) else 0])
-	var data := {
-		"ver": 6,
-		"coins": coins,
-		"rod_level": rod_level,
-		"bag_level": bag_level,
-		"bait": bait_level,
-		"hook": hook_level,
-		"inv": inv,
-		"lt_coins": lifetime_coins,
-		"lt_catches": lifetime_catches,
-		"dex": _dex_to_save(),
-		"daily_order": daily_order,
-		"weekly": weekly,
-		"day_stat": day_stat,
-		"best_q": best_quality,
-		"giant": caught_giant,
-		"ach": achievements_done.keys(),
-		"opacity": _opacity,
-		"focus": focus_mode,
-		"seen_intro": seen_intro,
-		"ts": Time.get_unix_time_from_system(),
-	}
-	if DisplayServer.get_name() != "headless":
-		var wp := DisplayServer.window_get_position()
-		data["win_pos"] = [wp.x, wp.y]
-	# 原子写：先写临时文件，再把旧档移为 .bak，最后改名顶替。
-	# 避免进程被杀(每次重启 taskkill)恰逢写档而截断 JSON 导致进度清零。
-	var tmp := save_path + ".tmp"
-	var f := FileAccess.open(tmp, FileAccess.WRITE)
-	if f == null:
-		return
-	f.store_string(JSON.stringify(data))
-	f.close()
-	if FileAccess.file_exists(save_path):
-		if FileAccess.file_exists(save_path + ".bak"):
-			DirAccess.remove_absolute(save_path + ".bak")
-		DirAccess.rename_absolute(save_path, save_path + ".bak")
-	DirAccess.rename_absolute(tmp, save_path)
-
-
-func _dex_to_save() -> Dictionary:
-	var out := {}
-	for id in dex:
-		var r: Dictionary = dex[id]
-		out[id] = [int(r["n"]), float(r["w"]),
-			1 if bool(r.get("big", false)) else 0,
-			1 if bool(r.get("perf", false)) else 0]
-	return out
-
-
-## 读一个存档文件，解析失败返回 null。
-func _read_save_file(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return null
-	var d: Variant = JSON.parse_string(f.get_as_text())
-	return d if d is Dictionary else null
+	SaveSystem.write_atomic(save_path, SaveSystem.collect(self))
 
 
 func _load_save() -> void:
 	if not save_enabled:
 		return
 	# 主档解析失败（截断/损坏）时回退到 .bak，最大限度保住进度
-	var data: Variant = _read_save_file(save_path)
+	var data: Variant = SaveSystem.read_file(save_path)
 	if data == null:
-		data = _read_save_file(save_path + ".bak")
+		data = SaveSystem.read_file(save_path + ".bak")
 		if data != null:
 			push_warning("主存档损坏，已从 .bak 恢复")
 	if not (data is Dictionary):
 		return
-	coins = int(data.get("coins", 0))
-	rod_level = max(1, int(data.get("rod_level", 1)))
-	bag_level = max(1, int(data.get("bag_level", 1)))  # v1 存档无此字段 → 默认 1
-	bait_level = clampi(int(data.get("bait", 0)), 0, FishData.BAITS.size() - 1)  # v2 及更早 → 蚯蚓
-	hook_level = clampi(int(data.get("hook", 0)), 0, FishData.HOOKS.size() - 1)  # 旧档 → 基础钩
-	inventory = []
-	for e in data.get("inv", []):           # v1 存档无此字段 → 空背包
-		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):
-			inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
-				"q": int(e[3]) if e.size() >= 4 else 0,    # v2 三元组 → 无星级
-				"lock": e.size() >= 5 and int(e[4]) == 1}) # v3 及更早 → 未锁定
-	lifetime_coins = int(data.get("lt_coins", 0))
-	lifetime_catches = int(data.get("lt_catches", 0))
-	best_quality = int(data.get("best_q", 0))
-	caught_giant = bool(data.get("giant", false))
-	achievements_done = {}
-	for id in data.get("ach", []):
-		achievements_done[str(id)] = true
-	dex = {}
-	var dex_raw: Variant = data.get("dex", [])
-	if dex_raw is Dictionary:                # v4+：{id: [n, w_max, big?, perf?]}（后两位 v7 新增）
-		for id in dex_raw:
-			if FishData.FISH.has(str(id)) and dex_raw[id] is Array and (dex_raw[id] as Array).size() >= 2:
-				var e: Array = dex_raw[id]
-				dex[str(id)] = {"n": int(e[0]), "w": float(e[1]),
-					"big": e.size() >= 3 and int(e[2]) == 1,
-					"perf": e.size() >= 4 and int(e[3]) == 1}
-	elif dex_raw is Array:                   # v1~v3：仅 id 列表 → 纪录从头积累
-		for id in dex_raw:
-			if FishData.FISH.has(str(id)):   # 老存档里已改名/移除的鱼种直接丢弃
-				dex[str(id)] = {"n": 1, "w": 0.0, "big": false, "perf": false}
-	daily_order = {}
-	var order_raw: Variant = data.get("daily_order", {})
-	if order_raw is Dictionary:
-		var od: Dictionary = order_raw
-		var fish_id := str(od.get("fish", ""))
-		if FishData.FISH.has(fish_id):
-			daily_order = {
-				"date": str(od.get("date", "")),
-				"kind": str(od.get("kind", "species")),  # 旧档无 kind → 指定鱼种
-				"fish": fish_id,
-				"need": max(1, int(od.get("need", 1))),
-				"tier": clampi(int(od.get("tier", 1)), 1, 5),
-				"minw": float(od.get("minw", 1.0)),
-				"done": bool(od.get("done", false)),
-			}
-	var wk_raw: Variant = data.get("weekly", {})  # 旧档无 weekly → _ensure_weekly 现生成
-	if wk_raw is Dictionary and wk_raw.has("week") and wk_raw.has("kind"):
-		weekly = {
-			"week": int(wk_raw.get("week", -1)),
-			"kind": str(wk_raw.get("kind", "catches")),
-			"target": max(1, int(wk_raw.get("target", 1))),
-			"base": int(wk_raw.get("base", 0)),
-			"reward": int(wk_raw.get("reward", 0)),
-			"done": bool(wk_raw.get("done", false)),
-		}
-	var ds_raw: Variant = data.get("day_stat", {})  # 旧档无 → _ensure_day_stat 现生成
-	if ds_raw is Dictionary and ds_raw.has("date"):
-		day_stat = {
-			"date": str(ds_raw.get("date", "")),
-			"catches": int(ds_raw.get("catches", 0)),
-			"coins": int(ds_raw.get("coins", 0)),
-		}
-	_opacity = float(data.get("opacity", 1.0))
-	_set_opacity(_opacity)
-	seen_intro = bool(data.get("seen_intro", true))  # 有存档=老玩家，默认已看过引导
-	if bool(data.get("focus", false)):
-		_set_focus(true)
-	var wp: Variant = data.get("win_pos", null)
-	if wp is Array and wp.size() >= 2:
-		_saved_win_pos = Vector2i(int(wp[0]), int(wp[1]))
+	SaveSystem.apply(self, data)
 	# 老存档（v4 及更早，无 ach 字段）静默补登已满足的成就，避免回屏刷屏
 	if not (data.get("ach", null) is Array):
 		_check_achievements(true)
