@@ -87,13 +87,20 @@ func _check_data() -> void:
 	var by_tier := {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 	for id in FishData.FISH:
 		var f: Dictionary = FishData.FISH[id]
-		for k in ["name", "tier", "wmin", "wmax", "vmin", "vmax"]:
+		for k in ["name", "tier", "wmin", "wmax", "vmin", "vmax", "tags"]:
 			_assert(f.has(k), "%s 缺字段 %s" % [id, k])
 		_assert(float(f["wmin"]) <= float(f["wmax"]), "%s wmin 应 <= wmax" % id)
 		_assert(int(f["vmin"]) <= int(f["vmax"]), "%s vmin 应 <= vmax" % id)
+		_assert((f["tags"] as Array).size() > 0, "%s tags 不应为空" % id)
 		by_tier[int(f["tier"])] += 1
 	for t in by_tier:
 		_assert(by_tier[t] > 0, "品阶 %d 至少应有一种鱼" % t)
+	# 鱼种规模与旧 id 兼容（旧 28 种必须仍在且带 river 标签 → 新手河湾体验不变）
+	_assert(FishData.FISH.size() >= 60, "鱼种应扩到 ≥60，实际 %d" % FishData.FISH.size())
+	for old_id in ["whitebait", "crucian", "carp", "mandarin", "snakehead", "koi",
+			"sturgeon", "chinese_sturgeon", "kaluga"]:
+		_assert(FishData.FISH.has(old_id), "旧鱼 id %s 应保留" % old_id)
+		_assert("river" in FishData.tags_of(old_id), "旧鱼 %s 应带 river 标签" % old_id)
 	print("  鱼种数 %d，按品阶分布 %s" % [FishData.FISH.size(), str(by_tier)])
 
 
@@ -148,6 +155,32 @@ func _check_spot_event_data() -> void:
 			_assert(rb.size() == 2 and int(rb[0]) > 0 and int(rb[0]) <= int(rb[1]),
 				"instant 事件 %s 应有合法 reward_base" % eid)
 	print("  事件 %d 个，结构/钓点适配 通过" % EventData.EVENTS.size())
+
+	# —— 钓点鱼池隔离：池内抽鱼绝不逸出到别的钓点 ——
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 123
+	for sid in SpotData.SPOT_ORDER:
+		var pool: Array = SpotData.pool_for(sid)
+		_assert(pool.size() >= 6, "钓点 %s 鱼池过小（%d）" % [sid, pool.size()])
+		var pool_set := {}
+		for fid in pool:
+			pool_set[fid] = true
+		var escaped := 0
+		# 用高 luck 逼出高阶（含池内可能缺的 t5）以验证就近回退不逸出
+		for i in 3000:
+			var c := FishData.roll_catch(rng, 6, 0, 8, pool)
+			if not pool_set.has(str(c["id"])):
+				escaped += 1
+		_assert(escaped == 0, "钓点 %s 抽鱼逸出鱼池 %d 次" % [sid, escaped])
+	# river_bend = 旧 28 种全集（保留现有体验）
+	_assert(SpotData.pool_for("river_bend").size() == 28,
+		"新手河湾应正好是旧 28 种，实际 %d" % SpotData.pool_for("river_bend").size())
+	# 海/湖各自的专属海鱼/湖鱼不应出现在对方池里
+	_assert(not ("hairtail" in SpotData.pool_for("still_lake")), "带鱼不应在静水湖泊池")
+	_assert(not ("largemouth" in SpotData.pool_for("coast_pier")), "大口黑鲈不应在海岸码头池")
+	_assert("hairtail" in SpotData.pool_for("coast_pier"), "带鱼应在海岸码头池")
+	_assert("largemouth" in SpotData.pool_for("still_lake"), "大口黑鲈应在静水湖泊池")
+	print("  钓点鱼池隔离：%s 各池就近回退不逸出 通过" % str(SpotData.SPOT_ORDER))
 
 
 func _check_distribution() -> void:
@@ -635,6 +668,9 @@ func _check_achievements_feature() -> void:
 	_assert(game.achievements_done.has("species_10"), "图鉴 10 种应解锁")
 	_assert(game.coins == before + 500, "species_10 应发 500 奖励，实得 %d" % (game.coins - before))
 	# 重量里程碑成就（maxweight 扫图鉴最大体重）
+	# 先清掉可能被前面随机 _do_catch 撞上巨物而提前解锁的重量成就，保证判定确定性
+	game.achievements_done.erase("whopper")
+	game.achievements_done.erase("leviathan")
 	game.dex["koi"] = {"n": 1, "w": 12.0, "big": true, "perf": false}
 	game._check_achievements()
 	_assert(game.achievements_done.has("whopper"), "≥10kg 应解锁大鱼出水")

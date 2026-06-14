@@ -16,41 +16,89 @@ const TIER_COLORS := [
 
 ## wmin/wmax = 体重区间(kg)，vmin/vmax = 对应体重端点的卖价(金币)，按体重线性插值。
 ## 相邻品阶价值倍率 ≈ ×3.5~4.5（调研结论），全谱跨度 ≈ ×5000。
+## tags = 生态标签，决定鱼出现在哪些钓点（SpotData.habitat_tags 与之求交集）：
+##   river 河流 / lake 静水湖泊 / stream 山涧溪流 / coast 海岸 / deep 深水 /
+##   cold 冷水 / night 夜行 / protected 保护鱼（养殖放流设定）。
+## 旧 28 种 id 与数值保持不变（旧存档兼容），全部带 river 标签 → 新手河湾仍是全鱼池、体验不变。
+## 60 种鱼谱系/选种依据见 docs/spot-research-20260614.md。
 const FISH := {
-	# —— 0 普通（常见杂鱼，冰钓基本盘）——
-	"whitebait": {"name": "白条", "tier": 0, "wmin": 0.01, "wmax": 0.02, "vmin": 1, "vmax": 3},
-	"topmouth": {"name": "麦穗鱼", "tier": 0, "wmin": 0.01, "wmax": 0.03, "vmin": 1, "vmax": 3},
-	"loach": {"name": "泥鳅", "tier": 0, "wmin": 0.03, "wmax": 0.15, "vmin": 2, "vmax": 5},
-	"crucian": {"name": "鲫鱼", "tier": 0, "wmin": 0.1, "wmax": 0.6, "vmin": 3, "vmax": 9},
-	"bighead": {"name": "鲢鳙", "tier": 0, "wmin": 1.5, "wmax": 3.0, "vmin": 6, "vmax": 14},
-	"yellowhead": {"name": "黄颡鱼", "tier": 0, "wmin": 0.1, "wmax": 0.3, "vmin": 8, "vmax": 18},
+	# —— 0 普通（常见杂鱼，基本盘）——
+	"whitebait": {"name": "白条", "tier": 0, "wmin": 0.01, "wmax": 0.02, "vmin": 1, "vmax": 3, "tags": ["river", "lake"]},
+	"topmouth": {"name": "麦穗鱼", "tier": 0, "wmin": 0.01, "wmax": 0.03, "vmin": 1, "vmax": 3, "tags": ["river", "lake"]},
+	"loach": {"name": "泥鳅", "tier": 0, "wmin": 0.03, "wmax": 0.15, "vmin": 2, "vmax": 5, "tags": ["river", "lake", "night"]},
+	"crucian": {"name": "鲫鱼", "tier": 0, "wmin": 0.1, "wmax": 0.6, "vmin": 3, "vmax": 9, "tags": ["river", "lake"]},
+	"bighead": {"name": "鲢鳙", "tier": 0, "wmin": 1.5, "wmax": 3.0, "vmin": 6, "vmax": 14, "tags": ["river", "lake"]},
+	"yellowhead": {"name": "黄颡鱼", "tier": 0, "wmin": 0.1, "wmax": 0.3, "vmin": 8, "vmax": 18, "tags": ["river", "lake", "night"]},
+	# 新增 · 湖
+	"bluegill": {"name": "蓝鳃太阳鱼", "tier": 0, "wmin": 0.05, "wmax": 0.4, "vmin": 2, "vmax": 6, "tags": ["lake"]},
+	"icefish": {"name": "银鱼", "tier": 0, "wmin": 0.005, "wmax": 0.02, "vmin": 3, "vmax": 8, "tags": ["lake", "cold"]},
+	"bitterling": {"name": "鳑鲏", "tier": 0, "wmin": 0.005, "wmax": 0.02, "vmin": 1, "vmax": 3, "tags": ["lake"]},
+	# 新增 · 海
+	"sardine": {"name": "沙丁鱼", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 2, "vmax": 5, "tags": ["coast"]},
+	"filefish": {"name": "马面鲀", "tier": 0, "wmin": 0.1, "wmax": 0.5, "vmin": 4, "vmax": 10, "tags": ["coast"]},
+	"goby": {"name": "虾虎鱼", "tier": 0, "wmin": 0.01, "wmax": 0.08, "vmin": 1, "vmax": 4, "tags": ["coast"]},
 	# —— 1 优良（常见经济鱼）——
-	"dace": {"name": "雅罗鱼", "tier": 1, "wmin": 0.3, "wmax": 1.0, "vmin": 14, "vmax": 26},
-	"carp": {"name": "鲤鱼", "tier": 1, "wmin": 1.0, "wmax": 8.0, "vmin": 16, "vmax": 40},
-	"grass": {"name": "草鱼", "tier": 1, "wmin": 2.0, "wmax": 12.0, "vmin": 16, "vmax": 42},
-	"bream": {"name": "鳊鱼", "tier": 1, "wmin": 0.5, "wmax": 2.0, "vmin": 18, "vmax": 36},
-	"blackcarp": {"name": "青鱼", "tier": 1, "wmin": 4.0, "wmax": 15.0, "vmin": 24, "vmax": 55},
-	# —— 2 稀有（地方名贵，"三花五罗"层）——
-	"bass": {"name": "鲈鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 55, "vmax": 120},
-	"fangbream": {"name": "三角鲂", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 60, "vmax": 130},
-	"barbel": {"name": "花䱻", "tier": 2, "wmin": 0.3, "wmax": 1.5, "vmin": 70, "vmax": 140},
-	"culter": {"name": "翘嘴鲌", "tier": 2, "wmin": 1.0, "wmax": 5.0, "vmin": 80, "vmax": 170},
-	"mandarin": {"name": "鳜鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 90, "vmax": 190},
+	"dace": {"name": "雅罗鱼", "tier": 1, "wmin": 0.3, "wmax": 1.0, "vmin": 14, "vmax": 26, "tags": ["river", "cold"]},
+	"carp": {"name": "鲤鱼", "tier": 1, "wmin": 1.0, "wmax": 8.0, "vmin": 16, "vmax": 40, "tags": ["river", "lake"]},
+	"grass": {"name": "草鱼", "tier": 1, "wmin": 2.0, "wmax": 12.0, "vmin": 16, "vmax": 42, "tags": ["river", "lake"]},
+	"bream": {"name": "鳊鱼", "tier": 1, "wmin": 0.5, "wmax": 2.0, "vmin": 18, "vmax": 36, "tags": ["river", "lake"]},
+	"blackcarp": {"name": "青鱼", "tier": 1, "wmin": 4.0, "wmax": 15.0, "vmin": 24, "vmax": 55, "tags": ["river", "lake"]},
+	# 新增 · 湖
+	"perch": {"name": "河鲈", "tier": 1, "wmin": 0.2, "wmax": 1.2, "vmin": 18, "vmax": 38, "tags": ["lake"]},
+	"catfish": {"name": "鲇鱼", "tier": 1, "wmin": 0.5, "wmax": 4.0, "vmin": 16, "vmax": 44, "tags": ["lake", "night"]},
+	"swampeel": {"name": "黄鳝", "tier": 1, "wmin": 0.1, "wmax": 0.7, "vmin": 20, "vmax": 45, "tags": ["lake", "night"]},
+	"tilapia": {"name": "罗非鱼", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 14, "vmax": 30, "tags": ["lake"]},
+	# 新增 · 海
+	"mackerel": {"name": "鲐鱼", "tier": 1, "wmin": 0.2, "wmax": 1.0, "vmin": 14, "vmax": 30, "tags": ["coast"]},
+	"small_croaker": {"name": "小黄鱼", "tier": 1, "wmin": 0.1, "wmax": 0.4, "vmin": 20, "vmax": 44, "tags": ["coast"]},
+	"mullet": {"name": "鲻鱼", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 16, "vmax": 36, "tags": ["coast"]},
+	"rockfish": {"name": "许氏平鲉", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 22, "vmax": 48, "tags": ["coast"]},
+	# —— 2 稀有（地方名贵，"三花五罗"层 + 湖海中坚）——
+	"bass": {"name": "鲈鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 55, "vmax": 120, "tags": ["river", "lake"]},
+	"fangbream": {"name": "三角鲂", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 60, "vmax": 130, "tags": ["river", "lake"]},
+	"barbel": {"name": "花䱻", "tier": 2, "wmin": 0.3, "wmax": 1.5, "vmin": 70, "vmax": 140, "tags": ["river", "stream"]},
+	"culter": {"name": "翘嘴鲌", "tier": 2, "wmin": 1.0, "wmax": 5.0, "vmin": 80, "vmax": 170, "tags": ["river", "lake"]},
+	"mandarin": {"name": "鳜鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 90, "vmax": 190, "tags": ["river", "lake", "night"]},
+	# 新增 · 湖
+	"largemouth": {"name": "大口黑鲈", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 70, "vmax": 160, "tags": ["lake"]},
+	# 新增 · 海
+	"seabass": {"name": "海鲈", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 70, "vmax": 160, "tags": ["coast"]},
+	"blackbream": {"name": "黑鲷", "tier": 2, "wmin": 0.3, "wmax": 2.5, "vmin": 65, "vmax": 150, "tags": ["coast"]},
+	"hairtail": {"name": "带鱼", "tier": 2, "wmin": 0.2, "wmax": 1.5, "vmin": 60, "vmax": 140, "tags": ["coast", "deep", "night"]},
+	"flounder": {"name": "牙鲆", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 80, "vmax": 180, "tags": ["coast"]},
+	"conger": {"name": "海鳗", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 60, "vmax": 140, "tags": ["coast", "night"]},
+	"pufferfish": {"name": "红鳍东方鲀", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 90, "vmax": 190, "tags": ["coast"]},
 	# —— 3 史诗（冷水掠食/高端食用鱼）——
-	"snakehead": {"name": "黑鱼", "tier": 3, "wmin": 1.0, "wmax": 6.0, "vmin": 200, "vmax": 420},
-	"trout": {"name": "虹鳟", "tier": 3, "wmin": 0.8, "wmax": 4.0, "vmin": 210, "vmax": 430},
-	"pike": {"name": "白斑狗鱼", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 220, "vmax": 450},
-	"zander": {"name": "梭鲈", "tier": 3, "wmin": 1.0, "wmax": 14.0, "vmin": 240, "vmax": 500},
-	"longsnout": {"name": "江团", "tier": 3, "wmin": 1.0, "wmax": 5.0, "vmin": 260, "vmax": 520},
-	"lenok": {"name": "细鳞鱼", "tier": 3, "wmin": 0.5, "wmax": 3.0, "vmin": 280, "vmax": 560},
-	# —— 4 传说（洄游名贵/吉祥彩蛋）——
-	"koi": {"name": "锦鲤", "tier": 4, "wmin": 1.0, "wmax": 8.0, "vmin": 750, "vmax": 1600},
-	"salmon": {"name": "大马哈鱼", "tier": 4, "wmin": 3.0, "wmax": 14.0, "vmin": 800, "vmax": 1700},
-	"sturgeon": {"name": "施氏鲟", "tier": 4, "wmin": 5.0, "wmax": 30.0, "vmin": 900, "vmax": 1900},
-	"taimen": {"name": "哲罗鲑", "tier": 4, "wmin": 3.0, "wmax": 50.0, "vmin": 1000, "vmax": 2200},
-	# —— 5 神话（"活化石"国宝层，游戏设定为养殖放流个体）——
-	"chinese_sturgeon": {"name": "中华鲟", "tier": 5, "wmin": 20.0, "wmax": 300.0, "vmin": 4500, "vmax": 9500},
-	"kaluga": {"name": "达氏鳇", "tier": 5, "wmin": 50.0, "wmax": 1000.0, "vmin": 5000, "vmax": 11000},
+	"snakehead": {"name": "黑鱼", "tier": 3, "wmin": 1.0, "wmax": 6.0, "vmin": 200, "vmax": 420, "tags": ["river", "lake", "night"]},
+	"trout": {"name": "虹鳟", "tier": 3, "wmin": 0.8, "wmax": 4.0, "vmin": 210, "vmax": 430, "tags": ["river", "stream", "cold"]},
+	"pike": {"name": "白斑狗鱼", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 220, "vmax": 450, "tags": ["river", "lake", "cold"]},
+	"zander": {"name": "梭鲈", "tier": 3, "wmin": 1.0, "wmax": 14.0, "vmin": 240, "vmax": 500, "tags": ["river", "lake"]},
+	"longsnout": {"name": "江团", "tier": 3, "wmin": 1.0, "wmax": 5.0, "vmin": 260, "vmax": 520, "tags": ["river", "night"]},
+	"lenok": {"name": "细鳞鱼", "tier": 3, "wmin": 0.5, "wmax": 3.0, "vmin": 280, "vmax": 560, "tags": ["river", "stream", "cold"]},
+	# 新增 · 湖
+	"yellowcheek": {"name": "鳡鱼", "tier": 3, "wmin": 2.0, "wmax": 30.0, "vmin": 240, "vmax": 560, "tags": ["lake"]},
+	"eel": {"name": "鳗鲡", "tier": 3, "wmin": 0.3, "wmax": 3.0, "vmin": 220, "vmax": 460, "tags": ["lake", "night"]},
+	# 新增 · 海
+	"seabream": {"name": "真鲷", "tier": 3, "wmin": 0.5, "wmax": 4.0, "vmin": 240, "vmax": 500, "tags": ["coast"]},
+	"spanish_mackerel": {"name": "马鲛鱼", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 220, "vmax": 470, "tags": ["coast"]},
+	"pomfret": {"name": "银鲳", "tier": 3, "wmin": 0.2, "wmax": 1.5, "vmin": 230, "vmax": 480, "tags": ["coast"]},
+	"grouper": {"name": "石斑鱼", "tier": 3, "wmin": 0.8, "wmax": 8.0, "vmin": 260, "vmax": 560, "tags": ["coast", "deep"]},
+	"yellowcroaker": {"name": "大黄鱼", "tier": 3, "wmin": 0.3, "wmax": 3.0, "vmin": 300, "vmax": 580, "tags": ["coast"]},
+	# —— 4 传说（洄游名贵 / 湖海巨物 / 运动钓目标鱼）——
+	"koi": {"name": "锦鲤", "tier": 4, "wmin": 1.0, "wmax": 8.0, "vmin": 750, "vmax": 1600, "tags": ["river", "lake"]},
+	"salmon": {"name": "大马哈鱼", "tier": 4, "wmin": 3.0, "wmax": 14.0, "vmin": 800, "vmax": 1700, "tags": ["river", "coast", "cold"]},
+	"sturgeon": {"name": "施氏鲟", "tier": 4, "wmin": 5.0, "wmax": 30.0, "vmin": 900, "vmax": 1900, "tags": ["river", "lake", "deep"]},
+	"taimen": {"name": "哲罗鲑", "tier": 4, "wmin": 3.0, "wmax": 50.0, "vmin": 1000, "vmax": 2200, "tags": ["river", "stream", "cold"]},
+	# 新增 · 湖
+	"wels_catfish": {"name": "六须鲇", "tier": 4, "wmin": 5.0, "wmax": 100.0, "vmin": 850, "vmax": 2000, "tags": ["lake", "deep", "night"]},
+	# 新增 · 海
+	"tuna": {"name": "金枪鱼", "tier": 4, "wmin": 5.0, "wmax": 200.0, "vmin": 900, "vmax": 2000, "tags": ["coast", "deep"]},
+	"giant_grouper": {"name": "龙趸石斑", "tier": 4, "wmin": 10.0, "wmax": 300.0, "vmin": 1000, "vmax": 2200, "tags": ["coast", "deep"]},
+	# —— 5 神话（"活化石"国宝层 + 海洋顶级运动钓；游戏设定为养殖放流/限时个体）——
+	"chinese_sturgeon": {"name": "中华鲟", "tier": 5, "wmin": 20.0, "wmax": 300.0, "vmin": 4500, "vmax": 9500, "tags": ["river", "coast", "protected"]},
+	"kaluga": {"name": "达氏鳇", "tier": 5, "wmin": 50.0, "wmax": 1000.0, "vmin": 5000, "vmax": 11000, "tags": ["river", "deep", "protected"]},
+	# 新增 · 海
+	"sailfish": {"name": "旗鱼", "tier": 5, "wmin": 20.0, "wmax": 90.0, "vmin": 5000, "vmax": 10000, "tags": ["coast", "deep"]},
 }
 
 # 基础品阶权重（rod Lv.1）：58/25/11/4.5/1.3/0.2（%）
@@ -96,7 +144,9 @@ static func quality_label(q: int) -> String:
 
 
 ## 按权重抽品阶，再在该品阶内随机选种，返回鱼 id。
-static func roll_fish(weights: Dictionary, rng: RandomNumberGenerator) -> String:
+## pool 非空时只在该钓点鱼池内抽（多钓点生态）：抽到的品阶在池内无鱼时，
+## 就近降阶/升阶到池内最近有鱼的品阶，绝不逸出到全鱼池（保证钓点隔离）。
+static func roll_fish(weights: Dictionary, rng: RandomNumberGenerator, pool: Array = []) -> String:
 	var total := 0.0
 	for r in weights:
 		total += weights[r]
@@ -107,13 +157,33 @@ static func roll_fish(weights: Dictionary, rng: RandomNumberGenerator) -> String
 		if pick <= 0.0:
 			tier = r
 			break
-	var candidates: Array = []
-	for id in FISH:
-		if FISH[id]["tier"] == tier:
-			candidates.append(id)
+	var ids: Array = pool if not pool.is_empty() else FISH.keys()
+	var candidates := _ids_of_tier(ids, tier)
 	if candidates.is_empty():
-		candidates = FISH.keys()
+		# 就近品阶回退（先降后升），始终留在同一鱼池内
+		for d in range(1, 6):
+			candidates = _ids_of_tier(ids, tier - d)
+			if candidates.is_empty():
+				candidates = _ids_of_tier(ids, tier + d)
+			if not candidates.is_empty():
+				break
+	if candidates.is_empty():
+		candidates = ids
 	return candidates[rng.randi() % candidates.size()]
+
+
+static func _ids_of_tier(ids: Array, tier: int) -> Array:
+	var out: Array = []
+	if tier < 0 or tier > 5:
+		return out
+	for id in ids:
+		if int(FISH[id]["tier"]) == tier:
+			out.append(id)
+	return out
+
+
+static func tags_of(id: String) -> Array:
+	return FISH[id].get("tags", ["river"]) if FISH.has(id) else []
 
 
 ## 鱼竿等级 -> 品阶权重（等级越高，高阶占比越大）。
@@ -132,8 +202,9 @@ static func weights_for_rod(rod_level: int) -> Dictionary:
 ## 钓一条鱼：抽种 + 抽体重 + 抽星级 + 算价值。返回 {"id", "w"(kg), "v"(金币), "q"(星级)}。
 ## 体重 roll 偏向小个体（k²），卖价与体重线性挂钩（Fisch 模型）再乘星级倍率。
 ## luck：额外品阶运气（如鱼汛事件 +N），仅抬高高阶权重，不影响鱼价基准。
-static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0, luck := 0) -> Dictionary:
-	var id := roll_fish(weights_for_rod(rod_level + luck), rng)
+## pool 非空时只在该钓点鱼池内出鱼（多钓点）；为空保持旧行为（全鱼池）。
+static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0, luck := 0, pool: Array = []) -> Dictionary:
+	var id := roll_fish(weights_for_rod(rod_level + luck), rng, pool)
 	var f: Dictionary = FISH[id]
 	var k := rng.randf()
 	k = k * k  # 偏向小体型，大鱼稀罕
