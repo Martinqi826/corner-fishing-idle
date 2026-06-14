@@ -87,14 +87,13 @@ const MERCHANT_FIRST := Vector2(180.0, 360.0)    # 首次出现(秒)，让玩家
 var _merchant_active := false
 var _merchant_t := 0.0                            # 当前阶段剩余秒数
 
-# —— 鱼汛：随机限时事件，咬钩更快 + 高阶鱼概率大增（仿宠物游戏流星雨）——
-const RUN_LUCK := 7                                # 鱼汛期间品阶运气加成（高潮事件，大鱼明显变多）
-const RUN_WAIT_MULT := 0.5                         # 鱼汛期间等待时长系数
-const RUN_DUR := Vector2(45.0, 70.0)
-const RUN_GAP := Vector2(900.0, 1800.0)
-const RUN_FIRST := Vector2(240.0, 480.0)
-var _run_active := false
-var _run_t := 0.0
+# —— 随机事件（EventData 驱动）：同一时刻最多一个 buff 在场，instant 一次结算。低干扰。——
+# 钓点决定可触发的事件池（SpotData.event_pool）；事件效果叠加 wait/value/luck 到结算。
+const EVENT_FIRST := Vector2(180.0, 420.0)         # 首个事件出现窗口（让玩家较快见到一次）
+var current_spot := SpotData.DEFAULT_SPOT          # 当前钓点（多钓点：切换/存档见阶段④）
+var active_event := ""                             # 当前在场的 buff 事件 id（"" = 无）
+var _event_buff_t := 0.0                           # 当前 buff 剩余时长
+var _event_next_t := 0.0                           # 距下一次事件的倒计时
 
 # —— 每日订单：每天 1 单，交付指定鱼种，按原价 ×2.5 结算 ——
 const DAILY_ORDER_MULT := 2.5
@@ -124,7 +123,7 @@ func _ready() -> void:
 	_ensure_weekly()
 	_build_buttons()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
-	_run_t = rng.randf_range(RUN_FIRST.x, RUN_FIRST.y)
+	_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
 	_update_hud()
 	_begin_wait()
 	_started = true
@@ -222,7 +221,7 @@ func _process(delta: float) -> void:
 			_save_t = 10.0
 			_save()
 	_tick_merchant(delta)
-	_tick_fish_run(delta)
+	_tick_events(delta)
 	_state_t -= delta
 	match _state:
 		ST_WAIT:
@@ -238,8 +237,9 @@ func _process(delta: float) -> void:
 func _begin_wait() -> void:
 	_state = ST_WAIT
 	var w := rng.randf_range(3.5, 7.0) * maxf(0.4, 1.0 - float(rod_level - 1) * 0.06)
-	if _run_active:
-		w *= RUN_WAIT_MULT  # 鱼汛期间咬钩更勤
+	w *= SpotData.wait_mult(current_spot)          # 钓点常驻系数（阶段④起生效）
+	if active_event != "":
+		w *= EventData.wait_mult(active_event)      # 事件期间咬钩节奏变化
 	_state_t = w
 	Audio.play_sfx("cast")
 	get_tree().create_timer(0.45).timeout.connect(func() -> void: Audio.play_sfx("bobber_splash"))
@@ -277,12 +277,42 @@ func _bag_full() -> bool:
 	return inventory.size() >= _bag_capacity()
 
 
+## 当前钓点鱼池（多钓点）：阶段④起 _do_catch / 离线按此池出鱼。
+func _spot_pool() -> Array:
+	return SpotData.pool_for(current_spot)
+
+
+## 钓点常驻 + 当前事件 叠加的品阶运气。
+func _catch_luck() -> int:
+	var l := SpotData.luck_bonus(current_spot)
+	if active_event != "":
+		l += EventData.luck(active_event)
+	return l
+
+
+## 钓点常驻 × 当前事件 叠加的渔获增值系数。
+func _catch_value_mult() -> float:
+	var m := SpotData.value_mult(current_spot)
+	if active_event != "":
+		m *= EventData.value_mult(active_event)
+	return m
+
+
+## 钓一条鱼：限定当前钓点鱼池，应用钓点/事件增值系数。
+func _roll_one(luck: int) -> Dictionary:
+	var c := FishData.roll_catch(rng, rod_level, bait_level, luck, _spot_pool())
+	var vm := _catch_value_mult()
+	if vm != 1.0:
+		c["v"] = max(1, int(round(float(c["v"]) * vm)))
+	return c
+
+
 func _do_catch() -> void:
 	if _bag_full():
 		_begin_wait()
 		return
-	var luck := RUN_LUCK if _run_active else 0
-	var c := FishData.roll_catch(rng, rod_level, bait_level, luck)
+	var luck := _catch_luck()
+	var c := _roll_one(luck)
 	var tier := FishData.tier_of(c["id"])
 	var q := int(c.get("q", 0))
 	var fname := FishData.quality_label(q) + FishData.size_tag(c["id"], c["w"]) \
@@ -315,7 +345,7 @@ func _do_catch() -> void:
 	# 鱼钩双钩：一定几率再上一条（受背包剩余格数限制）
 	if hook_level > 0 and not _bag_full() \
 			and rng.randf() < float(FishData.HOOKS[hook_level]["double"]):
-		var c2 := FishData.roll_catch(rng, rod_level, bait_level, luck)
+		var c2 := _roll_one(luck)
 		inventory.append(c2)
 		lifetime_catches += 1
 		best_quality = maxi(best_quality, int(c2.get("q", 0)))
@@ -352,11 +382,13 @@ func _update_hud() -> void:
 	if _bag_full():
 		bag += "（满）"
 	var mer := "　收鱼郎×1.5" if _merchant_active else ""
-	var run := "　🌊鱼汛!" if _run_active else ""
-	coins_label.text = "金币 %d　%s%s%s" % [coins, bag, mer, run]
+	var evt := ""
+	if active_event != "" and EventData.hud_text(active_event) != "":
+		evt = "　" + EventData.hud_text(active_event)
+	coins_label.text = "金币 %d　%s%s%s" % [coins, bag, mer, evt]
 	var col := Color(0.92, 0.92, 0.9)
-	if _run_active:
-		col = Color(0.55, 0.80, 0.96)
+	if active_event != "":
+		col = EventData.color(active_event)
 	elif _merchant_active:
 		col = Color(0.98, 0.82, 0.40)
 	elif _bag_full():
@@ -1659,23 +1691,89 @@ func _tick_merchant(delta: float) -> void:
 	_refresh_panel()
 
 
-## 鱼汛：限时高潮事件，咬钩更快 + 高阶鱼概率大增。
-func _tick_fish_run(delta: float) -> void:
-	_run_t -= delta
-	if _run_t > 0.0:
+# ============================ 随机事件（EventData 驱动）============================
+
+## 当前钓点可触发的事件 id 列表（事件池 ∩ EventData 适配本钓点）。
+func _eligible_events() -> Array:
+	var out: Array = []
+	for eid in SpotData.event_pool(current_spot):
+		if EventData.has(str(eid)) and EventData.applies_to(str(eid), current_spot):
+			out.append(str(eid))
+	return out
+
+
+## 事件主循环：buff 在场则走时长，否则走间隔到点触发。同一时刻最多一个 buff。
+func _tick_events(delta: float) -> void:
+	if active_event != "":
+		_event_buff_t -= delta
+		if _event_buff_t <= 0.0:
+			_end_buff()
 		return
-	if _run_active:
-		_run_active = false
-		_run_t = rng.randf_range(RUN_GAP.x, RUN_GAP.y)
-		_toast("鱼汛退了，水面又归于平静。", 2.4, Color(0.62, 0.70, 0.74))
+	_event_next_t -= delta
+	if _event_next_t <= 0.0:
+		_fire_event()
+
+
+## 触发一次事件：从当前钓点池随机挑选（forced 用于测试指定）。buff 进场 / instant 结算。
+func _fire_event(forced := "") -> void:
+	var pool := _eligible_events()
+	if pool.is_empty():
+		_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
+		return
+	var id := forced if (forced != "" and forced in pool) else str(pool[rng.randi() % pool.size()])
+	if EventData.is_instant(id):
+		_resolve_instant(id)
+		_schedule_next_after(id)
 	else:
-		_run_active = true
-		_run_t = rng.randf_range(RUN_DUR.x, RUN_DUR.y)
-		if not focus_mode:
-			_flash()
-		_toast("🌊 鱼汛来了！咬钩更勤，大鱼更多！", 3.5, Color(0.5, 0.78, 0.95))
-		_begin_wait()  # 立刻按更快节奏重排下一口
+		_activate_buff(id)
+
+
+## buff 事件进场：设时长、提示、可选闪光，并立刻按新节奏重排下一口。
+func _activate_buff(id: String) -> void:
+	active_event = id
+	var e: Dictionary = EventData.get_event(id)
+	var dur: Array = e.get("dur", [45.0, 70.0])
+	_event_buff_t = rng.randf_range(float(dur[0]), float(dur[1]))
+	if EventData.wants_flash(id) and not focus_mode:
+		_flash()
+	var tin := str(e.get("toast_in", ""))
+	if tin != "":
+		_toast(tin, 3.5, EventData.color(id))
+	_begin_wait()
 	_update_hud()
+
+
+## buff 事件退场：清状态、提示、排下一次事件。
+func _end_buff() -> void:
+	var id := active_event
+	active_event = ""
+	var tout := str(EventData.get_event(id).get("toast_out", ""))
+	if tout != "":
+		_toast(tout, 2.4, Color(0.62, 0.70, 0.74))
+	_schedule_next_after(id)
+	_update_hud()
+
+
+## instant 事件结算：发一次性金币奖励（随鱼竿轻微缩放），文案含 +金额。
+func _resolve_instant(id: String) -> void:
+	var e: Dictionary = EventData.get_event(id)
+	var rb: Array = e.get("reward_base", [40, 120])
+	var reward := int(round(rng.randf_range(float(rb[0]), float(rb[1])) * (1.0 + float(rod_level - 1) * 0.35)))
+	reward = maxi(1, reward)
+	coins += reward  # 拾得/保育奖励：进金币但不计入卖鱼终身收入
+	Audio.play_sfx("coin")
+	var tin := str(e.get("toast_in", ""))
+	if tin != "":
+		_toast(tin % reward if "%d" in tin else tin, 3.2, EventData.color(id))
+	_check_achievements()
+	_update_hud()
+	_refresh_panel()
+
+
+## 按某事件的 gap 排下一次事件出现时间。
+func _schedule_next_after(id: String) -> void:
+	var gap: Array = EventData.get_event(id).get("gap", [900.0, 1800.0])
+	_event_next_t = rng.randf_range(float(gap[0]), float(gap[1]))
 
 
 func _try_expand_bag() -> void:
@@ -2180,7 +2278,7 @@ func _offline_catch(elapsed: float) -> int:
 	var top: Dictionary = {}
 	var notable: Array = []
 	for i in n:
-		var c := FishData.roll_catch(rng, rod_level, bait_level)
+		var c := FishData.roll_catch(rng, rod_level, bait_level, 0, _spot_pool())
 		inventory.append(c)
 		var ib := FishData.size_tag(c["id"], c["w"]) == "巨物·"
 		_dex_record(c["id"], float(c["w"]), ib, int(c.get("q", 0)) >= 3)

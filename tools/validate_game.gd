@@ -47,7 +47,7 @@ func _run() -> void:
 	print("=== 流动鱼贩 ===")
 	await _check_merchant()
 
-	print("=== 鱼汛事件 ===")
+	print("=== 随机事件（EventData 驱动）===")
 	await _check_fish_run()
 
 	print("=== 周目标 ===")
@@ -377,21 +377,41 @@ func _check_fish_run() -> void:
 		if FishData.tier_of(FishData.roll_catch(rng, 1, 0, 7)["id"]) >= 3:
 			hi_run += 1
 	_assert(hi_run > hi_norm * 1.4, "鱼汛应显著提高高阶鱼占比（普通 %d vs 鱼汛 %d）" % [hi_norm, hi_run])
-	# 事件状态机：到点切换 + 等待提速
+	# —— 事件管理器（EventData 驱动）——
 	var g: Node = load("res://main.tscn").instantiate()
 	g.save_enabled = false
 	root.add_child(g)
 	await process_frame
-	_assert(not g._run_active, "起始鱼汛不在场")
-	g._run_t = 0.0
-	g._tick_fish_run(0.016)
-	_assert(g._run_active, "到点应触发鱼汛")
+	_assert(g.active_event == "", "起始无 buff 事件")
+	# 河湾事件池
+	var elig: Array = g._eligible_events()
+	_assert("fish_run" in elig and "morning_fog" in elig and "drift_crate" in elig,
+		"河湾事件池应含鱼汛/晨雾/漂流木箱")
+	# 触发鱼汛 buff：进场 + 等待提速 + 运气加成
+	g._fire_event("fish_run")
+	_assert(g.active_event == "fish_run", "应触发鱼汛 buff")
 	g._begin_wait()
-	_assert(g._state_t <= 7.0 * g.RUN_WAIT_MULT + 0.01, "鱼汛期间等待应提速")
-	g._run_t = 0.0
-	g._tick_fish_run(0.016)
-	_assert(not g._run_active, "时长结束应退去鱼汛")
-	print("  鱼汛：高阶占比 普通 %d→鱼汛 %d · 状态机 通过" % [hi_norm, hi_run])
+	_assert(g._state_t <= 7.0 * EventData.wait_mult("fish_run") * SpotData.wait_mult("river_bend") + 0.01,
+		"鱼汛期间等待应提速")
+	_assert(g._catch_luck() == EventData.luck("fish_run"), "鱼汛应给品阶运气加成")
+	# buff 到时退场并排下一次
+	g._event_buff_t = 0.0
+	g._tick_events(0.016)
+	_assert(g.active_event == "" and g._event_next_t > 0.0, "buff 到时应退场并排下次")
+	# instant 事件：发金币、不占 buff 槽
+	var coins_before: int = g.coins
+	g._fire_event("drift_crate")
+	_assert(g.coins > coins_before, "漂流木箱应发金币奖励")
+	_assert(g.active_event == "", "instant 事件不应占用 buff 槽")
+	# 钓点适配：海岸码头有涨潮、无晨雾
+	g.current_spot = "coast_pier"
+	var celig: Array = g._eligible_events()
+	_assert("tide_in" in celig and not ("morning_fog" in celig),
+		"海岸码头应有涨潮、无晨雾")
+	# 涨潮 + 海岸常驻系数 → 增值系数 >1
+	g._fire_event("tide_in")
+	_assert(g._catch_value_mult() > 1.0, "涨潮在海岸应抬高渔获价值")
+	print("  随机事件：池/鱼汛buff提速运气/instant金币/钓点适配/增值 通过（普通 %d→运气 %d）" % [hi_norm, hi_run])
 	g.queue_free()
 	await process_frame
 
