@@ -14,6 +14,9 @@ func _run() -> void:
 	print("=== 数据检查 ===")
 	_check_data()
 
+	print("=== 钓点 / 事件数据 ===")
+	_check_spot_event_data()
+
 	print("=== 抽取分布（rod=1，20000 次）===")
 	_check_distribution()
 
@@ -92,6 +95,59 @@ func _check_data() -> void:
 	for t in by_tier:
 		_assert(by_tier[t] > 0, "品阶 %d 至少应有一种鱼" % t)
 	print("  鱼种数 %d，按品阶分布 %s" % [FishData.FISH.size(), str(by_tier)])
+
+
+func _check_spot_event_data() -> void:
+	# —— 钓点 ——
+	_assert(SpotData.SPOTS.size() >= 3, "至少 3 个钓点")
+	_assert(SpotData.has(SpotData.DEFAULT_SPOT), "默认钓点应存在")
+	_assert(SpotData.default_unlocked(SpotData.DEFAULT_SPOT), "默认钓点应默认解锁")
+	for sid in SpotData.SPOT_ORDER:
+		_assert(SpotData.has(sid), "SPOT_ORDER 引用了不存在的钓点 %s" % sid)
+	for sid in SpotData.SPOTS:
+		_assert(sid in SpotData.SPOT_ORDER, "钓点 %s 未列入 SPOT_ORDER" % sid)
+		var s: Dictionary = SpotData.SPOTS[sid]
+		for k in ["name", "desc", "habitat_tags", "event_pool", "bg_key"]:
+			_assert(s.has(k), "钓点 %s 缺字段 %s" % [sid, k])
+		_assert((s["habitat_tags"] as Array).size() > 0, "钓点 %s habitat_tags 不应为空" % sid)
+		# 事件池引用必须有效，且该事件适用于本钓点
+		for eid in s["event_pool"]:
+			_assert(EventData.has(str(eid)), "钓点 %s 引用了不存在的事件 %s" % [sid, eid])
+			_assert(EventData.applies_to(str(eid), sid),
+				"钓点 %s 的事件 %s 的 spots 未包含本钓点" % [sid, eid])
+		# 每个钓点至少 2 个专属（非全局）事件
+		var exclusive := 0
+		for eid in s["event_pool"]:
+			if not (EventData.get_event(str(eid)).get("spots", []) as Array).is_empty():
+				exclusive += 1
+		_assert(exclusive >= 2, "钓点 %s 应至少有 2 个专属事件，实际 %d" % [sid, exclusive])
+	# river_bend 鱼池非空（扩 tags 前靠无 tags→river 回退也应有鱼）
+	_assert(SpotData.pool_for("river_bend").size() > 0, "新手河湾鱼池不应为空")
+	print("  钓点 %d 个：%s" % [SpotData.SPOTS.size(), str(SpotData.SPOT_ORDER)])
+
+	# —— 事件 ——
+	_assert(EventData.EVENTS.size() >= 5, "至少 5 个随机事件")
+	_assert(EventData.is_buff("fish_run"), "鱼汛应为 buff 型")
+	_assert((EventData.get_event("fish_run").get("spots", []) as Array).is_empty(),
+		"鱼汛应为全钓点共享")
+	for eid in EventData.EVENTS:
+		var e: Dictionary = EventData.EVENTS[eid]
+		for k in ["name", "kind", "dur", "gap", "first", "spots"]:
+			_assert(e.has(k), "事件 %s 缺字段 %s" % [eid, k])
+		for tk in ["dur", "gap", "first"]:
+			var arr: Array = e[tk]
+			_assert(arr.size() == 2 and float(arr[0]) <= float(arr[1]),
+				"事件 %s 的 %s 应为 [min<=max]" % [eid, tk])
+		_assert(EventData.is_buff(str(eid)) or EventData.is_instant(str(eid)),
+			"事件 %s kind 应为 buff/instant" % eid)
+		# 事件 spots 引用的钓点必须有效
+		for sid in e["spots"]:
+			_assert(SpotData.has(str(sid)), "事件 %s 引用了不存在的钓点 %s" % [eid, sid])
+		if EventData.is_instant(str(eid)):
+			var rb: Array = e.get("reward_base", [0, 0])
+			_assert(rb.size() == 2 and int(rb[0]) > 0 and int(rb[0]) <= int(rb[1]),
+				"instant 事件 %s 应有合法 reward_base" % eid)
+	print("  事件 %d 个，结构/钓点适配 通过" % EventData.EVENTS.size())
 
 
 func _check_distribution() -> void:
