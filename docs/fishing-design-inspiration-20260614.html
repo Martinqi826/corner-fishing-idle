@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>角落垂钓 - 钓鱼设计灵感调研报告</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2f3432;
+      --muted: #686d67;
+      --paper: #eee8dc;
+      --paper-2: #f7f3eb;
+      --line: #c9c2b5;
+      --water: #476f78;
+      --pine: #3f4d45;
+      --gold: #d6a85d;
+      --red: #ad5f4d;
+      --shadow: rgba(43, 48, 44, .16);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background: #d8d2c4;
+      color: var(--ink);
+    }
+
+    header {
+      min-height: 62vh;
+      display: flex;
+      align-items: flex-end;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(238,232,220,.92) 0%, rgba(207,200,187,.82) 64%, rgba(216,210,196,.96) 100%),
+        radial-gradient(120% 90% at 88% 96%, rgba(71,111,120,.30), rgba(71,111,120,0) 60%);
+    }
+
+    .hero {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 70px 0 50px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--water);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      max-width: 820px;
+      font-size: clamp(32px, 5vw, 54px);
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+
+    h2 { margin: 0 0 16px; font-size: 24px; }
+    h3 { margin: 0 0 10px; font-size: 17px; }
+    h4 { margin: 0 0 6px; font-size: 15px; color: var(--pine); }
+    p { margin: 0 0 10px; line-height: 1.76; color: var(--muted); }
+    p:last-child { margin-bottom: 0; }
+    a { color: var(--water); }
+    code {
+      color: var(--water);
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    main {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 40px 0 76px;
+    }
+
+    section { margin: 0 0 52px; scroll-margin-top: 70px; }
+
+    .part-divider {
+      margin: 8px 0 26px;
+      padding: 18px 22px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(71,111,120,.16), rgba(214,168,93,.12));
+      border: 1px solid var(--line);
+    }
+    .part-divider .eyebrow { margin-bottom: 6px; }
+    .part-divider h2 { margin: 0; font-size: 28px; }
+    .part-divider p { margin-top: 8px; color: #55605a; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: rgba(238, 232, 220, .92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(201, 194, 181, .8);
+    }
+
+    nav .inner {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    nav a {
+      flex: 0 0 auto;
+      text-decoration: none;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 12px;
+      background: rgba(255,255,255,.35);
+      font-size: 13px;
+    }
+    nav a:hover { background: rgba(255,255,255,.7); }
+
+    .lead {
+      max-width: 860px;
+      font-size: 18px;
+      color: #555b55;
+      line-height: 1.74;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      color: #59605a;
+      background: rgba(255,255,255,.36);
+      font-size: 13px;
+    }
+
+    .grid, .two, .three, .four { display: grid; gap: 14px; }
+    .two { grid-template-columns: 1fr 1fr; }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+
+    .card, .table-wrap, .stat {
+      background: rgba(238,232,220,.72);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 12px 30px var(--shadow);
+    }
+    .card, .table-wrap, .stat { padding: 16px; }
+
+    .stat strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 30px;
+      line-height: 1;
+      color: var(--pine);
+    }
+    .stat span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+    .card ul, .card ol { margin: 8px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.72; }
+    .card li { margin-bottom: 4px; }
+    .card.accent { border-left: 4px solid var(--water); }
+    .card.gold { border-left: 4px solid var(--gold); }
+    .card.red { border-left: 4px solid var(--red); }
+    .card.pine { border-left: 4px solid var(--pine); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(201,194,181,.78);
+      vertical-align: top;
+    }
+    th { color: var(--pine); font-size: 13px; }
+    td { color: var(--muted); line-height: 1.55; }
+    tbody tr:hover { background: rgba(255,255,255,.28); }
+
+    .pill {
+      display: inline-flex; align-items: center;
+      border-radius: 999px; padding: 4px 9px;
+      background: rgba(255,255,255,.42);
+      border: 1px solid var(--line);
+      color: #535a54; font-size: 12px; white-space: nowrap;
+    }
+    .pill.good { background: rgba(63,77,69,.14); border-color: rgba(63,77,69,.4); color: var(--pine); }
+    .pill.warn { background: rgba(214,168,93,.18); border-color: rgba(214,168,93,.5); color: #9a7327; }
+    .pill.bad  { background: rgba(173,95,77,.16); border-color: rgba(173,95,77,.5); color: var(--red); }
+
+    .timeline { display: grid; gap: 12px; grid-template-columns: repeat(9, minmax(0, 1fr)); counter-reset: step; margin-top: 6px; }
+    .step {
+      position: relative; padding: 13px;
+      border-left: 3px solid var(--water);
+      background: rgba(247,243,235,.6);
+      border-radius: 8px;
+    }
+    .step::before {
+      counter-increment: step; content: counter(step);
+      display: grid; place-items: center;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--water); color: white; font-weight: 700;
+      font-size: 13px; margin-bottom: 8px;
+    }
+    .step h4 { font-size: 14px; margin-bottom: 4px; }
+    .step p { font-size: 12.5px; line-height: 1.5; }
+
+    .verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+    .verdict > div { padding: 14px 16px; }
+    .verdict .pro { background: rgba(63,77,69,.10); }
+    .verdict .con { background: rgba(173,95,77,.09); border-left: 1px solid var(--line); }
+    .verdict h4 { margin-bottom: 8px; }
+    .verdict ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.7; }
+
+    .callout {
+      margin-top: 14px; padding: 14px 16px; border-radius: 8px;
+      background: rgba(214,168,93,.12); border: 1px solid rgba(214,168,93,.42);
+    }
+    .callout strong { color: #8a6a23; }
+
+    .tag-fit { font-weight: 700; }
+    .fit-yes { color: var(--pine); }
+    .fit-maybe { color: #9a7327; }
+    .fit-no { color: var(--red); }
+
+    .toc-list { columns: 2; column-gap: 28px; margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.9; }
+    .toc-list a { text-decoration: none; }
+    .toc-list a:hover { text-decoration: underline; }
+
+    .src-list { margin: 0; padding-left: 20px; line-height: 1.9; font-size: 13.5px; color: var(--muted); }
+    .src-list li { margin-bottom: 3px; }
+
+    footer {
+      width: min(1160px, 92vw);
+      margin: 0 auto;
+      padding: 0 0 40px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .timeline { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 860px) {
+      .two, .three, .four { grid-template-columns: 1fr; }
+      .verdict { grid-template-columns: 1fr; }
+      .verdict .con { border-left: none; border-top: 1px solid var(--line); }
+      .toc-list { columns: 1; }
+      header { min-height: 54vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <p class="eyebrow">Design Research · 灵感调研报告</p>
+      <h1>从真实垂钓到钓鱼游戏：<br>给《角落垂钓》的超长线、公平 F2P 与挂机节奏启示</h1>
+      <p class="lead">本报告把「现实中的鱼竿垂钓」与「市面钓鱼游戏」拆成可复用的设计素材，再结构化映射到《角落垂钓》的三个核心目的：<strong>能玩 2000 / 5000 / 10000 小时不被消耗干净</strong>、<strong>公平 F2P（本体免费、便利付费）</strong>、<strong>持续挂机 + 偶尔愉悦操作</strong>。定位锚点：一个像 Rusty's Retirement 一样安静、低打扰、融入桌面壁纸的桌面陪伴挂件。</p>
+      <div class="chips">
+        <span class="chip">现实垂钓拆解</span>
+        <span class="chip">钓鱼游戏类型横评</span>
+        <span class="chip">超长线内容机制</span>
+        <span class="chip">公平 F2P 边界</span>
+        <span class="chip">挂机 × 轻操作节奏</span>
+        <span class="chip">真实来源 · 待核实标注</span>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <div class="inner">
+      <a href="#toc">目录</a>
+      <a href="#p1">一、现实垂钓</a>
+      <a href="#real-elements">要素拆解</a>
+      <a href="#real-loop">完整循环</a>
+      <a href="#real-addict">为何玩一辈子</a>
+      <a href="#real-texture">真实质感取舍</a>
+      <a href="#p2">二、钓鱼游戏</a>
+      <a href="#g-casual">休闲/挂机</a>
+      <a href="#g-sim">拟真模拟</a>
+      <a href="#g-embed">玩法内嵌</a>
+      <a href="#g-cozy">治愈陈列</a>
+      <a href="#g-mobile">手游 F2P</a>
+      <a href="#p3">三、对本项目的启示</a>
+      <a href="#i-longterm">超长线</a>
+      <a href="#i-f2p">公平 F2P</a>
+      <a href="#i-rhythm">挂机节奏</a>
+      <a href="#sources">资料来源</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============ TOC ============ -->
+    <section id="toc">
+      <h2>目录</h2>
+      <div class="card">
+        <ol class="toc-list">
+          <li><a href="#p1">第一部分 · 现实中的鱼竿垂钓</a></li>
+          <li><a href="#real-elements">1.1 要素拆解（装备 / 技法 / 对象鱼 / 影响因素）</a></li>
+          <li><a href="#real-loop">1.2 钓鱼的完整循环（读水到留放 9 步）</a></li>
+          <li><a href="#real-addict">1.3 为什么钓鱼能玩一辈子（超长线核心）</a></li>
+          <li><a href="#real-texture">1.4 真实质感：哪些值得做进游戏，哪些会让挂机变烦</a></li>
+          <li><a href="#p2">第二部分 · 市面上的钓鱼游戏横评</a></li>
+          <li><a href="#g-casual">2.1 休闲 / 挂机类</a></li>
+          <li><a href="#g-sim">2.2 拟真模拟类</a></li>
+          <li><a href="#g-embed">2.3 玩法内嵌类</a></li>
+          <li><a href="#g-cozy">2.4 治愈 / 收集 / 陈列类</a></li>
+          <li><a href="#g-mobile">2.5 手游 F2P 类</a></li>
+          <li><a href="#p3">第三部分 · 对《角落垂钓》的启示</a></li>
+          <li><a href="#i-longterm">3.1 超长线内容设计清单（含适配度评级）</a></li>
+          <li><a href="#i-f2p">3.2 公平 F2P 的边界与「自动卖鱼/扩容」风险评估</a></li>
+          <li><a href="#i-rhythm">3.3 挂机 × 偶尔操作的节奏设计</a></li>
+          <li><a href="#sources">资料来源</a></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ PART 1 ============ -->
+    <div class="part-divider" id="p1">
+      <p class="eyebrow">Part One</p>
+      <h2>第一部分 · 现实中的鱼竿垂钓</h2>
+      <p>仅取「用鱼竿钓鱼」的范畴（路亚 / 台钓 / 海钓 / 飞蝇 / 冰钓 / 拖钓等），作为游戏机制的灵感来源。重点不是科普，而是「哪些真实细节能转译成挂机乐趣」。</p>
+    </div>
+
+    <section id="real-elements">
+      <h2>1.1 要素拆解</h2>
+      <p class="lead" style="margin-bottom:16px">真实垂钓是一套「组合系统」：玩家通过搭配装备 + 选择技法 + 适配环境，去博取一个本质上随机的结果。每一层都天然对应游戏里的一条成长线或一个变量——这正是钓鱼题材适合做成长 + 收集游戏的根本原因。</p>
+
+      <div class="table-wrap">
+        <h3>装备体系（每一件都可以是一条成长线）</h3>
+        <table>
+          <thead><tr><th style="width:14%">部件</th><th style="width:42%">作用</th><th>游戏化映射</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill">鱼竿 Rod</span></td><td>决定抛投距离、灵敏度、硬度（调性），匹配目标鱼大小。</td><td>本项目已有：缩短等待、提高高阶鱼权重、鱼价加成。核心金币去向。</td></tr>
+            <tr><td><span class="pill">渔轮 Reel</span></td><td>收线速度与卸力（drag），搏大鱼时泄力防断线。</td><td>可作为「搏鱼成功率 / 巨物上限」成长线，或并入鱼竿曲线避免系统过多。</td></tr>
+            <tr><td><span class="pill">钓线 Line</span></td><td>线径 / 拉力值 / 隐蔽性，决定能搏多大鱼、惊不惊鱼。</td><td>「断线风险 vs 渔获上限」的取舍变量，可做成可选难度而非硬墙。</td></tr>
+            <tr><td><span class="pill">鱼钩 Hook</span></td><td>钩号大小、倒刺，影响中鱼率与鱼体大小。</td><td>本项目已有：影响品相 / 通过率，第三条成长线。</td></tr>
+            <tr><td><span class="pill">浮漂 Float</span></td><td>显示咬口信号（下沉 / 顿口 / 走漂）、控制钓棚深度。</td><td>本项目核心反馈源：浮漂下沉 = 咬钩动效，是「偶尔操作」的天然提示点。</td></tr>
+            <tr><td><span class="pill">铅坠 Sinker</span></td><td>控制饵到达的水层与抛投重量、稳定线组。</td><td>可抽象为「钓层 / 水深」维度，区分不同鱼的栖息层。</td></tr>
+            <tr><td><span class="pill">饵 Bait</span></td><td>活饵 / 商品饵：用气味与适口性吸引特定鱼。</td><td>本项目已有：鱼饵 4 档，提高高品相通过率。可扩展为「针对性诱鱼」。</td></tr>
+            <tr><td><span class="pill">拟饵 Lure</span></td><td>路亚假饵（亮片 / 软虫 / 米诺 / 铅笔等），靠动作模拟猎物。</td><td>天然的「横向收集广度」素材：上百种拟饵 = 上百个可解锁的变体（参考 Fishing Clash 集卡）。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="two" style="margin-top:14px">
+        <div class="card accent">
+          <h3>主要技法（玩法风味标签）</h3>
+          <ul>
+            <li><strong>抛投底钓 / 台钓</strong>：定点守钓，靠饵料窝点聚鱼——最接近「挂机等待」的范式。</li>
+            <li><strong>路亚 Lure fishing</strong>：不断抛收、用拟饵动作逗引掠食鱼——节奏快、主动、技巧天花板高。</li>
+            <li><strong>飞蝇 Fly fishing</strong>：抛投飞蝇线本身是门手艺，门槛与仪式感强。</li>
+            <li><strong>拖钓 Trolling</strong>：船拖假饵覆盖大水面——天然「移动 / 范围」概念。</li>
+            <li><strong>冰钓 / 矶钓 / 海钓</strong>：极端环境 = 天然的「钓点 / 赛季」差异化。</li>
+          </ul>
+        </div>
+        <div class="card accent">
+          <h3>对象鱼与稀有度</h3>
+          <ul>
+            <li>同一水域里，鱼天然分「常见小杂鱼 → 目标鱼 → 罕见巨物 / 记录鱼」的金字塔，本身就是稀有度系统。</li>
+            <li>稀有不只看鱼种，还看<strong>个体</strong>：同种鱼的「破纪录重量」是终身追求（对应本项目「大 / 巨物」标记）。</li>
+            <li>地域特有种、洄游季节限定种、保护鱼（需放流）——为「图鉴广度 + 赛季限定 + 伦理抉择」提供素材。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:14px">
+        <h3>影响因素（"为什么今天钓不到"——不确定性的来源）</h3>
+        <p style="margin-bottom:10px">据钓鱼社区与海钓资料，水温、气压、潮汐、光照、浑浊度、水位变化、日月位置都会影响鱼的活性；且<strong>不同鱼种、不同水域反应不同</strong>，没有放之四海皆准的「最佳条件」。「气压/水温稳定数日 → 鱼吃口积极；冷锋过境后 24–48 小时 → 口慢」是较被认可的经验规律。</p>
+        <table>
+          <thead><tr><th style="width:16%">因素</th><th style="width:50%">真实影响（经验向，个体差异大）</th><th>游戏化潜力</th></tr></thead>
+          <tbody>
+            <tr><td>季节</td><td>洄游、繁殖、摄食窗口随季节变化。</td><td><span class="tag-fit fit-yes">高</span> 赛季化、限定鱼、内容轮换的天然骨架。</td></tr>
+            <tr><td>昼夜</td><td>晨昏「黄金咬口窗口」普遍，部分鱼夜行。</td><td><span class="tag-fit fit-yes">高</span> 与真实时钟挂钩 = 低成本的"偶尔变化"。</td></tr>
+            <tr><td>潮汐</td><td>海钓核心；涨退潮交替常是最佳摄食窗。</td><td><span class="tag-fit fit-yes">高</span> 本项目「海岸码头·涨潮」事件已用此。</td></tr>
+            <tr><td>天气 / 气压</td><td>稳定优于剧变；冷锋后口慢。</td><td><span class="tag-fit fit-maybe">中</span> 做成"事件 buff"即可，别做成劝退硬墙。</td></tr>
+            <tr><td>水温</td><td>决定鱼代谢与活跃水层与时段。</td><td><span class="tag-fit fit-maybe">中</span> 可与季节/钓点合并，避免变量爆炸。</td></tr>
+            <tr><td>水深 / 结构 / 水色</td><td>鱼藏身于结构（沉木、坎、桥墩）；浑浊影响视饵。</td><td><span class="tag-fit fit-maybe">中</span> 抽象为「钓点子区域 / 钓层」收集维度。</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><strong>给本项目的提示：</strong>真实影响因素多到可以做一个硬核模拟器，但桌面挂件的克制原则是——<strong>把"因素"做成偶发的、正向的、看一眼就懂的事件 buff（晨雾 / 涨潮 / 鱼汛），而不是要求玩家天天查气压表的负担</strong>。本项目现有 7 事件方向完全正确。</div>
+      </div>
+    </section>
+
+    <section id="real-loop">
+      <h2>1.2 钓鱼的完整循环</h2>
+      <p class="lead" style="margin-bottom:16px">一次完整垂钓是「读水选点 → 配组合 → 抛投 → 等待/逗引 → 识别咬口 → 刺鱼 → 搏鱼 → 抄鱼 → 测量/拍照/留放」。对挂机游戏而言，关键在于<strong>识别哪几步该自动化、哪几步留给玩家做"偶尔的愉悦操作"</strong>。</p>
+      <div class="timeline">
+        <div class="step"><h4>读水选点</h4><p>看水色、结构、鱼星，决定下竿位置。</p></div>
+        <div class="step"><h4>配组合</h4><p>按目标鱼配竿线钩饵漂坠。</p></div>
+        <div class="step"><h4>抛投</h4><p>把线组送到位，仪式感起点。</p></div>
+        <div class="step"><h4>等待 / 逗引</h4><p>守钓或路亚逗引，最磨人也最"挂机"。</p></div>
+        <div class="step"><h4>识别咬口</h4><p>看漂相、手感判断真假口。</p></div>
+        <div class="step"><h4>刺鱼</h4><p>抬竿中鱼，时机决定成败。</p></div>
+        <div class="step"><h4>搏鱼</h4><p>遛鱼控线防断防脱钩。</p></div>
+        <div class="step"><h4>抄鱼</h4><p>抄网上岸，最后一关也会翻车。</p></div>
+        <div class="step"><h4>测量留放</h4><p>称重拍照记录，留还是放。</p></div>
+      </div>
+      <div class="callout">
+        <strong>映射到本项目（已基本实现）：</strong>「抛投→等待→咬钩→上鱼→结算」已覆盖前 5 步并自动化。真正值得设计的是<strong>第 6–9 步的"偶尔操作"潜力</strong>：①咬口时一次轻点"刺鱼"换品相加成（可选，不点也能自动收）；②结算时偶尔出现的「留 or 放」抉择（保护鱼 / 破纪录鱼）；③测量/图鉴纪录的成就感（已有"大/巨物/最大体重"）。详见第三部分 3.3。
+      </div>
+    </section>
+
+    <section id="real-addict">
+      <h2>1.3 为什么钓鱼让人上瘾、且能玩一辈子</h2>
+      <p class="lead" style="margin-bottom:16px">这是对「超长线」目标最关键的一节。钓鱼之所以是终身爱好，不靠单一机制，而是<strong>多条独立的长期动机叠加</strong>，任何一条钝化了，还有其他几条拉着你回来。心理学层面，钓鱼被反复类比为"近似赌博"：抛投与收线像反复拉老虎机摇杆，每一次咬口都触发多巴胺，<strong>不确定奖励（variable reward）</strong>是核心成瘾源；同时身处自然、专注当下又带来减压与平静。</p>
+      <div class="three">
+        <div class="card pine">
+          <h4>1. 不确定奖励</h4>
+          <p>不知道下一杆是空军、小杂鱼还是破纪录巨物。这种间歇强化是钓鱼"近似赌博"的成瘾内核，也是挂机收益波动感的来源。</p>
+        </div>
+        <div class="card pine">
+          <h4>2. 技艺精进</h4>
+          <p>读水、配组、抛投、控鱼……可终身打磨，永远有"更高的天花板"。给硬核玩家的纵向深度。</p>
+        </div>
+        <div class="card pine">
+          <h4>3. 收集</h4>
+          <p>钓遍每个鱼种、每种拟饵、每个水域——「图鉴/收集癖」是收集型玩家的长期燃料（参见 Melvor 完成度日志、Stardew 83 鱼）。</p>
+        </div>
+        <div class="card pine">
+          <h4>4. 破纪录</h4>
+          <p>同种鱼的最大个体是永无止境的目标（IGFA 世界纪录文化）。一个数字就能撑起几千小时追求。</p>
+        </div>
+        <div class="card pine">
+          <h4>5. 探索新水域</h4>
+          <p>每片新水域 = 新鱼种 + 新打法 + 新风景。内容横向扩张的天然理由。</p>
+        </div>
+        <div class="card pine">
+          <h4>6. 装备追求</h4>
+          <p>对竿、轮、饵的钻研与"剁手"本身就是乐趣，是付费意愿的现实映射。</p>
+        </div>
+        <div class="card pine">
+          <h4>7. 记录 / 日志</h4>
+          <p>渔获日志、照片、数据复盘 → 自我量化的满足。对应游戏内的统计/图鉴/成就墙。</p>
+        </div>
+        <div class="card pine">
+          <h4>8. 放流与伦理</h4>
+          <p>Catch &amp; Release、保护鱼放生带来道德满足感，是一种"非数值"的正反馈。</p>
+        </div>
+        <div class="card pine">
+          <h4>9. 社交 / 比赛</h4>
+          <p>钓友交流、钓鱼比赛、晒获——社群归属与竞争。对应排行榜/赛事（需谨慎，见下）。</p>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>对"超长线"的核心结论：</strong>不要指望靠"把数字调大"留住人。要像真实钓鱼一样，<strong>同时埋下多条相互独立的长期动机</strong>——收集广度（鱼种/拟饵/钓点）、破纪录（个体上限）、技艺天花板（掌握度）、装备追求、自我量化（日志/成就）。这样当一个玩家"鱼竿满级了"，他还有"图鉴没集齐""那条神话鱼还没破纪录""新钓点没解锁"在拉着他。
+      </div>
+    </section>
+
+    <section id="real-texture">
+      <h2>1.4 真实质感：值得做 vs 会让挂机变烦</h2>
+      <p class="lead" style="margin-bottom:16px">真实钓鱼有很多"质感细节"，但桌面挂件的天职是低打扰。下面把真实细节分成"值得转译"和"会破坏挂机体验"两类。</p>
+      <div class="verdict">
+        <div class="pro">
+          <h4>值得做进游戏（增味、不增负担）</h4>
+          <ul>
+            <li><strong>空军是常态</strong>→ 收益波动、不保证每杆有鱼，但挂机版要"软化"：长期看一定有产出，避免真实那种几小时颗粒无收的挫败。</li>
+            <li><strong>晨昏黄金口 / 潮汐窗口</strong>→ 与真实时钟/事件挂钩的轻量正向 buff（已在做）。</li>
+            <li><strong>留与放的取舍</strong>→ 偶发的"放流换保育奖励 vs 卖钱"抉择，给一次有意义的轻点（本项目已有"保护鱼放流"事件）。</li>
+            <li><strong>破纪录的仪式感</strong>→ 巨物/新纪录时的特别反馈（特殊音效/图鉴金框），强化"难忘瞬间"。</li>
+            <li><strong>耐心被奖励</strong>→ 守得越久越可能出大物的"钓棚加深"感（参考 Tiny Fishing 越深越值钱）。</li>
+          </ul>
+        </div>
+        <div class="con">
+          <h4>会让挂机变烦（应弱化或剔除）</h4>
+          <ul>
+            <li><strong>频繁精准操作</strong>：真实搏鱼要时刻控线，但挂件里若每条鱼都强制小游戏 = 灾难。最多做成"可选加成"。</li>
+            <li><strong>强制回访 / 错过即损失</strong>：真实"窗口期"若变成"不在线就亏"，等同体力惩罚，违背低打扰。</li>
+            <li><strong>装备损耗 / 频繁补给</strong>：真实要补线换钩，但游戏里做成消耗管理 = 微管理负担。</li>
+            <li><strong>过度拟真的失败</strong>：断线、脱钩、跑鱼在模拟器里是乐趣，在桌面挂件里是泼冷水，应极低频或可关。</li>
+            <li><strong>复杂配组门槛</strong>：真实配组很深，但不该成为新手必须查攻略才能玩的劝退点；做成"默认能玩、深挖有奖励"。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PART 2 ============ -->
+    <div class="part-divider" id="p2">
+      <p class="eyebrow">Part Two</p>
+      <h2>第二部分 · 市面上的钓鱼游戏横评</h2>
+      <p>按类型分别调研，每类提炼：核心要素 / 留存与长线机制 / 商业化模式 / 值得借鉴 / 坑。机制以公开资料为准，<span class="pill warn">待核实</span> 标注表示具体数值/实现需进一步确认，不在此编造。</p>
+    </div>
+
+    <section id="g-casual">
+      <h2>2.1 休闲 / 挂机类</h2>
+      <p class="lead" style="margin-bottom:14px">代表作：<strong>Tiny Fishing</strong>（网页休闲）、<strong>Cat Goes Fishing</strong>（Steam 休闲）、<strong>WEBFISHING</strong>（多人休闲社交）、各类 <strong>Fish Idle</strong>。与本项目最近的一类。</p>
+      <div class="two">
+        <div class="card">
+          <h3>Tiny Fishing</h3>
+          <p><strong>核心要素：</strong>极简循环——抛线→收线接鱼→赚钱→升级（最大深度 / 一杆接鱼数 / 鱼价）→钓更深、更稀有的鱼。一个"5 分钟打开、20 分钟才舍得关"的小钩子。</p>
+          <p><strong>长线机制：</strong>"越深越值钱"的纵向阶梯 + 升级即时反馈，制造"再钓一杆"的冲动。</p>
+          <p><strong>借鉴：</strong>升级与产出强绑定的即时正反馈；"深度"作为单一清晰的纵向进度轴。<strong>坑：</strong>深度玩穿后内容很快见底，缺横向广度与长期目标。</p>
+        </div>
+        <div class="card">
+          <h3>Cat Goes Fishing</h3>
+          <p><strong>核心要素：</strong>抛投 + 选饵 + 控线收鱼（收太猛会断线，是轻技巧点）；不同鱼有不同行为（深水/表层/掠食）。</p>
+          <p><strong>长线机制：</strong>升级鱼竿解锁新区域与新鱼；里程碑明确——首条 Huge 鱼、最贵鱼、集齐图鉴（Catalog）。官方明言"没有真正的结局"。</p>
+          <p><strong>借鉴：</strong>用"图鉴 + 里程碑 + 巨物"三件套撑长线，正好是本项目已有方向。<strong>坑：</strong>评测普遍指出久玩会重复，说明光靠"换更大鱼"不够，需要节奏变化。</p>
+        </div>
+        <div class="card">
+          <h3>WEBFISHING</h3>
+          <p><strong>核心要素：</strong>低门槛多人在线钓鱼，主打<strong>社交氛围</strong>与休闲社区（一起钓鱼、聊天、装扮）。</p>
+          <p><strong>长线机制：</strong>社交本身 = 留存；收集与外观装扮。<strong>借鉴：</strong>"轻社交 + 外观"是健康的非数值长线与变现点。<strong>坑：</strong>多人/服务器对一个单机桌面挂件是重负担，社交需谨慎裁剪（详见 3.1）。</p>
+        </div>
+        <div class="card">
+          <h3>Fish Idle / 放置钓鱼类</h3>
+          <p><strong>核心要素：</strong>典型放置框架——自动产出 + 升级倍率 + 离线收益 + 偶尔领取。</p>
+          <p><strong>长线机制：</strong>多数靠 prestige/转生重置换永久乘数维持月活甚至年活；自动化是"留存保险"。<strong>商业化：</strong>常见激励视频 + 一次性去广告 + 加速礼包。<strong>坑：</strong>纯数字膨胀 + 强广告会快速透支好感。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="g-sim">
+      <h2>2.2 拟真模拟类</h2>
+      <p class="lead" style="margin-bottom:14px">代表作：<strong>Fishing Planet</strong>（F2P 模拟）、<strong>Russian Fishing 4</strong>（F2P 硬核模拟）、<strong>Call of the Wild: The Angler</strong>（买断开放世界）。它们与本项目气质相反（硬核、需专注），但其<strong>变现教训</strong>极有参考价值。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:18%">作品</th><th style="width:16%">商业化</th><th>关键观察 / 教训</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Fishing Planet</td>
+              <td><span class="pill">F2P + 内购</span></td>
+              <td>免费 + 付费内容（地图/装备/会员）。开放世界、深度拟真。<strong>借鉴：</strong>F2P 钓鱼 + 内容包是成立的商业模式。<strong>坑：</strong>硬核学习曲线对休闲玩家劝退，与桌面挂件定位冲突。</td>
+            </tr>
+            <tr>
+              <td>Russian Fishing 4</td>
+              <td><span class="pill bad">F2P + 高价内购</span></td>
+              <td>无主线、自由钓的硬核模拟，Steam 上意外热门，但<strong>变现广受差评</strong>：会员 3 天约 $3.5、1 个月约 $15，甚至传有约 $2000 的天价微交易（PC Gamer 报道）。<strong>教训（重要）：</strong>再好的核心玩法也会被"昂贵、像在卡你"的变现劝退。这是本项目要极力避免的反面教材。</td>
+            </tr>
+            <tr>
+              <td>Call of the Wild: The Angler</td>
+              <td><span class="pill good">买断 + DLC</span></td>
+              <td>买断制开放世界钓鱼，氛围与画面取胜。<strong>借鉴：</strong>买断 + 可选 DLC 是被玩家接受度高的"公平"模型。<strong>坑：</strong>买断对一个想免费铺量的桌面挂件不直接适用，但其"DLC=内容包"思路可借。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout"><strong>一句话教训：</strong>拟真类证明了"钓鱼可以承载几千小时"，但 RF4 的差评也证明——<strong>长线再长，变现一旦显得"贵且在卡你"，口碑立刻崩。</strong>这条直接喂给第三部分的 F2P 边界。</div>
+    </section>
+
+    <section id="g-embed">
+      <h2>2.3 玩法内嵌类</h2>
+      <p class="lead" style="margin-bottom:14px">钓鱼不是主菜、而是大游戏里的一道：<strong>Stardew Valley</strong>、<strong>Animal Crossing</strong>、<strong>Dave the Diver</strong>、<strong>Sneaky Sasquatch</strong>。它们告诉我们：<strong>钓鱼的乐趣很大程度来自"钓之后"——收集、陈列、捐赠、订单，而非抛竿动作本身。</strong></p>
+      <div class="two">
+        <div class="card">
+          <h3>Stardew Valley</h3>
+          <p><strong>核心要素：</strong>有技巧的咬口小游戏（把鱼控在绿条内）；83 种鱼，集齐才能完成收藏并拿奖励。</p>
+          <p><strong>长线机制：</strong><span class="pill warn">季节限定 + 天气限定 + 传奇鱼每档只能钓一次</span> → 收集需要跨季节、看天气、规划，天然拉长收集尾巴；传奇鱼可入鱼缸"陈列"而非卖钱。</p>
+          <p><strong>借鉴：</strong>"季节/天气限定 + 一次性传奇 + 收集墙"是低成本撑长线的黄金组合；钓上来后能"展示"比"卖掉"更有情感留存。</p>
+        </div>
+        <div class="card">
+          <h3>Animal Crossing</h3>
+          <p><strong>核心要素：</strong>极简钓鱼（找黑影→抛线→看时机收）；但<strong>"之后"很丰富</strong>：捐给博物馆、装饰小岛、季度钓鱼比赛。</p>
+          <p><strong>长线机制：</strong>真实时钟/季节驱动鱼种轮换；博物馆陈列 = 收集成就的可视化；定期赛事制造回访理由（温和、非强制）。</p>
+          <p><strong>借鉴：</strong>"博物馆/陈列"把收集变成可炫耀的空间；与真实日历同步是几乎零成本的"内容感"。</p>
+        </div>
+        <div class="card">
+          <h3>Dave the Diver</h3>
+          <p><strong>核心要素：</strong>用鱼叉而非鱼竿（严格说不算鱼竿垂钓，仅作"采集→经营"循环参考）；白天潜水抓鱼，晚上经营寿司店。</p>
+          <p><strong>长线机制：</strong>"采集 → 经营/加工 → 再投资"的双循环让单一采集有了下游目的；叙事与多样玩法防腻。</p>
+          <p><strong>借鉴：</strong>给"卖鱼"加一个下游（订单/加工/装点鱼缸），让渔获有"卖钱"之外的去处。<strong>坑：</strong>多系统耦合对极简挂件可能过重。</p>
+        </div>
+        <div class="card">
+          <h3>Sneaky Sasquatch</h3>
+          <p><strong>核心要素：</strong>开放世界休闲游戏里的钓鱼是众多活动之一，轻松、好上手。</p>
+          <p><strong>长线机制：</strong>钓鱼作为"赚钱/调剂"的轻活动嵌在更大目标里。<strong>借鉴：</strong>钓鱼可以只是"舒适的背景活动"——这恰恰是桌面挂件的本质，不必把每个动作都做重。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="g-cozy">
+      <h2>2.4 治愈 / 收集 / 陈列类</h2>
+      <p class="lead" style="margin-bottom:14px">与本项目气质最贴近的一类。代表：<strong>Chillquarium</strong>。核心不是"钓"，而是<strong>养 / 收集 / 陈列 / 看着舒服</strong>。</p>
+      <div class="two">
+        <div class="card gold">
+          <h3>Chillquarium</h3>
+          <p><strong>核心要素：</strong>买随机鱼包 → 鱼随时间长大（1XP/秒，<strong>离线也长</strong>，右键喂食 +5XP 可加速）→ 养大卖钱 → 买更多包 / 更大鱼缸 / 装饰。纯治愈放置。</p>
+          <p><strong>长线机制：</strong>收集（稀有鱼）+ 陈列（自定义鱼缸、装饰纯外观）+ 缓慢成长。QoL 做得到位：<strong>自动喂食、一键卖出已解锁鱼</strong>。</p>
+          <p><strong>商业化：</strong><span class="pill good">一次性买断（Steam 定价）</span>，无内购、无广告。</p>
+        </div>
+        <div class="card gold">
+          <h3>为什么它对本项目最有参考价值</h3>
+          <ul>
+            <li><strong>循环高度同构：</strong>本项目"钓→进鱼篓→卖→升级"≈ Chillquarium"买包→养大→卖→扩缸"，都是低压力的收集变现。</li>
+            <li><strong>离线成长是核心而非附属：</strong>"不在线也在长"正是治愈挂机的灵魂——本项目离线收益方向一致。</li>
+            <li><strong>QoL 即体验：</strong>自动喂食、一键卖出被当作"减负"而非付费墙——这正是本项目"自动卖鱼"该走的路（见 3.2）。</li>
+            <li><strong>装饰=纯外观长线：</strong>装饰不影响数值，却给收集型玩家无尽布置乐趣——健康的非 P2W 变现/留存点。</li>
+            <li><strong>坑：</strong>买断制意味着没有持续收入；本项目若要 F2P，需要在"不破坏治愈感"的前提下找到温和变现（见 3.2）。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="g-mobile">
+      <h2>2.5 手游 F2P 类</h2>
+      <p class="lead" style="margin-bottom:14px">代表：<strong>Ace Fishing: Wild Catch</strong>、<strong>Fishing Clash</strong>、<strong>Fishing Strike</strong>。它们贡献了最成熟的<strong>F2P 长线 + 变现机制库</strong>，但也包含本项目应警惕的"激进套路"。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:16%">作品</th><th style="width:30%">长线 / 留存机制</th><th>变现与"坑"</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Ace Fishing</td>
+              <td>60+ 钓点（海/河/湖/海岸/岛）环游世界；中鱼后是"拉力对抗"操作小游戏。<span class="pill warn">体力/能量系统等具体机制待核实</span></td>
+              <td>F2P + 内购。<strong>坑：</strong>这类手游普遍用体力/能量限制单次游玩时长以促回访——与桌面挂件"持续陪伴"哲学直接冲突，<strong>不可照搬</strong>。</td>
+            </tr>
+            <tr>
+              <td>Fishing Clash</td>
+              <td>多重深度长线：<strong>拟饵集卡（CCG 式）并升级</strong>、每个钓点有<strong>技能树（用代币解锁加成）</strong>、<strong>每日 live 活动 + 每周随机事件</strong>、<strong>全球排行榜竞技</strong>。</td>
+              <td>F2P + 内购。<strong>借鉴：</strong>集卡=横向收集、技能树=纵向掌握、日/周活动=live-ops 节奏、排行榜=社交竞争——一整套长线模板。<strong>坑：</strong>集卡很容易滑向抽卡/付费强度，需守住"不卡进度"的底线。</td>
+            </tr>
+            <tr>
+              <td>Fishing Strike</td>
+              <td><strong>500+ 鱼种收集</strong>、数十个世界区域、可升级/自定义渔船。</td>
+              <td>F2P + 内购。<strong>借鉴：</strong>"超大收集池 + 区域扩张 + 载具/基地养成"是横向广度的极致样本。<strong>坑：</strong>体量越大越依赖抽卡/掉率变现，公平性风险随之上升。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <strong>提炼：</strong>手游 F2P 给了最丰富的"长线机制零件库"（集卡 / 技能树 / 日周活动 / 赛季 / 排行榜 / 超大图鉴），<strong>机制本身可借，但其"靠体力门 + 抽卡 + 卡进度逼氪"的驱动方式必须丢弃</strong>。本项目要做的是"拿走它的内容广度，换上 Chillquarium 的温和变现与治愈节奏"。
+      </div>
+    </section>
+
+    <!-- ============ PART 3 ============ -->
+    <div class="part-divider" id="p3">
+      <p class="eyebrow">Part Three · 重点产出</p>
+      <h2>第三部分 · 对《角落垂钓》的启示</h2>
+      <p>把前两部分的素材，结构化映射到三个核心目的。每条都标注「是否适合一个安静的桌面挂机挂件」并给出取舍建议。</p>
+    </div>
+
+    <section id="i-longterm">
+      <h2>3.1 超长线内容设计（2000 / 5000 / 10000 小时不被消耗干净）</h2>
+      <p class="lead" style="margin-bottom:16px">核心思路（来自 1.3 与各游戏长线机制）：<strong>不要靠单一轴硬撑，而要叠多条相互独立、消耗速率不同的长期动机</strong>。下表把可用机制按"是否适合安静桌面挂件"评级，并给取舍建议。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:18%">机制</th><th style="width:30%">怎么用 / 参考来源</th><th style="width:12%">适配度</th><th>取舍建议</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>横向收集广度</strong></td>
+              <td>更多鱼种 / 稀有变体（颜色/白化/季节型）/ 拟饵 / 钓点。参考 Fishing Strike 500+ 鱼、Fishing Clash 集卡。</td>
+              <td><span class="tag-fit fit-yes">非常适合</span></td>
+              <td><strong>主力长线轴。</strong>当前 60 鱼可逐步扩，并引入"同种稀有变体"（白化/金色/季节限定）以极低美术成本翻倍图鉴深度。</td>
+            </tr>
+            <tr>
+              <td><strong>稀有个体 / 破纪录</strong></td>
+              <td>同种鱼的最大体重纪录（IGFA 文化）；巨物金框瞬间。本项目已有"大/巨物/最大体重"。</td>
+              <td><span class="tag-fit fit-yes">非常适合</span></td>
+              <td>把"个人最佳纪录"做成常驻可炫耀面板；偶发"超大个体"是免费的多巴胺事件。几乎零成本、无限尾巴。</td>
+            </tr>
+            <tr>
+              <td><strong>掌握度 / 技巧天花板</strong></td>
+              <td>Melvor 的逐项 Mastery、Fishing Clash 钓点技能树。每个鱼种/钓点有可累积的熟练度与小加成。</td>
+              <td><span class="tag-fit fit-yes">适合</span></td>
+              <td>做成"每钓点/每鱼种熟练度条 + 里程碑被动加成"，给硬核玩家纵向深度，且全程被动、不增操作负担。</td>
+            </tr>
+            <tr>
+              <td><strong>纵向 Prestige / 转生</strong></td>
+              <td>放置类标配：重置进度换永久乘数，制造"再爬一遍但更快"的月活/年活。</td>
+              <td><span class="tag-fit fit-maybe">谨慎</span></td>
+              <td>可做"换竿/换钓场重开"式软转生，但<strong>治愈挂件慎用"清空式重置"</strong>——清掉图鉴/纪录会让收集党反感。建议只重置经济、保留收藏。</td>
+            </tr>
+            <tr>
+              <td><strong>赛季 / Live-ops</strong></td>
+              <td>与真实季节/节日挂钩的限定鱼、限定外观、限定事件。AC/Stardew 的季节限定、Fishing Clash 日周活动。</td>
+              <td><span class="tag-fit fit-yes">适合（轻量版）</span></td>
+              <td><strong>性价比最高的"内容感"来源。</strong>与系统时钟同步即可自动轮换（冬季鱼、节日装饰），无需联网运营也能有"季节限定"。后续可加可选的在线活动。</td>
+            </tr>
+            <tr>
+              <td><strong>沙盒 / 陈列布置</strong></td>
+              <td>Chillquarium 鱼缸装饰、AC 博物馆、Stardew 鱼缸陈列。纯外观、无尽布置。</td>
+              <td><span class="tag-fit fit-yes">非常适合</span></td>
+              <td><strong>强烈建议加入。</strong>让玩家把心爱渔获"陈列"在桌面角落场景里（标本墙/小鱼缸/装饰），契合"桌面摆件"本质，是健康的非数值长线 + 变现点。</td>
+            </tr>
+            <tr>
+              <td><strong>程序化 / 涌现</strong></td>
+              <td>随机事件、随机天气、随机个体属性制造"每天不一样"。本项目已有 7 事件 + 个体随机。</td>
+              <td><span class="tag-fit fit-yes">适合</span></td>
+              <td>继续扩事件库 + 个体变异维度；涌现感是低成本对抗"看穿"的关键。注意保持低干扰、正向为主。</td>
+            </tr>
+            <tr>
+              <td><strong>世界纪录 / 排行榜</strong></td>
+              <td>Fishing Clash 全球榜、IGFA 纪录文化。社交竞争的长线。</td>
+              <td><span class="tag-fit fit-maybe">谨慎</span></td>
+              <td>可做<strong>异步、非压迫</strong>的榜（最大鱼周榜/好友榜），但避免实时 PvP 与排名焦虑——那会破坏"安静陪伴"。优先级低。</td>
+            </tr>
+            <tr>
+              <td><strong>社交 / PvP</strong></td>
+              <td>WEBFISHING 社区、手游联赛。</td>
+              <td><span class="tag-fit fit-no">基本不适合</span></td>
+              <td><strong>不建议做实时多人/PvP。</strong>服务器成本高、与单机桌面挂件哲学冲突、引入竞争焦虑。最多保留"截图分享/晒图鉴"的轻社交。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two" style="margin-top:14px">
+        <div class="card accent">
+          <h3>推荐的"长线组合拳"（按优先级）</h3>
+          <ol>
+            <li><strong>横向收集（鱼种 + 稀有变体 + 钓点）</strong>——主轴，消耗最慢。</li>
+            <li><strong>陈列 / 布置沙盒</strong>——契合桌面摆件，给收集成果一个"家"。</li>
+            <li><strong>破纪录 + 掌握度</strong>——零成本的无限尾巴 + 硬核纵深。</li>
+            <li><strong>时钟驱动的轻赛季</strong>——免运营的"内容感"。</li>
+            <li><strong>软转生（只重置经济、保留收藏）</strong>——给数值党可选的"再来一遍"。</li>
+          </ol>
+        </div>
+        <div class="card red">
+          <h3>明确不做 / 缓做（保护"安静"定位）</h3>
+          <ul>
+            <li>实时多人、PvP、公会——重且违背哲学。</li>
+            <li>清空式 Prestige（抹掉图鉴/纪录）——伤收集党。</li>
+            <li>排名焦虑型实时排行榜——制造压迫。</li>
+            <li>把"影响因素"做成需要查表的硬核模拟——增负担。</li>
+            <li>体力/能量门——见 3.2，与挂机本质冲突。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="i-f2p">
+      <h2>3.2 公平 F2P 的边界（本体免费、便利付费）</h2>
+      <p class="lead" style="margin-bottom:16px">行业数据：休闲/挂机玩家<strong>愿意为"身份认同、便利、个性化"付费</strong>——某统计显示放置类内购中超 58% 来自纯外观内容（无数值/无 P2W）；而<strong>激进付费墙、欺骗性机制、P2W 会直接招致差评、社媒声讨与大量卸载</strong>。同时，<strong>付费玩家本就稀少（休闲游戏付费率常 &lt;5%）</strong>，所以变现要靠"少数愿意支持的人买得开心"，而非"逼大众交钱"。</p>
+      <div class="two">
+        <div class="card good" style="border-left:4px solid var(--pine)">
+          <h3>玩家"愿意"为什么付费（绿色区）</h3>
+          <ul>
+            <li><strong>外观 / 个性化：</strong>鱼竿皮肤、浮漂样式、场景主题（雨/夜/樱花角落）、鱼缸装饰、宠物。占放置类内购大头，零 P2W。</li>
+            <li><strong>一次性便利 / QoL：</strong>自动卖鱼、自动整理、一键收益——做成<strong>一次性买断</strong>最被接受（参考 Chillquarium 把自动喂食/一键卖出当免费 QoL；行业常见 ~$4.99 一次性去广告/解便利）。</li>
+            <li><strong>内容包 / DLC：</strong>新钓点世界包、新鱼系列、赛季外观集——"买内容"比"买进度"健康（参考 Angler 的 DLC、Fishing Planet 内容包）。</li>
+            <li><strong>支持者 / 打赏：</strong>"支持开发者"礼包、署名感谢、专属外观——情感付费，口碑极好。</li>
+            <li><strong>（可选）去广告：</strong>若有激励视频，提供一次性永久去广告。</li>
+          </ul>
+        </div>
+        <div class="card red">
+          <h3>玩家"反感"为什么付费（红色区）</h3>
+          <ul>
+            <li><strong>卡进度的硬墙：</strong>"不付费就钓不动/产出腰斩"。</li>
+            <li><strong>体力 / 能量门：</strong>限制单次游玩、逼你买体力或等待——<strong>与"持续挂机陪伴"本质直接冲突，绝对不做</strong>。</li>
+            <li><strong>激进抽卡：</strong>靠低掉率 + 保底逼氪的拟饵/鱼抽卡。集卡机制可借，抽卡驱动不可取。</li>
+            <li><strong>P2W：</strong>付费直接买数值碾压——破坏公平与收集成就感。</li>
+            <li><strong>把"本该免费的便利"做成反复付费墙：</strong>如背包扩容（见下）。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:16px">
+        <h3 style="margin-top:0;color:#8a6a23">⚑ 针对委托人设想的"自动卖鱼 / 背包扩容收费"——风险评估与更好方案</h3>
+        <div class="two" style="margin-top:8px">
+          <div class="card">
+            <h4>① 自动卖鱼 → <span class="pill good">较安全，但要选对形态</span></h4>
+            <p><strong>风险：</strong>低。自动化属于公认可付费的 QoL。但形态很关键。</p>
+            <p><strong>方案：</strong>做成<strong>一次性买断的便利解锁</strong>（如"自动鱼贩"永久解锁），而非订阅/反复付费。可附"按品阶过滤的自动卖出规则"加深价值。手动卖鱼始终免费可用——付费只买"省事"，不买"能不能玩"。这与 Chillquarium 把"一键卖出"当免费 QoL 的思路一致；本项目把它做成可选付费 QoL 是温和且可接受的。</p>
+          </div>
+          <div class="card">
+            <h4>② 背包(鱼篓)扩容收费 → <span class="pill bad">高风险，像人为设卡</span></h4>
+            <p><strong>风险：</strong>高。容量上限本质上是<strong>开发者人为制造的瓶颈</strong>，再卖解药，玩家很容易识破为"先卡你、再收钱"，尤其它还会<strong>惩罚挂机</strong>（鱼篓满 = 离线/挂机收益被截断），与"低打扰陪伴"哲学正面冲突。</p>
+            <p><strong>更好的替代设计：</strong></p>
+            <ul style="margin-top:6px">
+              <li><strong>容量靠玩法免费成长</strong>（已有：升级鱼篓用金币）——保持纯免费路径，不设付费墙。</li>
+              <li><strong>满篓不再"硬截断"</strong>：满了自动把最低价鱼折价转化为金币（"自动鱼贩兜底"），让挂机永不空转——把痛点变成卖点。</li>
+              <li>若一定要变现"容量"，包进<strong>外观+便利的"支持者礼包"</strong>里附赠，而不是单独当付费墙卖。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pine" style="margin-top:14px">
+        <h3>本项目 F2P 北极星原则（一句话）</h3>
+        <p><strong>"付费只买开心与省事（外观 / 一次性便利 / 内容包 / 支持开发者），永不买进度、永不设体力门、永不 P2W。"</strong> 让不付费的玩家觉得完整且被尊重，让愿意付费的少数人觉得"这是支持我喜欢的小东西"。这正是从 RF4 差评（反例）与 Chillquarium/外观经济（正例）两端得到的结论。</p>
+      </div>
+    </section>
+
+    <section id="i-rhythm">
+      <h2>3.3 挂机 × 偶尔操作的节奏</h2>
+      <p class="lead" style="margin-bottom:16px">目标：<strong>持续挂机为主，偶尔需要操作，但整体不让人觉得麻烦。</strong>判定一个"操作"该不该有的黄金标准——它是<strong>愉悦的（领取、决策、布置、欣赏）</strong>还是<strong>烦人的（频繁点击、强制回访、微管理、体力调度）</strong>。Rusty's Retirement 之所以成功（Steam 销量逾 50 万），正是因为它"嵌入你的生活，而不要求你嵌入它的世界"。</p>
+      <div class="verdict">
+        <div class="pro">
+          <h4>愉悦的"偶尔操作"（应保留/增加）</h4>
+          <ul>
+            <li><strong>领取式结算：</strong>回来一键收离线渔获/金币（多巴胺时刻，零压力）。</li>
+            <li><strong>有意义的抉择：</strong>偶发"留 or 放"（保护鱼/破纪录鱼）、"接哪个订单"——一次轻点、有取舍、不强制。</li>
+            <li><strong>布置 / 陈列：</strong>把心爱鱼摆进桌面鱼缸、换场景主题——慢节奏的自我表达。</li>
+            <li><strong>欣赏 / 翻图鉴：</strong>看新解锁、看个人纪录墙——纯正反馈。</li>
+            <li><strong>可选的小技巧点：</strong>咬口时一次轻点"刺鱼"换品相加成（不点也自动收，给主动玩家额外掌控感而非负担）。</li>
+          </ul>
+        </div>
+        <div class="con">
+          <h4>烦人的操作（应避免）</h4>
+          <ul>
+            <li><strong>频繁点击：</strong>每条鱼都要手动收/手动卖——这正是"自动卖鱼"要解决的，应作为免费或一次性 QoL。</li>
+            <li><strong>强制回访 / 错过即损失：</strong>限时窗口"不在线就亏"= 变相体力惩罚。</li>
+            <li><strong>体力 / 能量管理：</strong>限制游玩时长——与挂机本质冲突，禁用。</li>
+            <li><strong>满篓硬截断：</strong>不在线鱼篓满了就停产 = 惩罚挂机，应自动兜底转化（见 3.2）。</li>
+            <li><strong>复杂配组/补给微管理：</strong>每次都要换线换钩配饵——做成"默认能跑，深挖有奖励"。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="three" style="margin-top:16px">
+        <div class="card accent">
+          <h3>离线收益设计</h3>
+          <p>本项目已有：最多 8 小时、效率 50%、受鱼篓余量限制。</p>
+          <ul>
+            <li>方向正确（治愈类离线成长是灵魂，Chillquarium 离线也长鱼）。</li>
+            <li><strong>建议：</strong>满篓不截断，自动折价兜底，让"挂一夜回来一定有惊喜"而非"满了就白挂"。</li>
+            <li>回归时给一个温暖的"离线小结"卡片（钓了 N 条、最大一条是…），把领取做成仪式。</li>
+            <li>8 小时上限是否放宽到 12–24h 可做 A/B：上限太短会隐性逼日活（玩家社区对"逼每日登录"有怨言）。</li>
+          </ul>
+        </div>
+        <div class="card accent">
+          <h3>自动化分层</h3>
+          <p>把自动化做成"可成长的层级"，既是长线也是变现点：</p>
+          <ul>
+            <li><strong>L0 手动：</strong>手动抛/收/卖（始终免费）。</li>
+            <li><strong>L1 自动钓：</strong>已实现的自动循环。</li>
+            <li><strong>L2 自动卖（按规则）：</strong>一次性便利解锁，可设过滤。</li>
+            <li><strong>L3 自动整理/兜底：</strong>满篓折价、自动锁稀有。</li>
+            <li>关键：<strong>自动化是"减负"，永不是"不付费就玩不动"。</strong></li>
+          </ul>
+        </div>
+        <div class="card accent">
+          <h3>"结算 / 抉择"节点设计</h3>
+          <p>需要一次轻点的节点，要稀疏、正向、可跳过：</p>
+          <ul>
+            <li><strong>频率克制：</strong>抉择类事件低频出现，避免变成"不停弹窗"。</li>
+            <li><strong>都给默认安全项：</strong>不点也有合理结果（自动收/默认卖），点了有额外收益或情感价值。</li>
+            <li><strong>低干扰呈现：</strong>沿用现有 HUD 角标/柔和提示，不抢屏、不强制暂停玩家工作。</li>
+            <li><strong>奖励"回来看一眼"而非"必须盯着"。</strong></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>节奏总原则：</strong>像 Rusty's Retirement 那样——<strong>默认完全可以"开着不管"，但每次"回来看一眼"都有愉悦的小事可做（领取、一个抉择、摆个装饰、翻翻新纪录）。</strong>操作是"邀请"而非"义务"，是奖励主动玩家、而不是惩罚被动玩家。
+      </div>
+    </section>
+
+    <!-- ============ SOURCES ============ -->
+    <section id="sources">
+      <h2>资料来源</h2>
+      <p style="margin-bottom:14px">以下为本报告联网调研引用来源（可点击）。游戏具体数值/实现以官方与维基为准；标注 <span class="pill warn">待核实</span> 处表示需进一步确认，未在正文编造数值。</p>
+      <div class="two">
+        <div class="card">
+          <h3>现实垂钓 · 心理与影响因素</h3>
+          <ul class="src-list">
+            <li><a href="https://inthebite.com/2014/07/the-psychology-of-fishing-addiction/">InTheBite — The Psychology of Fishing Addiction</a></li>
+            <li><a href="https://fishingbuzz.co.uk/the-anglers-brain-who-we-are-and-why-fishing-is-integral-to-our-mental-health/">Fishing Buzz — The Angler's Brain（钓鱼与心理健康）</a></li>
+            <li><a href="https://honestfishers.com/why-is-fishing-so-addictive/">Honest Fishers — Why Is Fishing So Addictive</a></li>
+            <li><a href="https://fishingbooker.com/blog/how-weather-affects-fishing/">FishingBooker — How Weather Affects Fishing</a></li>
+            <li><a href="https://topsail.fish/understanding-tides-weather-inshore-fishing-success/">Topsail — Tides &amp; Weather: Inshore Fishing</a></li>
+            <li><a href="https://www.mercurymarine.com/us/en/lifestyle/dockline/how-barometric-pressure-affects-fishing">Mercury Marine — Barometric Pressure &amp; Fishing</a></li>
+            <li><a href="https://www.fishranger.com.au/fishing_factors">FishRanger — Fishing Factors</a></li>
+            <li><a href="https://igfa.org/member-services/world-record/">IGFA World Records（破纪录文化）</a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>休闲 / 挂机 / 治愈类游戏</h3>
+          <ul class="src-list">
+            <li><a href="https://thetinyfishing.com/tiny-fishing-addictive-psychology">Tiny Fishing — Addictive Psychology</a> / <a href="https://www.coolmathgames.com/0-tiny-fishing">Coolmath: Tiny Fishing</a></li>
+            <li><a href="https://cat-goes-fishing.fandom.com/wiki/Cat_Goes_Fishing">Cat Goes Fishing Wiki</a> / <a href="https://steamcommunity.com/app/343780">Steam: Cat Goes Fishing</a></li>
+            <li><a href="https://chillquarium.fandom.com/wiki/Gameplay">Chillquarium Wiki — Gameplay</a> / <a href="https://store.steampowered.com/app/2276930/Chillquarium/">Steam: Chillquarium</a></li>
+            <li><a href="https://store.steampowered.com/app/2666510/Rustys_Retirement/">Steam: Rusty's Retirement</a> / <a href="https://en.wikipedia.org/wiki/Rusty's_Retirement">Wikipedia: Rusty's Retirement</a></li>
+            <li><a href="https://www.pcgamer.com/games/sim/idle-farming-sim-rustys-retirement-allows-you-to-pour-hours-into-farmwork-whilst-still-doing-other-things/">PC Gamer — Rusty's Retirement</a></li>
+            <li><a href="https://pixelkin.org/2025/06/06/8-best-desktop-idlers-like-rustys-retirement-to-sit-on-your-screen/">Pixelkin — Desktop idlers like Rusty's Retirement</a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>拟真模拟 · 内嵌玩法 · 收集长线</h3>
+          <ul class="src-list">
+            <li><a href="https://store.steampowered.com/app/766570/Russian_Fishing_4/">Steam: Russian Fishing 4</a> / <a href="https://www.pcgamer.com/games/this-russian-fishing-sim-is-bizarrely-popular-on-steam-but-players-cant-decide-if-they-love-or-hate-it-perhaps-because-of-the-usd2000-microtransaction/">PC Gamer — RF4 monetisation 争议</a></li>
+            <li><a href="https://apps.apple.com/DE/app/id1542220472">Fishing Planet（F2P + 内购）</a></li>
+            <li><a href="https://steamcommunity.com/app/1408610/discussions/0/3826413307974321256/">Call of the Wild: The Angler（Steam 讨论）</a></li>
+            <li><a href="https://www.davideaversa.it/blog/game-design-taxonomy-fishing-mini-games/">Davide Aversa — Taxonomy of Fishing Mini-games</a></li>
+            <li><a href="https://stardewvalleywiki.com/Fish">Stardew Valley Wiki — Fish</a> / <a href="https://stardewvalleywiki.com/Legend">Legendary Fish</a></li>
+            <li><a href="https://www.gamesradar.com/games/rpg/if-collecting-fish-in-animal-crossing-stardew-valley-or-dave-the-diver-consumed-your-life-this-new-fishing-rpg-might-be-perfect-for-you/">GamesRadar — AC/Stardew/Dave the Diver 钓鱼收集</a></li>
+            <li><a href="https://wiki.melvoridle.com/w/Completion_Log">Melvor Idle Wiki — Completion Log</a> / <a href="https://wiki.melvoridle.com/w/Mastery">Mastery</a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>手游 F2P · 变现与留存数据</h3>
+          <ul class="src-list">
+            <li><a href="https://play.google.com/store/apps/details?id=com.tensquaregames.letsfish2&hl=en">Google Play: Fishing Clash</a> / <a href="https://www.pocketgamer.com/android/best-fishing-games/">PocketGamer — Best fishing games（Ace/Strike/Clash）</a></li>
+            <li><a href="https://ace-fishing-wild-catch.en.softonic.com/android">Ace Fishing: Wild Catch</a> / <a href="https://fishing-strike.en.uptodown.com/android">Fishing Strike</a></li>
+            <li><a href="https://blog.solar-engine.com/en-blog/docs/casual-games-iap-monetization-strategies">SolarEngine — Casual Games IAP Monetization（外观占比/付费偏好）</a></li>
+            <li><a href="https://appfollow.io/blog/what-mobile-game-players-want-monetization-insights-from-app-store-reviews">AppFollow — 玩家对变现的真实评价</a></li>
+            <li><a href="https://mobilefreetoplay.com/top-7-idle-game-mechanics/">Mobile Free To Play — Top 7 Idle Game Mechanics</a></li>
+            <li><a href="https://popcorngames.io/en/blogs/idle-games-with-prestige">Idle Games with Prestige Systems</a></li>
+            <li><a href="https://www.pocketgamer.biz/2026-live-ops-trends-templatisation-personalisation-and-ai/">PocketGamer.biz — 2026 Live-ops Trends</a></li>
+            <li><a href="https://steamcommunity.com/app/1267910/discussions/0/4665175132461478006/">Melvor Idle — 离线进度上限讨论</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>报告类型：钓鱼设计灵感联网调研（现实垂钓 + 游戏横评 → 映射《角落垂钓》三大目的）。视觉沿用项目白皮书 <code>docs/project_overview.html</code> 配色（paper / ink / water / pine / gold）。所有引用见上方「资料来源」，标 <span class="pill warn" style="font-size:11px;padding:2px 7px">待核实</span> 处需进一步确认，未编造游戏具体数值/机制。整理日期：2026-06-14。</p>
+  </footer>
+</body>
+</html>
