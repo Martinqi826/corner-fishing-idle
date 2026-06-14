@@ -63,6 +63,12 @@ func _run() -> void:
 	await _settle(2)
 	_snap("scene_lake.png")
 	_main.active_event = ""
+	_main._switch_spot("coast_pier")
+	_main._fire_event("tide_in")  # 「海岸码头 · 涨潮」
+	_main._update_hud()
+	await _settle(2)
+	_snap("scene_coast.png")
+	_main.active_event = ""
 	_main._switch_spot("river_bend")
 	_main._update_hud()
 

@@ -767,7 +767,14 @@ func _check_spots() -> void:
 	# 事件适配随钓点改变
 	_assert("cold_front" in g._eligible_events(), "湖泊应可触发寒潮")
 	_assert(not ("tide_in" in g._eligible_events()), "湖泊不应触发涨潮")
-	print("  钓点：解锁/拒切未解锁/切换换池清事件/事件适配 通过")
+	# 鱼图标回退：新鱼缺专属图应回退到品阶通用图标（非空、不崩）
+	var ic_new: TextureRect = g._fish_icon("hairtail", 40)
+	_assert(ic_new.texture != null, "新鱼缺专属图应回退品阶通用图标（非空）")
+	var ic_old: TextureRect = g._fish_icon("carp", 40)
+	_assert(ic_old.texture != null, "已有专属图的鱼应正常显示图标")
+	ic_new.queue_free()
+	ic_old.queue_free()
+	print("  钓点：解锁/拒切未解锁/切换换池清事件/事件适配/图标回退 通过")
 	g.queue_free()
 	await process_frame
 

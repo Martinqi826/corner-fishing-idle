@@ -724,6 +724,8 @@ func _apply_button_skin(b: Button, primary := false) -> void:
 	b.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
 
 
+## 鱼图标：优先专属图；缺失时回退「按品阶通用鱼图标」（Codex 资源或程序化生成），绝不空白/崩。
+var _tier_icon_cache := {}
 func _fish_icon(id: String, size := 42) -> TextureRect:
 	var tr := TextureRect.new()
 	tr.custom_minimum_size = Vector2(size, size)
@@ -731,7 +733,62 @@ func _fish_icon(id: String, size := 42) -> TextureRect:
 	var path := "res://assets/art/fish/%s.png" % id
 	if ResourceLoader.exists(path):
 		tr.texture = load(path) as Texture2D
+	else:
+		tr.texture = _generic_fish_texture(FishData.tier_of(id))
 	return tr
+
+
+## 按品阶的通用鱼图标：先找 Codex 通用图，缺则程序化生成（品阶色小鱼剪影），按品阶缓存。
+func _generic_fish_texture(tier: int) -> Texture2D:
+	tier = clampi(tier, 0, FishData.TIER_COLORS.size() - 1)
+	if _tier_icon_cache.has(tier):
+		return _tier_icon_cache[tier]
+	var asset := "res://assets/art/fish/generic_tier%d.png" % tier
+	var tex: Texture2D
+	if ResourceLoader.exists(asset):
+		tex = load(asset) as Texture2D
+	else:
+		tex = _make_generic_fish(_tier_color(tier))
+	_tier_icon_cache[tier] = tex
+	return tex
+
+
+## 程序化小鱼剪影（品阶色 + 柔边 + 鱼尾 + 眼点），水彩淡墨气质，作缺图回退。
+func _make_generic_fish(col: Color) -> ImageTexture:
+	var s := 64
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cx := s * 0.52
+	var cy := s * 0.5
+	var rx := s * 0.30
+	var ry := s * 0.19
+	for y in s:
+		for x in s:
+			var a := 0.0
+			# 鱼身：椭圆，向边缘柔化
+			var dx := (x - cx) / rx
+			var dy := (y - cy) / ry
+			var d := dx * dx + dy * dy
+			if d <= 1.0:
+				a = clampf(0.9 - d * 0.45, 0.4, 0.9)
+			# 鱼尾：左侧三角
+			var tx := cx - rx * 0.78
+			if x <= tx and x >= tx - s * 0.16:
+				var span := (tx - x) / (s * 0.16)
+				if absf(y - cy) <= span * s * 0.16:
+					a = maxf(a, 0.75)
+			if a > 0.0:
+				img.set_pixel(x, y, Color(col.r, col.g, col.b, a))
+	# 眼点
+	var ex := int(cx + rx * 0.45)
+	var ey := int(cy - ry * 0.25)
+	for oy in range(-1, 2):
+		for ox in range(-1, 2):
+			var px := ex + ox
+			var py := ey + oy
+			if px >= 0 and px < s and py >= 0 and py < s:
+				img.set_pixel(px, py, Color(0.12, 0.11, 0.10, 0.85))
+	return ImageTexture.create_from_image(img)
 
 
 func _tier_color(tier: int) -> Color:
