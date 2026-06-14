@@ -2,7 +2,8 @@ class_name SaveSystem
 ## 存档系统（从 main.gd 拆出）：序列化 / 反序列化 / 迁移 / 原子写 / .bak 回退。
 ## 纯函数，游戏状态在主节点 g 上读写。main 只保留薄壳调用 + 离线结算。
 ## 存档结构升级历史：v1 id列表→图鉴纪录轴；inv 三→四→五元组；dex 2→4元组徽章；
-## daily_order 补 kind/tier/minw；新增 hook/weekly/day_stat/best_q/giant/ach/seen_intro/focus/win_pos。
+## daily_order 补 kind/tier/minw；新增 hook/weekly/day_stat/best_q/giant/ach/seen_intro/focus/win_pos；
+## v8 多钓点：spot(当前钓点)/unlocked(已解锁)/seen(已造访)/event(在场 buff)，旧档默认 river_bend。
 
 const OFFLINE_CAP := 8.0 * 3600.0
 
@@ -14,7 +15,7 @@ static func collect(g) -> Dictionary:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0])
 	var data := {
-		"ver": 7,
+		"ver": 8,
 		"coins": g.coins,
 		"rod_level": g.rod_level,
 		"bag_level": g.bag_level,
@@ -33,6 +34,11 @@ static func collect(g) -> Dictionary:
 		"opacity": g._opacity,
 		"focus": g.focus_mode,
 		"seen_intro": g.seen_intro,
+		# —— v8 多钓点 ——
+		"spot": g.current_spot,
+		"unlocked": g.unlocked_spots,
+		"seen": g.seen_spots,
+		"event": {"id": g.active_event, "t": g._event_buff_t} if g.active_event != "" else {},
 		"ts": Time.get_unix_time_from_system(),
 	}
 	if DisplayServer.get_name() != "headless":
@@ -123,6 +129,7 @@ static func apply(g, data: Dictionary) -> void:
 				"need": max(1, int(od.get("need", 1))),
 				"tier": clampi(int(od.get("tier", 1)), 1, 5),
 				"minw": float(od.get("minw", 1.0)),
+				"spot": str(od.get("spot", "")),         # v7 及更早无 → 留空，运行时再补
 				"done": bool(od.get("done", false)),
 			}
 	var wk_raw: Variant = data.get("weekly", {})  # 旧档无 → main._ensure_weekly 现生成
@@ -150,3 +157,38 @@ static func apply(g, data: Dictionary) -> void:
 	var wp: Variant = data.get("win_pos", null)
 	if wp is Array and wp.size() >= 2:
 		g._saved_win_pos = Vector2i(int(wp[0]), int(wp[1]))
+	apply_spots(g, data)
+
+
+## v8 多钓点迁移：当前钓点 / 已解锁 / 已见 / 在场事件。
+## 旧档（无 spot 字段）默认落点 river_bend，仅解锁默认钓点。
+static func apply_spots(g, data: Dictionary) -> void:
+	g.current_spot = str(data.get("spot", SpotData.DEFAULT_SPOT))
+	if not SpotData.has(g.current_spot):
+		g.current_spot = SpotData.DEFAULT_SPOT
+	g.unlocked_spots = []
+	for s in data.get("unlocked", [SpotData.DEFAULT_SPOT]):
+		if SpotData.has(str(s)) and not (str(s) in g.unlocked_spots):
+			g.unlocked_spots.append(str(s))
+	if not (SpotData.DEFAULT_SPOT in g.unlocked_spots):
+		g.unlocked_spots.append(SpotData.DEFAULT_SPOT)  # 默认钓点必在
+	if not (g.current_spot in g.unlocked_spots):
+		g.current_spot = SpotData.DEFAULT_SPOT          # 当前钓点必须已解锁
+	g.seen_spots = []
+	for s in data.get("seen", [g.current_spot]):
+		if SpotData.has(str(s)) and not (str(s) in g.seen_spots):
+			g.seen_spots.append(str(s))
+	if not (g.current_spot in g.seen_spots):
+		g.seen_spots.append(g.current_spot)
+	# 在场 buff 事件：仅当事件仍适用于当前钓点时恢复，否则丢弃
+	g.active_event = ""
+	g._event_buff_t = 0.0
+	var ev: Variant = data.get("event", {})
+	if ev is Dictionary:
+		var eid := str(ev.get("id", ""))
+		if EventData.has(eid) and EventData.is_buff(eid) and EventData.applies_to(eid, g.current_spot):
+			g.active_event = eid
+			g._event_buff_t = maxf(0.0, float(ev.get("t", 0.0)))
+	# 旧档订单缺 spot → 归到当前钓点
+	if g.daily_order is Dictionary and str(g.daily_order.get("spot", "")) == "":
+		g.daily_order["spot"] = g.current_spot

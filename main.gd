@@ -62,6 +62,7 @@ var _opacity := 1.0
 var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
 var seen_intro := false          # 是否看过首次引导
 var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
+var spot_chip: Button = null    # HUD 上的当前钓点·事件小字（可点开钓点页）
 
 # 存档路径用变量：测试可改用独立文件，避免覆盖真实存档。
 var save_path := "user://corner_fishing_save.json"
@@ -90,7 +91,10 @@ var _merchant_t := 0.0                            # 当前阶段剩余秒数
 # —— 随机事件（EventData 驱动）：同一时刻最多一个 buff 在场，instant 一次结算。低干扰。——
 # 钓点决定可触发的事件池（SpotData.event_pool）；事件效果叠加 wait/value/luck 到结算。
 const EVENT_FIRST := Vector2(180.0, 420.0)         # 首个事件出现窗口（让玩家较快见到一次）
-var current_spot := SpotData.DEFAULT_SPOT          # 当前钓点（多钓点：切换/存档见阶段④）
+var current_spot := SpotData.DEFAULT_SPOT          # 当前钓点
+var unlocked_spots: Array = [SpotData.DEFAULT_SPOT]  # 已解锁钓点 id
+var seen_spots: Array = [SpotData.DEFAULT_SPOT]      # 已造访过的钓点 id（首访提示用）
+var _unlocks_inited := false                       # 载入期静默解锁，运行期才弹解锁提示
 var active_event := ""                             # 当前在场的 buff 事件 id（"" = 无）
 var _event_buff_t := 0.0                           # 当前 buff 剩余时长
 var _event_next_t := 0.0                           # 距下一次事件的倒计时
@@ -115,17 +119,22 @@ func _ready() -> void:
 	coins_label.position = SCENE_OFF + Vector2(22, 96)
 	toast_label.position = SCENE_OFF + Vector2(40, 112)
 	toast_label.size = Vector2(440, 28)
+	_build_spot_chip()
 	_build_order_chip()
 	_setup_window()
 	_load_ui_layout()
 	_load_save()
+	_refresh_unlocks()  # 载入期静默补登已满足解锁的钓点
 	_ensure_daily_order()
 	_ensure_weekly()
 	_build_buttons()
+	_apply_spot_visuals()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
-	_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
+	if active_event == "":  # 存档可能恢复了在场事件，则不重排首个事件
+		_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
 	_update_hud()
 	_begin_wait()
+	_unlocks_inited = true
 	_started = true
 	Audio.start_ambience()
 	if not seen_intro and lifetime_catches == 0 and DisplayServer.get_name() != "headless":
@@ -394,7 +403,39 @@ func _update_hud() -> void:
 	elif _bag_full():
 		col = Color(1.0, 0.78, 0.45)
 	coins_label.add_theme_color_override("font_color", col)
+	_refresh_unlocks()
+	_update_spot_chip()
 	_update_order_chip()
+
+
+## HUD 当前钓点·事件小字（金币行上方，点开钓点页）。
+func _build_spot_chip() -> void:
+	spot_chip = Button.new()
+	spot_chip.flat = true
+	spot_chip.focus_mode = Control.FOCUS_NONE
+	spot_chip.position = SCENE_OFF + Vector2(22, 72)
+	spot_chip.add_theme_font_size_override("font_size", 14)
+	spot_chip.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	spot_chip.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	spot_chip.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
+	spot_chip.add_theme_color_override("font_hover_color", Color(0.98, 0.90, 0.62))
+	spot_chip.pressed.connect(func() -> void:
+		Audio.play_ui("ui_click")
+		_catch_tab = 5
+		_open_panel("catch"))
+	ui_root.add_child(spot_chip)
+
+
+func _update_spot_chip() -> void:
+	if spot_chip == null:
+		return
+	var txt := SpotData.display_name(current_spot)
+	var col := Color(0.86, 0.86, 0.82)
+	if active_event != "" and EventData.hud_text(active_event) != "":
+		txt += " · " + EventData.display_name(active_event)
+		col = EventData.color(active_event)
+	spot_chip.text = txt
+	spot_chip.add_theme_color_override("font_color", col)
 
 
 ## HUD 订单进度小字（低调、可点开订单页）。Stardew/AC 式每日目标常驻可见。
@@ -781,11 +822,12 @@ func _set_catch_tab(tab: int) -> void:
 func _fill_bag_panel(v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴", "订单", "成就", "统计"]
+	var names := ["背包", "图鉴", "订单", "成就", "统计", "钓点"]
 	for i in range(names.size()):
 		var tb := Button.new()
 		tb.text = names[i]
-		tb.custom_minimum_size = Vector2(50, 28)
+		tb.custom_minimum_size = Vector2(46, 28)
+		tb.add_theme_font_size_override("font_size", 13)
 		_apply_button_skin(tb, i == _catch_tab)
 		if i != _catch_tab:
 			tb.pressed.connect(_set_catch_tab.bind(i))
@@ -796,7 +838,8 @@ func _fill_bag_panel(v: VBoxContainer) -> void:
 		1: _fill_dex_tab(v)
 		2: _fill_order_tab(v)
 		3: _fill_ach_tab(v)
-		_: _fill_stats_tab(v)
+		4: _fill_stats_tab(v)
+		_: _fill_spot_tab(v)
 
 
 ## 统计页：长期成长看板（只读）。
@@ -858,6 +901,101 @@ func _fill_stats_tab(v: VBoxContainer) -> void:
 		list.add_child(panel)
 	sc0.add_child(list)
 	v.add_child(sc0)
+
+
+## 钓点页：列出各钓点（名/描述/解锁状态/鱼种收集进度/当前事件），可切换已解锁钓点。
+func _spot_species_progress(sid: String) -> Array:
+	var pool: Array = SpotData.pool_for(sid)
+	var got := 0
+	for fid in pool:
+		if dex.has(fid):
+			got += 1
+	return [got, pool.size()]
+
+
+func _fill_spot_tab(v: VBoxContainer) -> void:
+	var stat := Label.new()
+	stat.text = "钓点 · 已解锁 %d/%d" % [unlocked_spots.size(), SpotData.SPOTS.size()]
+	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
+	v.add_child(stat)
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(0, 360)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 7)
+	for sid in SpotData.SPOT_ORDER:
+		list.add_child(_spot_card(sid))
+	sc.add_child(list)
+	v.add_child(sc)
+
+
+func _spot_card(sid: String) -> Control:
+	var unlocked := sid in unlocked_spots
+	var is_cur := sid == current_spot
+	var s: Dictionary = SpotData.get_spot(sid)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _paper_style(0.92) if unlocked else _dark_row_style(0.44))
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 10 if side in ["left", "right"] else 8)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	margin.add_child(box)
+	# 标题行：钓点名 + 状态徽标 + 切换按钮
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	var nm := Label.new()
+	nm.text = ("📍 " if is_cur else "") + str(s["name"])
+	nm.add_theme_font_size_override("font_size", 17)
+	nm.add_theme_color_override("font_color",
+		Color(0.24, 0.30, 0.40) if unlocked else Color(0.70, 0.66, 0.58))
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(nm)
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(70, 32)
+	if is_cur:
+		btn.text = "当前"
+		btn.disabled = true
+		_apply_button_skin(btn, false)
+	elif unlocked:
+		btn.text = "前往"
+		_apply_button_skin(btn, true)
+		btn.pressed.connect(_switch_spot.bind(sid))
+	else:
+		btn.text = "未解锁"
+		btn.disabled = true
+		_apply_button_skin(btn, false)
+	head.add_child(btn)
+	box.add_child(head)
+	# 描述
+	var desc := Label.new()
+	desc.text = str(s["desc"])
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size = Vector2(440, 0)
+	desc.add_theme_font_size_override("font_size", 12)
+	desc.add_theme_color_override("font_color",
+		Color(0.46, 0.43, 0.37) if unlocked else Color(0.60, 0.57, 0.50))
+	box.add_child(desc)
+	# 状态行：解锁条件 / 鱼种收集 / 当前事件
+	var info := Label.new()
+	info.add_theme_font_size_override("font_size", 12)
+	if unlocked:
+		var prog := _spot_species_progress(sid)
+		var line := "鱼种收集 %d/%d" % [prog[0], prog[1]]
+		if is_cur:
+			if active_event != "":
+				line += "　·　当前事件：%s" % EventData.display_name(active_event)
+			else:
+				line += "　·　风平浪静"
+		info.text = line
+		info.add_theme_color_override("font_color", Color(0.40, 0.50, 0.40))
+	else:
+		info.text = "🔒 %s" % SpotData.unlock_text(sid)
+		info.add_theme_color_override("font_color", Color(0.72, 0.58, 0.28))
+	box.add_child(info)
+	return panel
 
 
 func _fill_ach_tab(v: VBoxContainer) -> void:
@@ -1023,14 +1161,16 @@ func _make_daily_order(date_key: String) -> Dictionary:
 	var local := RandomNumberGenerator.new()
 	local.seed = int(abs(("%s:%d" % [date_key, rod_level]).hash()))
 	var max_tier := clampi(1 + int(float(rod_level - 1) / 3.0), 1, 3)
+	# 候选鱼 = 所有已解锁钓点鱼池的并集（保证订单可在某已解锁钓点完成；多钓点感知）
+	var ids := _order_pool()
+	if ids.is_empty():
+		ids = FishData.FISH.keys()
 	var candidates: Array = []
-	var ids := FishData.FISH.keys()
-	ids.sort()
 	for id in ids:
 		if FishData.tier_of(str(id)) <= max_tier:
 			candidates.append(str(id))
 	if candidates.is_empty():
-		candidates = FishData.FISH.keys()
+		candidates = ids
 	var fish_id: String = candidates[local.randi() % candidates.size()]
 	var kinds := ["species", "species", "species", "tier", "weight"]
 	if bait_level >= 2:
@@ -1043,7 +1183,7 @@ func _make_daily_order(date_key: String) -> Dictionary:
 			var mt := local.randi_range(1, max_tier)
 			order["tier"] = mt
 			order["need"] = clampi(4 - mt, 1, 3)
-			order["fish"] = _rep_fish_of_tier(mt, local)
+			order["fish"] = _rep_fish_of_tier(mt, local, ids)
 		"weight":
 			order["minw"] = [1.0, 2.0, 3.0][local.randi_range(0, 2)]
 			order["need"] = local.randi_range(1, 2)
@@ -1055,19 +1195,21 @@ func _make_daily_order(date_key: String) -> Dictionary:
 				1: order["need"] = local.randi_range(2, 3)
 				2: order["need"] = local.randi_range(1, 2)
 				_: order["need"] = 1
+	order["spot"] = _best_spot_for(str(order["fish"]))  # 建议钓点提示
 	return order
 
 
-## 取某品阶的代表鱼 id（仅用于订单图标）。
-func _rep_fish_of_tier(t: int, local: RandomNumberGenerator) -> String:
-	var pool: Array = []
-	for id in FishData.FISH:
+## 取某品阶的代表鱼 id（仅用于订单图标/建议）。pool 限定候选鱼范围。
+func _rep_fish_of_tier(t: int, local: RandomNumberGenerator, pool: Array = []) -> String:
+	var src: Array = pool if not pool.is_empty() else FishData.FISH.keys()
+	var bucket: Array = []
+	for id in src:
 		if FishData.tier_of(str(id)) == t:
-			pool.append(str(id))
-	if pool.is_empty():
-		return str(FishData.FISH.keys()[0])
-	pool.sort()
-	return str(pool[local.randi() % pool.size()])
+			bucket.append(str(id))
+	if bucket.is_empty():
+		return str(src[0]) if not src.is_empty() else str(FishData.FISH.keys()[0])
+	bucket.sort()
+	return str(bucket[local.randi() % bucket.size()])
 
 
 ## 一条渔获是否满足当前订单（不含上锁判定）。
@@ -1199,6 +1341,14 @@ func _fill_order_tab(v: VBoxContainer) -> void:
 	progress.add_theme_color_override("font_color",
 		Color(0.84, 0.58, 0.18) if have >= need and not done else Color(0.56, 0.51, 0.42))
 	info.add_child(progress)
+	# 建议钓点：目标鱼所属钓点 ≠ 当前钓点时提示去哪钓（多钓点 × 订单联动）
+	var sug := str(daily_order.get("spot", ""))
+	if not done and have < need and SpotData.has(sug) and sug != current_spot and (sug in unlocked_spots):
+		var sl := Label.new()
+		sl.text = "建议去「%s」钓这条" % SpotData.display_name(sug)
+		sl.add_theme_font_size_override("font_size", 12)
+		sl.add_theme_color_override("font_color", Color(0.42, 0.56, 0.74))
+		info.add_child(sl)
 	row.add_child(info)
 
 	var btn := Button.new()
@@ -1774,6 +1924,80 @@ func _resolve_instant(id: String) -> void:
 func _schedule_next_after(id: String) -> void:
 	var gap: Array = EventData.get_event(id).get("gap", [900.0, 1800.0])
 	_event_next_t = rng.randf_range(float(gap[0]), float(gap[1]))
+
+
+# ============================ 多钓点 ============================
+
+## 补登已满足解锁条件的钓点；运行期（_unlocks_inited 后）新解锁会弹提示。
+func _refresh_unlocks() -> void:
+	var species := dex.size()
+	for sid in SpotData.SPOT_ORDER:
+		if sid in unlocked_spots:
+			continue
+		if SpotData.unlock_met(sid, lifetime_catches, lifetime_coins, species):
+			unlocked_spots.append(sid)
+			if _unlocks_inited:
+				Audio.play_sfx("upgrade")
+				_toast("新钓点解锁：%s！（鱼篓→钓点 切换过去）" % SpotData.display_name(sid),
+					4.0, Color(0.6, 0.85, 0.55))
+
+
+## 切换到某钓点：换鱼池 / 事件 / 背景 / 订单建议。锁定钓点拒绝。
+func _switch_spot(id: String) -> void:
+	if not SpotData.has(id) or not (id in unlocked_spots):
+		Audio.play_ui("ui_error")
+		_toast("这个钓点还没解锁", 1.6, Color(1.0, 0.5, 0.4))
+		return
+	if id == current_spot:
+		return
+	current_spot = id
+	if not (id in seen_spots):
+		seen_spots.append(id)
+	# 换钓点 → 在场事件清空，按新钓点重排下一次事件
+	if active_event != "":
+		active_event = ""
+		_event_buff_t = 0.0
+	_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
+	_apply_spot_visuals()
+	_ensure_daily_order()
+	Audio.play_sfx("upgrade")
+	_toast("已来到 %s" % SpotData.display_name(id), 2.2, Color(0.6, 0.82, 0.95))
+	_begin_wait()  # 立刻按新钓点节奏重排
+	_update_hud()
+	_refresh_panel()
+	_save()
+
+
+## 把当前钓点的背景切给 ScenePainter（缺图自动回退现有主图，不崩）。
+func _apply_spot_visuals() -> void:
+	if painter.has_method("set_spot"):
+		painter.set_spot(str(SpotData.get_spot(current_spot).get("bg_key", "")))
+
+
+## 订单候选鱼池：所有已解锁钓点鱼池的并集（保证订单总能在某个已解锁钓点完成）。
+func _order_pool() -> Array:
+	var seen := {}
+	var out: Array = []
+	for sid in unlocked_spots:
+		for fid in SpotData.pool_for(sid):
+			if not seen.has(fid):
+				seen[fid] = true
+				out.append(fid)
+	out.sort_custom(func(a, b):
+		var ta := FishData.tier_of(str(a))
+		var tb := FishData.tier_of(str(b))
+		if ta != tb:
+			return ta < tb
+		return str(a) < str(b))
+	return out
+
+
+## 某鱼最适合在哪个已解锁钓点钓（订单 UI 的“建议钓点”提示）。
+func _best_spot_for(fish_id: String) -> String:
+	for sid in SpotData.SPOT_ORDER:
+		if sid in unlocked_spots and fish_id in SpotData.pool_for(sid):
+			return sid
+	return current_spot
 
 
 func _try_expand_bag() -> void:

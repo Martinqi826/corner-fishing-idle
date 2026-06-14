@@ -39,6 +39,7 @@ var t := 0.0
 var dip := 0.0
 var use_composite := false
 var _base: Texture2D
+var _spot_base: Texture2D = null   # 当前钓点底图（缺图回退到 _base，不崩）
 var _water_overlay: Texture2D     # 旧版波光叠层（无新版帧动画时的回退）
 var _bobber_idle: Texture2D
 var _bobber_bite: Texture2D
@@ -254,9 +255,18 @@ func _a(c: Color, a: float) -> Color:
 	return Color(c.r, c.g, c.b, a)
 
 
+## 切换钓点底图：加载 assets/art/background/spot_<bg_key>.png；缺图回退现有主图（不崩）。
+func set_spot(bg_key: String) -> void:
+	if bg_key == "":
+		_spot_base = null
+	else:
+		_spot_base = _tex("res://assets/art/background/spot_%s.png" % bg_key)
+	queue_redraw()
+
+
 # —— 真实美术：主图 + 动态叠加层（图层顺序按 dynamic_art_plan.md）——
 func _draw_composite() -> void:
-	draw_texture(_base, Vector2.ZERO)
+	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
 	_draw_mist_layer()
 	_draw_shimmer_layer()
 	_draw_snow_layer()

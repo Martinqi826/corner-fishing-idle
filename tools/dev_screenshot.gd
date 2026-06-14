@@ -49,6 +49,23 @@ func _run() -> void:
 	await _settle(2)
 	_snap("panel_rod.png")
 
+	# 3b) 多钓点：解锁全部 → 钓点页签 + 切到静水湖泊看 HUD 钓点角标
+	_main.lifetime_catches = 400
+	_main._refresh_unlocks()
+	_main._catch_tab = 5
+	_main._open_panel("catch")
+	await _settle(2)
+	_snap("panel_spot.png")
+	_main._close_panel()
+	_main._switch_spot("still_lake")
+	_main._fire_event("morning_fog")  # 让 HUD 角标显示「静水湖泊 · 晨雾」
+	_main._update_hud()
+	await _settle(2)
+	_snap("scene_lake.png")
+	_main.active_event = ""
+	_main._switch_spot("river_bend")
+	_main._update_hud()
+
 	# 4) 动态层：强制小动物事件（中段全亮）+ 涟漪帧动画
 	_main._close_panel()
 	_main.painter._start_wild("rabbit")

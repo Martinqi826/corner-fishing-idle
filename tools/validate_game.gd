@@ -59,8 +59,14 @@ func _run() -> void:
 	print("=== 每日订单 ===")
 	await _check_daily_order()
 
+	print("=== 多钓点：切换 / 鱼池 / 解锁 ===")
+	await _check_spots()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
+
+	print("=== 存档 v8 多钓点往返 / 旧档迁移 ===")
+	await _check_save_v8()
 
 	print("=== 存档原子写 / 损坏回退 ===")
 	await _check_save_robust()
@@ -720,6 +726,104 @@ func _check_achievements_feature() -> void:
 	_assert(g2.coins == 0, "静默补登不应补发奖励（金币应仍为 0）")
 	print("  成就：解锁/奖励/老存档静默补登 通过（共 %d 项）" % AchievementData.LIST.size())
 	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
+
+
+func _check_spots() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	_assert(g.current_spot == "river_bend", "起始应在新手河湾")
+	_assert(g.unlocked_spots.size() == 1 and "river_bend" in g.unlocked_spots, "起始仅河湾解锁")
+	# 未解锁钓点不可切
+	g._switch_spot("still_lake")
+	_assert(g.current_spot == "river_bend", "未解锁钓点不应切过去")
+	# 达成解锁条件 → 解锁
+	g.lifetime_catches = 80
+	g._refresh_unlocks()
+	_assert("still_lake" in g.unlocked_spots, "达成 80 渔获应解锁静水湖泊")
+	# 切到已解锁：换鱼池 + 清在场事件 + 重排
+	g.active_event = "fish_run"
+	g._event_buff_t = 50.0
+	g._switch_spot("still_lake")
+	_assert(g.current_spot == "still_lake", "应切到静水湖泊")
+	_assert(g.active_event == "", "切钓点应清空在场事件")
+	_assert("still_lake" in g.seen_spots, "切过去应记入已造访")
+	# 鱼池随之变化：钓上的鱼都应属于湖泊池
+	var lset := {}
+	for fid in SpotData.pool_for("still_lake"):
+		lset[fid] = true
+	g.inventory = []
+	g.bag_level = 8  # 放大容量便于多钓几条
+	for i in 40:
+		g._do_catch()
+	var off_pool := 0
+	for c in g.inventory:
+		if not lset.has(str(c["id"])):
+			off_pool += 1
+	_assert(off_pool == 0, "切到湖泊后只应钓到湖鱼，越界 %d 条" % off_pool)
+	# 事件适配随钓点改变
+	_assert("cold_front" in g._eligible_events(), "湖泊应可触发寒潮")
+	_assert(not ("tide_in" in g._eligible_events()), "湖泊不应触发涨潮")
+	print("  钓点：解锁/拒切未解锁/切换换池清事件/事件适配 通过")
+	g.queue_free()
+	await process_frame
+
+
+func _check_save_v8() -> void:
+	var path := ProjectSettings.globalize_path(TEST_SAVE)
+	if FileAccess.file_exists(TEST_SAVE):
+		DirAccess.remove_absolute(path)
+	# 往返：解锁全部 + 切到海岸 + 在场涨潮事件
+	var g1: Node = load("res://main.tscn").instantiate()
+	g1.save_enabled = true
+	g1.save_path = TEST_SAVE
+	root.add_child(g1)
+	await process_frame
+	g1.lifetime_catches = 400  # 满足 still_lake(80) + coast_pier(300)
+	g1._refresh_unlocks()
+	g1._switch_spot("coast_pier")
+	g1.active_event = "tide_in"
+	g1._event_buff_t = 42.0
+	g1._save()
+	g1.queue_free()
+	await process_frame
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(g2.current_spot == "coast_pier", "v8 应恢复当前钓点海岸码头")
+	_assert("still_lake" in g2.unlocked_spots and "coast_pier" in g2.unlocked_spots,
+		"v8 应恢复已解锁钓点")
+	_assert("coast_pier" in g2.seen_spots, "v8 应恢复已造访钓点")
+	_assert(g2.active_event == "tide_in" and g2._event_buff_t > 0.0,
+		"v8 应恢复在场 buff 事件（仍适用当前钓点）")
+	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
+	# 旧档（v7 无 spot 字段）迁移 → 默认 river_bend，仅默认钓点解锁
+	var old := {
+		"ver": 7, "coins": 50, "rod_level": 2, "bag_level": 2, "bait": 0, "hook": 0,
+		"inv": [], "lt_coins": 0, "lt_catches": 10, "dex": {}, "opacity": 1.0,
+		"ts": Time.get_unix_time_from_system() - 5.0,
+	}
+	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f = null
+	var g3: Node = load("res://main.tscn").instantiate()
+	g3.save_enabled = true
+	g3.save_path = TEST_SAVE
+	root.add_child(g3)
+	await process_frame
+	_assert(g3.current_spot == "river_bend", "旧档应默认落点河湾")
+	_assert(g3.unlocked_spots.size() == 1 and "river_bend" in g3.unlocked_spots,
+		"旧档(低渔获)应仅解锁河湾，实际 %s" % str(g3.unlocked_spots))
+	_assert(g3.active_event == "", "旧档无在场事件")
+	print("  存档 v8：多钓点往返 / 旧档迁移默认河湾 通过")
+	g3.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
 
