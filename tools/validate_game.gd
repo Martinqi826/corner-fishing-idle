@@ -86,6 +86,9 @@ func _run() -> void:
 	print("=== 离线产鱼 ===")
 	await _check_offline()
 
+	print("=== 满篓兜底（在线折价兑换）===")
+	await _check_overflow()
+
 	print("=== 动态美术层 ===")
 	await _check_effects()
 
@@ -187,9 +190,14 @@ func _check_spot_event_data() -> void:
 			if not pool_set.has(str(c["id"])):
 				escaped += 1
 		_assert(escaped == 0, "钓点 %s 抽鱼逸出鱼池 %d 次" % [sid, escaped])
-	# river_bend = 旧 28 种全集（保留现有体验）
-	_assert(SpotData.pool_for("river_bend").size() == 28,
-		"新手河湾应正好是旧 28 种，实际 %d" % SpotData.pool_for("river_bend").size())
+	# river_bend 仍含全部原始河鱼（向后兼容）且已 v2 扩充（>28）；各钓点池都应足够丰富
+	var river_pool := SpotData.pool_for("river_bend")
+	for old_id in ["crucian", "carp", "bass", "snakehead", "koi", "kaluga"]:
+		_assert(old_id in river_pool, "新手河湾应仍含原始鱼 %s" % old_id)
+	_assert(river_pool.size() > 28, "新手河湾应已扩充到 >28，实际 %d" % river_pool.size())
+	for sid2 in ["river_bend", "still_lake", "coast_pier"]:
+		_assert(SpotData.pool_for(sid2).size() >= 40,
+			"钓点 %s 鱼池应 ≥40，实际 %d" % [sid2, SpotData.pool_for(sid2).size()])
 	# 海/湖各自的专属海鱼/湖鱼不应出现在对方池里
 	_assert(not ("hairtail" in SpotData.pool_for("still_lake")), "带鱼不应在静水湖泊池")
 	_assert(not ("largemouth" in SpotData.pool_for("coast_pier")), "大口黑鲈不应在海岸码头池")
@@ -1128,32 +1136,97 @@ func _check_migration_v1() -> void:
 
 
 func _check_offline() -> void:
-	# ts=1 小时前 → 离线产鱼入篓，受容量限制
-	var old := {
+	# —— 子用例 1：离线时长不足以装满 → 全部入篓，不触发折价、不直接产金币 ——
+	var short_save := {
 		"ver": 2, "coins": 0, "rod_level": 1, "bag_level": 1,
 		"inv": [["ghostfish", 1.0, 10], ["carp", 2.0, 30]],  # 未知鱼种过滤；v2 三元组 → q=0
 		"lt_coins": 0, "lt_catches": 0, "dex": [], "opacity": 1.0,
-		"ts": Time.get_unix_time_from_system() - 3600.0,
+		"ts": Time.get_unix_time_from_system() - 60.0,  # 仅 1 分钟 → est 远小于空格
 	}
 	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
-	f.store_string(JSON.stringify(old))
+	f.store_string(JSON.stringify(short_save))
 	f = null
-
 	var g: Node = load("res://main.tscn").instantiate()
 	g.save_enabled = true
 	g.save_path = TEST_SAVE
 	root.add_child(g)
 	await process_frame
-	_assert(g.inventory.size() > 0, "离线 1h 应有渔获")
-	_assert(g.inventory.size() <= g._bag_capacity(), "离线渔获不应超过容量")
-	_assert(g.coins == 0, "离线不应直接产金币")
+	_assert(g.inventory.size() > 1, "短离线应有渔获入篓（起始已有 1 条 carp）")
+	_assert(g.inventory.size() <= g._bag_capacity(), "短离线渔获不应超过容量")
+	_assert(int(g._offline_report.get("overflow_n", 0)) == 0, "未满篓不应触发折价兜底")
+	_assert(g.coins == 0, "未满篓离线不应直接产金币（鱼都进了篓）")
 	for c in g.inventory:
 		_assert(str(c["id"]) != "ghostfish", "未知鱼种应在载入时被过滤")
 	_assert(int(g.inventory[0].get("q", -1)) == 0, "v2 三元组迁移后 q 应为 0")
-	print("  离线 1h 入篓 %d 条（容量 %d）" % [g.inventory.size(), g._bag_capacity()])
+	print("  短离线 1min：入篓 %d 条（容量 %d），无折价兜底" % [g.inventory.size(), g._bag_capacity()])
 	g.queue_free()
 	await process_frame
+
+	# —— 子用例 2：离线远超容量 → 鱼篓填满 + 多出折价兜底产金币（调研 3.2，不再硬截断）——
+	var long_save := {
+		"ver": 2, "coins": 0, "rod_level": 1, "bag_level": 1,
+		"inv": [["carp", 2.0, 30]],
+		"lt_coins": 0, "lt_catches": 0, "dex": [], "opacity": 1.0,
+		"ts": Time.get_unix_time_from_system() - 3600.0,  # 1 小时 → est 远超 20 格
+	}
+	f = FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(long_save))
+	f = null
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(g2.inventory.size() == g2._bag_capacity(), "长离线应把鱼篓填满")
+	_assert(int(g2._offline_report.get("overflow_n", 0)) > 0, "超容量部分应触发折价兜底")
+	_assert(g2.coins > 0, "满篓离线应折价产金币（不再硬截断惩罚挂机）")
+	_assert(g2.coins == int(g2._offline_report.get("overflow_v", -1)), "兜底金币应与小结一致")
+	print("  长离线 1h：填满 %d 格 + 折价兑 %d 条 = +%d 金币" % [
+		g2.inventory.size(), int(g2._offline_report.get("overflow_n", 0)), g2.coins])
+	g2.queue_free()
+	await process_frame
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
+
+
+## 满篓兜底核心 _absorb_overflow：留贵兑贱、上锁/订单鱼绝不被兑、折价正确。
+func _check_overflow() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	# 用一个谁都匹配不上的订单，排除每日订单对“可兑换鱼”的保护干扰
+	g.daily_order = {"kind": "weight", "minw": 9999.0, "need": 1, "done": false}
+	g.display = []  # 无陈列加成，卖价 = 原价，便于精确断言
+	# 造满篓：1 条上锁高价鱼 + 余下廉价鱼（v=5）填满
+	g.inventory = []
+	var locked := {"id": "carp", "w": 50.0, "v": 9999, "q": 3, "lock": true}
+	g.inventory.append(locked)
+	while g.inventory.size() < g._bag_capacity():
+		g.inventory.append({"id": "carp", "w": 1.0, "v": 5, "q": 0})
+	var cap: int = g._bag_capacity()
+	# 钓到中等价鱼 → 应替换最廉价那条（v=5），上锁鱼绝不动
+	var mid := {"id": "carp", "w": 10.0, "v": 100, "q": 0}
+	var gain: int = g._absorb_overflow(mid)
+	_assert(g.inventory.size() == cap, "兜底后鱼篓格数不变")
+	_assert(g.inventory.has(locked), "上锁收藏鱼绝不被兑掉")
+	_assert(g.inventory.has(mid), "更值钱的新鱼应被收进篓")
+	_assert(gain == int(ceil(5 * g.OVERFLOW_SELL_RATE)), "兑掉最廉价那条、按折价计（应=%d）" % int(ceil(5 * g.OVERFLOW_SELL_RATE)))
+	# 钓到比篓里所有可兑换鱼更便宜的鱼 → 直接兑掉新鱼，篓不变
+	var cheap := {"id": "carp", "w": 0.5, "v": 1, "q": 0}
+	var gain2: int = g._absorb_overflow(cheap)
+	_assert(not g.inventory.has(cheap), "更便宜的新鱼应被直接兑掉、不进篓")
+	_assert(g.inventory.size() == cap, "兜底后鱼篓格数始终不变")
+	_assert(gain2 >= 1, "兜底金币至少 1")
+	# 极端：全篓上锁（无可兑换）→ 仍只兑掉新鱼、绝不动收藏
+	for c in g.inventory:
+		c["lock"] = true
+	var snapshot: int = g.inventory.size()
+	var g3: int = g._absorb_overflow({"id": "carp", "w": 2.0, "v": 80, "q": 0})
+	_assert(g.inventory.size() == snapshot, "全篓上锁时不应动任何收藏鱼")
+	_assert(g3 >= 1, "全篓上锁仍折价兑掉新鱼")
+	print("  满篓兜底：留贵兑贱 / 上锁与订单鱼受保护 / 折价正确（gain=%d）" % gain)
+	g.queue_free()
+	await process_frame
 
 
 func _check_effects() -> void:

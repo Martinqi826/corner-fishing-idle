@@ -19,8 +19,9 @@ const TIER_COLORS := [
 ## tags = 生态标签，决定鱼出现在哪些钓点（SpotData.habitat_tags 与之求交集）：
 ##   river 河流 / lake 静水湖泊 / stream 山涧溪流 / coast 海岸 / deep 深水 /
 ##   cold 冷水 / night 夜行 / protected 保护鱼（养殖放流设定）。
-## 旧 28 种 id 与数值保持不变（旧存档兼容），全部带 river 标签 → 新手河湾仍是全鱼池、体验不变。
-## 60 种鱼谱系/选种依据见 docs/spot-research-20260614.md。
+## 旧 id 与数值保持不变（旧存档兼容）。
+## 106 种鱼（v2 扩充：真实中国淡水鱼 + 海鱼/头足类 + 活化石，谱系见 docs/spot-research-20260614.md）。
+## 各钓点鱼池约 43~48 种（river/lake/coast 按 tags∩habitat_tags 求交）。
 const FISH := {
 	# —— 0 普通（常见杂鱼，基本盘）——
 	"whitebait": {"name": "白条", "tier": 0, "wmin": 0.01, "wmax": 0.02, "vmin": 1, "vmax": 3, "tags": ["river", "lake"]},
@@ -37,6 +38,16 @@ const FISH := {
 	"sardine": {"name": "沙丁鱼", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 2, "vmax": 5, "tags": ["coast"]},
 	"filefish": {"name": "马面鲀", "tier": 0, "wmin": 0.1, "wmax": 0.5, "vmin": 4, "vmax": 10, "tags": ["coast"]},
 	"goby": {"name": "虾虎鱼", "tier": 0, "wmin": 0.01, "wmax": 0.08, "vmin": 1, "vmax": 4, "tags": ["coast"]},
+	# 扩充 v2 · 溪河/湖/海杂鱼
+	"minnow": {"name": "马口鱼", "tier": 0, "wmin": 0.03, "wmax": 0.15, "vmin": 3, "vmax": 8, "tags": ["river", "stream"]},
+	"zacco": {"name": "宽鳍鱲", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 2, "vmax": 6, "tags": ["river", "stream"]},
+	"gudgeon": {"name": "棒花鱼", "tier": 0, "wmin": 0.01, "wmax": 0.08, "vmin": 1, "vmax": 4, "tags": ["river", "lake"]},
+	"spined_loach": {"name": "中华花鳅", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 2, "vmax": 5, "tags": ["river", "lake", "night"]},
+	"ricefish": {"name": "青鳉", "tier": 0, "wmin": 0.002, "wmax": 0.01, "vmin": 2, "vmax": 6, "tags": ["lake"]},
+	"paradisefish": {"name": "斗鱼", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 3, "vmax": 8, "tags": ["lake"]},
+	"anchovy": {"name": "鳀鱼", "tier": 0, "wmin": 0.005, "wmax": 0.02, "vmin": 2, "vmax": 5, "tags": ["coast"]},
+	"halfbeak": {"name": "鱵鱼", "tier": 0, "wmin": 0.02, "wmax": 0.12, "vmin": 3, "vmax": 8, "tags": ["coast"]},
+	"sandlance": {"name": "玉筋鱼", "tier": 0, "wmin": 0.005, "wmax": 0.03, "vmin": 2, "vmax": 6, "tags": ["coast"]},
 	# —— 1 优良（常见经济鱼）——
 	"dace": {"name": "雅罗鱼", "tier": 1, "wmin": 0.3, "wmax": 1.0, "vmin": 14, "vmax": 26, "tags": ["river", "cold"]},
 	"carp": {"name": "鲤鱼", "tier": 1, "wmin": 1.0, "wmax": 8.0, "vmin": 16, "vmax": 40, "tags": ["river", "lake"]},
@@ -53,6 +64,16 @@ const FISH := {
 	"small_croaker": {"name": "小黄鱼", "tier": 1, "wmin": 0.1, "wmax": 0.4, "vmin": 20, "vmax": 44, "tags": ["coast"]},
 	"mullet": {"name": "鲻鱼", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 16, "vmax": 36, "tags": ["coast"]},
 	"rockfish": {"name": "许氏平鲉", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 22, "vmax": 48, "tags": ["coast"]},
+	# 扩充 v2 · 河湖经济鱼 + 海岸食用鱼
+	"redeye": {"name": "赤眼鳟", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 16, "vmax": 36, "tags": ["river", "lake"]},
+	"wuchang": {"name": "武昌鱼", "tier": 1, "wmin": 0.5, "wmax": 2.5, "vmin": 18, "vmax": 40, "tags": ["river", "lake"]},
+	"spotted_steed": {"name": "唇䱻", "tier": 1, "wmin": 0.3, "wmax": 1.5, "vmin": 18, "vmax": 38, "tags": ["river", "stream"]},
+	"bigscale_loach": {"name": "大鳞副泥鳅", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 16, "vmax": 34, "tags": ["lake", "night"]},
+	"yellowtail_fish": {"name": "黄尾鲴", "tier": 1, "wmin": 0.2, "wmax": 1.0, "vmin": 16, "vmax": 32, "tags": ["river", "lake"]},
+	"yellow_drum": {"name": "黄姑鱼", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 20, "vmax": 44, "tags": ["coast"]},
+	"greenling": {"name": "六线鱼", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 22, "vmax": 46, "tags": ["coast"]},
+	"haarder": {"name": "梭鱼", "tier": 1, "wmin": 0.3, "wmax": 2.5, "vmin": 18, "vmax": 40, "tags": ["coast"]},
+	"flathead_fish": {"name": "鲬", "tier": 1, "wmin": 0.3, "wmax": 1.5, "vmin": 20, "vmax": 42, "tags": ["coast"]},
 	# —— 2 稀有（地方名贵，"三花五罗"层 + 湖海中坚）——
 	"bass": {"name": "鲈鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 55, "vmax": 120, "tags": ["river", "lake"]},
 	"fangbream": {"name": "三角鲂", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 60, "vmax": 130, "tags": ["river", "lake"]},
@@ -68,6 +89,16 @@ const FISH := {
 	"flounder": {"name": "牙鲆", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 80, "vmax": 180, "tags": ["coast"]},
 	"conger": {"name": "海鳗", "tier": 2, "wmin": 0.5, "wmax": 5.0, "vmin": 60, "vmax": 140, "tags": ["coast", "night"]},
 	"pufferfish": {"name": "红鳍东方鲀", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 90, "vmax": 190, "tags": ["coast"]},
+	# 扩充 v2 · 河湖名贵 + 海岸名鱼/头足类
+	"spinibarbus": {"name": "光倒刺鲃", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 60, "vmax": 130, "tags": ["river", "stream"]},
+	"mongolian_redfin": {"name": "蒙古鲌", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 60, "vmax": 130, "tags": ["river", "lake"]},
+	"small_snakehead": {"name": "月鳢", "tier": 2, "wmin": 0.3, "wmax": 1.5, "vmin": 60, "vmax": 130, "tags": ["lake", "night"]},
+	"yellowfin_seabream": {"name": "黄鳍鲷", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 65, "vmax": 150, "tags": ["coast"]},
+	"crimson_snapper": {"name": "红笛鲷", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 70, "vmax": 160, "tags": ["coast"]},
+	"spotted_scat": {"name": "金钱鱼", "tier": 2, "wmin": 0.2, "wmax": 1.0, "vmin": 60, "vmax": 130, "tags": ["coast"]},
+	"octopus": {"name": "章鱼", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 70, "vmax": 160, "tags": ["coast", "night"]},
+	"squid": {"name": "鱿鱼", "tier": 2, "wmin": 0.2, "wmax": 2.0, "vmin": 60, "vmax": 140, "tags": ["coast", "night"]},
+	"cuttlefish": {"name": "墨鱼", "tier": 2, "wmin": 0.3, "wmax": 2.5, "vmin": 65, "vmax": 150, "tags": ["coast"]},
 	# —— 3 史诗（冷水掠食/高端食用鱼）——
 	"snakehead": {"name": "黑鱼", "tier": 3, "wmin": 1.0, "wmax": 6.0, "vmin": 200, "vmax": 420, "tags": ["river", "lake", "night"]},
 	"trout": {"name": "虹鳟", "tier": 3, "wmin": 0.8, "wmax": 4.0, "vmin": 210, "vmax": 430, "tags": ["river", "stream", "cold"]},
@@ -84,6 +115,15 @@ const FISH := {
 	"pomfret": {"name": "银鲳", "tier": 3, "wmin": 0.2, "wmax": 1.5, "vmin": 230, "vmax": 480, "tags": ["coast"]},
 	"grouper": {"name": "石斑鱼", "tier": 3, "wmin": 0.8, "wmax": 8.0, "vmin": 260, "vmax": 560, "tags": ["coast", "deep"]},
 	"yellowcroaker": {"name": "大黄鱼", "tier": 3, "wmin": 0.3, "wmax": 3.0, "vmin": 300, "vmax": 580, "tags": ["coast"]},
+	# 扩充 v2 · 冷水高端 + 海岸/深水掠食
+	"chinese_sucker": {"name": "胭脂鱼", "tier": 3, "wmin": 1.0, "wmax": 6.0, "vmin": 260, "vmax": 540, "tags": ["river"]},
+	"burbot": {"name": "江鳕", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 240, "vmax": 500, "tags": ["river", "lake", "cold", "night"]},
+	"manchurian_trout": {"name": "花羔红点鲑", "tier": 3, "wmin": 0.5, "wmax": 3.0, "vmin": 260, "vmax": 540, "tags": ["river", "stream", "cold"]},
+	"amur_catfish": {"name": "怀头鲇", "tier": 3, "wmin": 2.0, "wmax": 20.0, "vmin": 240, "vmax": 520, "tags": ["lake", "deep", "night"]},
+	"amberjack": {"name": "高体鰤", "tier": 3, "wmin": 2.0, "wmax": 15.0, "vmin": 260, "vmax": 560, "tags": ["coast", "deep"]},
+	"cobia": {"name": "军曹鱼", "tier": 3, "wmin": 3.0, "wmax": 20.0, "vmin": 260, "vmax": 560, "tags": ["coast", "deep"]},
+	"barramundi": {"name": "尖吻鲈", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 240, "vmax": 500, "tags": ["coast"]},
+	"miiuy_croaker": {"name": "鮸鱼", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 240, "vmax": 500, "tags": ["coast"]},
 	# —— 4 传说（洄游名贵 / 湖海巨物 / 运动钓目标鱼）——
 	"koi": {"name": "锦鲤", "tier": 4, "wmin": 1.0, "wmax": 8.0, "vmin": 750, "vmax": 1600, "tags": ["river", "lake"]},
 	"salmon": {"name": "大马哈鱼", "tier": 4, "wmin": 3.0, "wmax": 14.0, "vmin": 800, "vmax": 1700, "tags": ["river", "coast", "cold"]},
@@ -94,11 +134,24 @@ const FISH := {
 	# 新增 · 海
 	"tuna": {"name": "金枪鱼", "tier": 4, "wmin": 5.0, "wmax": 200.0, "vmin": 900, "vmax": 2000, "tags": ["coast", "deep"]},
 	"giant_grouper": {"name": "龙趸石斑", "tier": 4, "wmin": 10.0, "wmax": 300.0, "vmin": 1000, "vmax": 2200, "tags": ["coast", "deep"]},
+	# 扩充 v2 · 洄游名贵 + 大洋运动钓巨物
+	"mahseer": {"name": "结鱼", "tier": 4, "wmin": 3.0, "wmax": 30.0, "vmin": 800, "vmax": 1800, "tags": ["river", "stream", "cold"]},
+	"marbled_eel": {"name": "花鳗鲡", "tier": 4, "wmin": 2.0, "wmax": 20.0, "vmin": 800, "vmax": 1800, "tags": ["river", "lake", "night"]},
+	"marlin": {"name": "马林鱼", "tier": 4, "wmin": 30.0, "wmax": 300.0, "vmin": 1000, "vmax": 2200, "tags": ["coast", "deep"]},
+	"giant_trevally": {"name": "浪人鲹", "tier": 4, "wmin": 5.0, "wmax": 50.0, "vmin": 900, "vmax": 2000, "tags": ["coast", "deep"]},
+	"mahimahi": {"name": "鲯鳅", "tier": 4, "wmin": 3.0, "wmax": 30.0, "vmin": 800, "vmax": 1800, "tags": ["coast", "deep"]},
+	"swordfish": {"name": "剑鱼", "tier": 4, "wmin": 30.0, "wmax": 200.0, "vmin": 950, "vmax": 2100, "tags": ["coast", "deep"]},
+	"wahoo": {"name": "刺鲅", "tier": 4, "wmin": 2.0, "wmax": 40.0, "vmin": 800, "vmax": 1800, "tags": ["coast", "deep"]},
 	# —— 5 神话（"活化石"国宝层 + 海洋顶级运动钓；游戏设定为养殖放流/限时个体）——
 	"chinese_sturgeon": {"name": "中华鲟", "tier": 5, "wmin": 20.0, "wmax": 300.0, "vmin": 4500, "vmax": 9500, "tags": ["river", "coast", "protected"]},
 	"kaluga": {"name": "达氏鳇", "tier": 5, "wmin": 50.0, "wmax": 1000.0, "vmin": 5000, "vmax": 11000, "tags": ["river", "deep", "protected"]},
 	# 新增 · 海
 	"sailfish": {"name": "旗鱼", "tier": 5, "wmin": 20.0, "wmax": 90.0, "vmin": 5000, "vmax": 10000, "tags": ["coast", "deep"]},
+	# 扩充 v2 · 活化石 / 深海传奇
+	"paddlefish": {"name": "白鲟", "tier": 5, "wmin": 50.0, "wmax": 300.0, "vmin": 5000, "vmax": 11000, "tags": ["river", "protected"]},
+	"coelacanth": {"name": "矛尾鱼", "tier": 5, "wmin": 30.0, "wmax": 90.0, "vmin": 6000, "vmax": 12000, "tags": ["coast", "deep"]},
+	"oarfish": {"name": "皇带鱼", "tier": 5, "wmin": 50.0, "wmax": 200.0, "vmin": 5500, "vmax": 11000, "tags": ["coast", "deep", "night"]},
+	"whale_shark": {"name": "鲸鲨", "tier": 5, "wmin": 200.0, "wmax": 1000.0, "vmin": 6000, "vmax": 13000, "tags": ["coast", "deep", "protected"]},
 }
 
 # 基础品阶权重（rod Lv.1）：58/25/11/4.5/1.3/0.2（%）
@@ -109,7 +162,7 @@ const QUALITY_NAMES := ["", "上品", "极品", "完美"]
 const QUALITY_MULTS := [1.0, 1.8, 4.0, 8.0]
 
 # —— 稀有变体（Chillquarium 式收集深度护城河）：与星级正交，独立 roll，决定外观色 + 价值倍率。
-# 概率与品阶/星级无关；普通占绝大多数，越华丽越稀有。收集轴：每种鱼 ×4 变体（60×3 稀有 = 180 收集格）。
+# 概率与品阶/星级无关；普通占绝大多数，越华丽越稀有。收集轴：每种鱼 ×4 变体（106×3 稀有 = 318 收集格）。
 const VARIANT_NAMES := ["", "斑斓", "鎏金", "七彩"]
 const VARIANT_MULTS := [1.0, 2.0, 5.0, 12.0]
 const VARIANT_COLORS := [
