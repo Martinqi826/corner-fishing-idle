@@ -121,10 +121,12 @@ func _ready() -> void:
 	if painter.material is ShaderMaterial:
 		(painter.material as ShaderMaterial).set_shader_parameter("center", Vector2(478, 388) + SCENE_OFF)
 	coins_label.position = SCENE_OFF + Vector2(22, 96)
-	toast_label.position = SCENE_OFF + Vector2(40, 112)
+	# 钓点签 72 / 金币 96 / 订单 120 三行栈占到 ~138；toast 落到 150 清开，上鱼提示不再盖住订单行
+	toast_label.position = SCENE_OFF + Vector2(24, 150)
 	toast_label.size = Vector2(440, 28)
 	_build_spot_chip()
 	_build_order_chip()
+	_apply_hud_legibility()
 	_setup_window()
 	_load_ui_layout()
 	_load_save()
@@ -503,6 +505,21 @@ func _refresh_panel() -> void:
 		_open_panel(kind)
 
 
+# 常驻 HUD 文字（金币行 / 钓点签 / 订单签）叠在水彩背景上，原先只设字色、
+# 在湖泊/海岸等中明度底图上糊成一团。统一加暖墨描边 + 柔和投影把字「托」起来，
+# 比飘字更强一档保证一眼可读，但仍是暖墨非纯黑，不破坏水彩的安静气质。
+func _apply_hud_legibility() -> void:
+	for node: Control in [coins_label, spot_chip, order_chip]:
+		if node == null:
+			continue
+		node.add_theme_color_override("font_outline_color", Color(0.12, 0.09, 0.07, 0.82))
+		node.add_theme_constant_override("outline_size", 5)
+		node.add_theme_color_override("font_shadow_color", Color(0.06, 0.05, 0.04, 0.5))
+		node.add_theme_constant_override("shadow_offset_x", 1)
+		node.add_theme_constant_override("shadow_offset_y", 2)
+		node.add_theme_constant_override("shadow_outline_size", 3)
+
+
 # 把工程化的高饱和色调柔化为水彩气质：降饱和 + 提亮 + 轻混奶油色。
 # 飘字/toast 统一过这道滤镜，整体色调与柔和场景一致。
 func _soft(c: Color) -> Color:
@@ -518,9 +535,12 @@ func _popup(text: String, pos: Vector2, color: Color) -> void:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_color_override("font_color", _soft(color))
-	# 柔和的暖墨描边代替生硬纯黑，保证场景上可读又不突兀
-	l.add_theme_color_override("font_outline_color", Color(0.16, 0.13, 0.10, 0.42))
-	l.add_theme_constant_override("outline_size", 4)
+	# 飘字固定出现在浮漂处（水彩最密的右下角），描边/投影需与 HUD 同档才一眼可读
+	l.add_theme_color_override("font_outline_color", Color(0.12, 0.09, 0.07, 0.82))
+	l.add_theme_constant_override("outline_size", 5)
+	l.add_theme_color_override("font_shadow_color", Color(0.06, 0.05, 0.04, 0.5))
+	l.add_theme_constant_override("shadow_offset_x", 1)
+	l.add_theme_constant_override("shadow_offset_y", 2)
 	l.position = pos
 	l.z_index = 20
 	ui_root.add_child(l)
