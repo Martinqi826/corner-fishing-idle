@@ -101,6 +101,7 @@ var _unlocks_inited := false                       # 载入期静默解锁，运
 var active_event := ""                             # 当前在场的 buff 事件 id（"" = 无）
 var _event_buff_t := 0.0                           # 当前 buff 剩余时长
 var _event_next_t := 0.0                           # 距下一次事件的倒计时
+var day_phase := Weather.DEFAULT_PHASE             # 昼夜时段（由真实时钟派生，零存档）
 
 # —— 每日订单：每天 1 单，交付指定鱼种，按原价 ×2.5 结算 ——
 const DAILY_ORDER_MULT := 2.5
@@ -132,6 +133,9 @@ func _ready() -> void:
 	_ensure_weekly()
 	_build_buttons()
 	_apply_spot_visuals()
+	day_phase = Weather.current_phase()
+	if painter.has_method("set_phase_tint"):
+		painter.set_phase_tint(Weather.tint(day_phase))
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
 	if active_event == "":  # 存档可能恢复了在场事件，则不重排首个事件
 		_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
@@ -234,6 +238,7 @@ func _process(delta: float) -> void:
 			_save()
 	_tick_merchant(delta)
 	_tick_events(delta)
+	_tick_phase()
 	_state_t -= delta
 	match _state:
 		ST_WAIT:
@@ -250,11 +255,27 @@ func _begin_wait() -> void:
 	_state = ST_WAIT
 	var w := rng.randf_range(3.5, 7.0) * maxf(0.4, 1.0 - float(rod_level - 1) * 0.06)
 	w *= SpotData.wait_mult(current_spot)          # 钓点常驻系数（阶段④起生效）
+	w *= Weather.wait_mult(day_phase)              # 昼夜时段（金色时段咬钩更勤）
 	if active_event != "":
 		w *= EventData.wait_mult(active_event)      # 事件期间咬钩节奏变化
 	_state_t = w
 	Audio.play_sfx("cast")
 	get_tree().create_timer(0.45).timeout.connect(func() -> void: Audio.play_sfx("bobber_splash"))
+
+
+## 昼夜时段：每帧轻量比对真实时钟，跨段才刷新（一天仅 4 次，开销可忽略）。
+func _tick_phase() -> void:
+	var p := Weather.current_phase()
+	if p != day_phase:
+		day_phase = p
+		_apply_phase()
+
+
+## 应用当前时段：场景染色 + HUD + 按新节奏重排（不打断已在咬钩）。
+func _apply_phase() -> void:
+	if painter.has_method("set_phase_tint"):
+		painter.set_phase_tint(Weather.tint(day_phase))
+	_update_hud()
 
 
 func _begin_bite() -> void:
@@ -433,7 +454,7 @@ func _build_spot_chip() -> void:
 func _update_spot_chip() -> void:
 	if spot_chip == null:
 		return
-	var txt := SpotData.display_name(current_spot)
+	var txt := SpotData.display_name(current_spot) + " · " + Weather.display_name(day_phase)
 	var col := Color(0.86, 0.86, 0.82)
 	if active_event != "" and EventData.hud_text(active_event) != "":
 		txt += " · " + EventData.display_name(active_event)

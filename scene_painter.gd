@@ -40,6 +40,7 @@ var dip := 0.0
 var use_composite := false
 var _base: Texture2D
 var _spot_base: Texture2D = null   # 当前钓点底图（缺图回退到 _base，不崩）
+var phase_tint := Color(0, 0, 0, 0)  # 昼夜时段染色（A=0 不染色），main 经 set_phase_tint 设置
 var _water_overlay: Texture2D     # 旧版波光叠层（无新版帧动画时的回退）
 var _bobber_idle: Texture2D
 var _bobber_bite: Texture2D
@@ -264,12 +265,25 @@ func set_spot(bg_key: String) -> void:
 	queue_redraw()
 
 
+## 昼夜时段染色（main 在跨段时调用；A=0 即白昼不染色）。
+func set_phase_tint(c: Color) -> void:
+	phase_tint = c
+	queue_redraw()
+
+
+## 时段染色叠层：覆盖整幅场景的淡色，经羽化材质自然向左上渐隐。
+func _draw_phase_tint() -> void:
+	if phase_tint.a > 0.001:
+		draw_rect(Rect2(0.0, 0.0, W, H), phase_tint)
+
+
 # —— 真实美术：主图 + 动态叠加层（图层顺序按 dynamic_art_plan.md）——
 func _draw_composite() -> void:
 	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
 	_draw_mist_layer()
 	_draw_shimmer_layer()
 	_draw_snow_layer()
+	_draw_phase_tint()
 	_draw_wildlife()
 	_draw_ripples()
 	_draw_bobber_sprite()

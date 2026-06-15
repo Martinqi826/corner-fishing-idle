@@ -9,17 +9,19 @@ static func pool(g: CornerFishing) -> Array:
 	return SpotData.pool_for(g.current_spot)
 
 
-## 钓点常驻 + 当前事件 叠加的品阶运气。
+## 钓点常驻 + 昼夜时段 + 当前事件 叠加的品阶运气。
 static func catch_luck(g: CornerFishing) -> int:
 	var l := SpotData.luck_bonus(g.current_spot)
+	l += Weather.luck(g.day_phase)
 	if g.active_event != "":
 		l += EventData.luck(g.active_event)
 	return l
 
 
-## 钓点常驻 × 当前事件 叠加的渔获增值系数。
+## 钓点常驻 × 昼夜时段 × 当前事件 叠加的渔获增值系数。
 static func catch_value_mult(g: CornerFishing) -> float:
 	var m := SpotData.value_mult(g.current_spot)
+	m *= Weather.value_mult(g.day_phase)
 	if g.active_event != "":
 		m *= EventData.value_mult(g.active_event)
 	return m

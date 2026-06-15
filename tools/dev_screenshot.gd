@@ -79,6 +79,14 @@ func _run() -> void:
 	_snap("scene_coast.png")
 	_main.active_event = ""
 	_main._switch_spot("river_bend")
+	# 昼夜：强制黄昏，验证场景染色 + HUD「· 黄昏」
+	_main.day_phase = "dusk"
+	_main._apply_phase()
+	_main._update_hud()
+	await _settle(2)
+	_snap("scene_dusk.png")
+	_main.day_phase = Weather.current_phase()
+	_main._apply_phase()
 	_main._update_hud()
 
 	# 4) 动态层：强制小动物事件（中段全亮）+ 涟漪帧动画

@@ -68,6 +68,9 @@ func _run() -> void:
 	print("=== 稀有变体系统 ===")
 	await _check_variants()
 
+	print("=== 昼夜时段系统 ===")
+	await _check_weather()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -963,6 +966,38 @@ func _check_variants() -> void:
 	await process_frame
 	DirAccess.remove_absolute(path)
 	print("  稀有变体：分布/抬价/dex掩码累积/成就/存档 v10 往返 通过")
+
+
+func _check_weather() -> void:
+	# 时段划分
+	_assert(Weather.phase_for_hour(6) == "dawn" and Weather.phase_for_hour(12) == "day"
+		and Weather.phase_for_hour(18) == "dusk" and Weather.phase_for_hour(23) == "night"
+		and Weather.phase_for_hour(3) == "night", "时段应按小时正确划分")
+	_assert(Weather.value_mult("dusk") > 1.0 and Weather.luck("night") >= 1
+		and Weather.value_mult("day") == 1.0 and Weather.luck("day") == 0,
+		"金色时段应加成、白昼应中性")
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.current_spot = "river_bend"
+	g.active_event = ""
+	g.day_phase = "day"
+	var base_v: float = g._catch_value_mult()
+	var base_l: int = g._catch_luck()
+	g.day_phase = "dusk"
+	_assert(g._catch_value_mult() > base_v, "黄昏应抬高渔获增值系数")
+	g.day_phase = "night"
+	_assert(g._catch_luck() > base_l, "夜晚应抬高品阶运气")
+	# 场景染色接入：夜晚有染色、白昼无
+	g._apply_phase()
+	_assert(g.painter.phase_tint.a > 0.0, "夜晚应有场景染色")
+	g.day_phase = "day"
+	g._apply_phase()
+	_assert(g.painter.phase_tint.a == 0.0, "白昼不应染色")
+	print("  昼夜时段：划分/金色时段加成/夜晚运气/染色接入 通过")
+	g.queue_free()
+	await process_frame
 
 
 func _check_save_robust() -> void:
