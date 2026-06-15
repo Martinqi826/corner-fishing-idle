@@ -1094,87 +1094,17 @@ func _tick_merchant(delta: float) -> void:
 
 # ============================ 随机事件（EventData 驱动）============================
 
-## 当前钓点可触发的事件 id 列表（事件池 ∩ EventData 适配本钓点）。
+## 随机事件：薄壳委托 Events（实现见 events.gd，行为不变）。
 func _eligible_events() -> Array:
-	var out: Array = []
-	for eid in SpotData.event_pool(current_spot):
-		if EventData.has(str(eid)) and EventData.applies_to(str(eid), current_spot):
-			out.append(str(eid))
-	return out
+	return Events.eligible(self)
 
 
-## 事件主循环：buff 在场则走时长，否则走间隔到点触发。同一时刻最多一个 buff。
 func _tick_events(delta: float) -> void:
-	if active_event != "":
-		_event_buff_t -= delta
-		if _event_buff_t <= 0.0:
-			_end_buff()
-		return
-	_event_next_t -= delta
-	if _event_next_t <= 0.0:
-		_fire_event()
+	Events.tick(self, delta)
 
 
-## 触发一次事件：从当前钓点池随机挑选（forced 用于测试指定）。buff 进场 / instant 结算。
 func _fire_event(forced := "") -> void:
-	var pool := _eligible_events()
-	if pool.is_empty():
-		_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
-		return
-	var id := forced if (forced != "" and forced in pool) else str(pool[rng.randi() % pool.size()])
-	if EventData.is_instant(id):
-		_resolve_instant(id)
-		_schedule_next_after(id)
-	else:
-		_activate_buff(id)
-
-
-## buff 事件进场：设时长、提示、可选闪光，并立刻按新节奏重排下一口。
-func _activate_buff(id: String) -> void:
-	active_event = id
-	var e: Dictionary = EventData.get_event(id)
-	var dur: Array = e.get("dur", [45.0, 70.0])
-	_event_buff_t = rng.randf_range(float(dur[0]), float(dur[1]))
-	if EventData.wants_flash(id) and not focus_mode:
-		_flash()
-	var tin := str(e.get("toast_in", ""))
-	if tin != "":
-		_toast(tin, 3.5, EventData.color(id))
-	_begin_wait()
-	_update_hud()
-
-
-## buff 事件退场：清状态、提示、排下一次事件。
-func _end_buff() -> void:
-	var id := active_event
-	active_event = ""
-	var tout := str(EventData.get_event(id).get("toast_out", ""))
-	if tout != "":
-		_toast(tout, 2.4, Color(0.62, 0.70, 0.74))
-	_schedule_next_after(id)
-	_update_hud()
-
-
-## instant 事件结算：发一次性金币奖励（随鱼竿轻微缩放），文案含 +金额。
-func _resolve_instant(id: String) -> void:
-	var e: Dictionary = EventData.get_event(id)
-	var rb: Array = e.get("reward_base", [40, 120])
-	var reward := int(round(rng.randf_range(float(rb[0]), float(rb[1])) * (1.0 + float(rod_level - 1) * 0.35)))
-	reward = maxi(1, reward)
-	coins += reward  # 拾得/保育奖励：进金币但不计入卖鱼终身收入
-	Audio.play_sfx("coin")
-	var tin := str(e.get("toast_in", ""))
-	if tin != "":
-		_toast(tin % reward if "%d" in tin else tin, 3.2, EventData.color(id))
-	_check_achievements()
-	_update_hud()
-	_refresh_panel()
-
-
-## 按某事件的 gap 排下一次事件出现时间。
-func _schedule_next_after(id: String) -> void:
-	var gap: Array = EventData.get_event(id).get("gap", [900.0, 1800.0])
-	_event_next_t = rng.randf_range(float(gap[0]), float(gap[1]))
+	Events.fire(self, forced)
 
 
 # ============================ 多钓点 ============================
