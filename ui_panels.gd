@@ -806,55 +806,85 @@ static func fill_bag_tab(g: CornerFishing, v: VBoxContainer) -> void:
 
 
 static func fish_entry(g: CornerFishing, c: Dictionary, idx: int, featured := false, compact := false) -> Control:
+	# 简约卡片：品阶由名字颜色编码（不再重复文字）；体型降为小角标；
+	# 售价并入卖出键（「卖 17」一控件兼表价值与操作）；收藏锁为轻量幽灵钮，不抢权重。
 	var tier := FishData.tier_of(c["id"])
+	var vr := int(c.get("var", 0))
+	var locked: bool = bool(c.get("lock", false))
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(232 if compact else 0, 58 if compact else (76 if featured else 52))
-	panel.add_theme_stylebox_override("panel", paper_style(0.92) if featured else dark_row_style(0.48))
+	panel.custom_minimum_size = Vector2(232, 54)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", dark_row_style(0.42))
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 7 if compact else (8 if featured else 6))
-	margin.add_theme_constant_override("margin_top", 5 if compact else (6 if featured else 3))
-	margin.add_theme_constant_override("margin_right", 6 if compact else (8 if featured else 5))
-	margin.add_theme_constant_override("margin_bottom", 5 if compact else (6 if featured else 3))
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_right", 6)
+	margin.add_theme_constant_override("margin_bottom", 4)
 	panel.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 5 if compact else 7)
+	row.add_theme_constant_override("separation", 5)
 	margin.add_child(row)
-	row.add_child(g._fish_icon(str(c["id"]), 34 if compact else (58 if featured else 38)))
+
+	row.add_child(g._fish_icon(str(c["id"]), 34))
+
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 0)
-	var vr := int(c.get("var", 0))
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.add_theme_constant_override("separation", 1)
+	# 名字行：变体只用一颗品色宝石「◆」标记（不再拼长前缀），鱼名最长 5 字双列也放得下；
+	# 品阶由名字颜色编码，星级移到副行。
 	var nm := Label.new()
-	nm.text = "%s %s%s%s%s" % [FishData.TIER_NAMES[tier], FishData.variant_label(vr),
-		FishData.size_tag(c["id"], c["w"]), FishData.display_name(c["id"]), "★".repeat(int(c.get("q", 0)))]
+	nm.text = ("◆" + FishData.display_name(c["id"])) if vr >= 1 else FishData.display_name(c["id"])
 	nm.clip_text = true
-	nm.add_theme_font_size_override("font_size", 12 if compact else (15 if featured else 13))
+	nm.add_theme_font_size_override("font_size", 13)
 	nm.add_theme_color_override("font_color",
-		FishData.variant_color(vr) if vr >= 1 else (g._ui_tier_color(tier, featured) if featured else g._ui_tier_color(tier, false)))
+		FishData.variant_color(vr) if vr >= 1 else g._ui_tier_color(tier, false))
+	if vr >= 1:
+		nm.tooltip_text = "%s变体（价值 ×%.0f）" % [
+			FishData.variant_label(vr).replace("·", ""), FishData.VARIANT_MULTS[vr]]
 	info.add_child(nm)
 	var meta := Label.new()
-	meta.text = "%.2fkg  %d 金币" % [c["w"], c["v"]]
+	var parts: Array[String] = []
+	var q := int(c.get("q", 0))
+	if q > 0:
+		parts.append("★".repeat(q))
+	var sztag := FishData.size_tag(c["id"], c["w"]).replace("·", "").strip_edges()
+	if sztag != "":
+		parts.append(sztag)
+	parts.append("%.2fkg" % c["w"])
+	meta.text = " · ".join(parts)
 	meta.clip_text = true
-	meta.add_theme_font_size_override("font_size", 11 if compact else (13 if featured else 12))
-	meta.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42) if featured else Color(0.78, 0.68, 0.45))
+	meta.add_theme_font_size_override("font_size", 11)
+	meta.add_theme_color_override("font_color", Color(0.64, 0.61, 0.53))
 	info.add_child(meta)
 	row.add_child(info)
-	var locked: bool = bool(c.get("lock", false))
+
+	# 收藏锁：幽灵切换钮，幽暗时退到背景，上锁时点亮金色
 	var lk := Button.new()
-	lk.text = "解" if locked else "锁"
-	lk.tooltip_text = "解除收藏锁" if locked else "上锁收藏（不会被卖出）"
-	lk.custom_minimum_size = Vector2(28, 32 if featured else 30)
+	lk.text = "锁"
+	lk.tooltip_text = "解除收藏锁" if locked else "上锁收藏（不会被卖出 / 交付）"
+	lk.custom_minimum_size = Vector2(22, 40)
 	lk.focus_mode = Control.FOCUS_NONE
-	apply_button_skin(lk, false)
-	if locked:
-		lk.add_theme_color_override("font_color", Color(0.95, 0.78, 0.42))
+	var lk_empty := StyleBoxEmpty.new()
+	var lk_hover := dark_row_style(0.5)
+	lk.add_theme_stylebox_override("normal", lk_empty)
+	lk.add_theme_stylebox_override("pressed", lk_empty)
+	lk.add_theme_stylebox_override("hover", lk_hover)
+	lk.add_theme_stylebox_override("focus", lk_empty)
+	lk.add_theme_color_override("font_color",
+		Color(0.95, 0.78, 0.42) if locked else Color(0.50, 0.48, 0.43))
+	lk.add_theme_color_override("font_hover_color", Color(0.95, 0.88, 0.70))
+	lk.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
 	lk.pressed.connect(g._toggle_lock.bind(idx))
 	row.add_child(lk)
+
+	# 卖出键：金色主操作，价格直接写在键上
 	var sell := Button.new()
-	sell.text = "藏" if locked else "卖"
+	sell.text = "锁定" if locked else "卖 %d" % g._sell_value(c)
 	sell.disabled = locked
-	sell.custom_minimum_size = Vector2(34 if featured else 28, 32 if featured else 30)
-	apply_button_skin(sell, featured)
+	sell.custom_minimum_size = Vector2(54, 38)
+	sell.add_theme_font_size_override("font_size", 13)
+	apply_button_skin(sell, true)
 	sell.pressed.connect(g._sell_one.bind(idx))
 	row.add_child(sell)
 	return panel
