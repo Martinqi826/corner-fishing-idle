@@ -598,25 +598,30 @@ func _build_buttons() -> void:
 		_build_round_buttons()
 
 
-# 干净 spot 底图没有烤死的按钮，这里补一组金色圆按钮（呼应 river 的金按钮观感）。
-# river 用底图自带按钮 + 透明命中区，这组隐藏；切钓点时在 _apply_spot_visuals 里切显隐。
+# 干净 spot 底图没有烤死的按钮，这里补一组图标按钮，直接复用 Codex 的独立图标
+# （ui_button_fish/rod/coin），与 river 底图烤死的那三个图标一模一样，跨钓点观感一致。
+# river 用底图自带按钮 + 透明命中区，这组隐藏；切钓点时在 Spots.apply_visuals 里切显隐。
+const SPOT_BTN_ICONS := {
+	"catch": "res://assets/art/ui/ui_button_fish.png",
+	"rod": "res://assets/art/ui/ui_button_rod.png",
+	"set": "res://assets/art/ui/ui_button_coin.png",
+}
+
 func _build_spot_buttons() -> void:
-	for d in [["篓", "catch"], ["竿", "rod"], ["设", "set"]]:
-		var b := _round_button(d[0])
-		var gold := StyleBoxFlat.new()
-		gold.bg_color = Color(0.66, 0.49, 0.25, 0.95)
-		gold.set_corner_radius_all(16)
-		gold.set_border_width_all(1)
-		gold.border_color = Color(1.0, 0.87, 0.55, 0.5)
-		b.add_theme_stylebox_override("normal", gold)
-		var goldh := gold.duplicate() as StyleBoxFlat
-		goldh.bg_color = Color(0.78, 0.59, 0.31, 1.0)
-		b.add_theme_stylebox_override("hover", goldh)
-		b.add_theme_stylebox_override("pressed", goldh)
-		b.add_theme_color_override("font_color", Color(0.18, 0.15, 0.10))
-		b.position = (btn_centers[d[1]] as Vector2) + SCENE_OFF - Vector2(16, 16)
+	for k in ["catch", "rod", "set"]:
+		var b := TextureButton.new()
+		b.texture_normal = load(SPOT_BTN_ICONS[k])
+		b.ignore_texture_size = true
+		b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		b.custom_minimum_size = Vector2(30, 30)
+		b.size = Vector2(30, 30)
+		b.focus_mode = Control.FOCUS_NONE
+		b.position = (btn_centers[k] as Vector2) + SCENE_OFF - Vector2(15, 15)
 		b.visible = false
-		b.pressed.connect(_toggle_panel.bind(d[1]))
+		b.mouse_entered.connect(func() -> void: b.modulate = Color(1.18, 1.14, 1.0))
+		b.mouse_exited.connect(func() -> void: b.modulate = Color.WHITE)
+		b.pressed.connect(func() -> void: Audio.play_ui("ui_click"))
+		b.pressed.connect(_toggle_panel.bind(k))
 		ui_root.add_child(b)
 		_spot_round_btns.append(b)
 

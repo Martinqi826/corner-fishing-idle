@@ -71,6 +71,9 @@ static func switch_to(g: CornerFishing, id: String) -> void:
 static func apply_visuals(g: CornerFishing) -> void:
 	if g.painter.has_method("set_spot"):
 		g.painter.set_spot(str(SpotData.get_spot(g.current_spot).get("bg_key", "")))
+	# 干净 spot 显示图标按钮、river 隐藏。这里是切钓点的唯一入口（switch_to 直接调本函数），
+	# 之前只放在 main._apply_spot_visuals 包装里，switch_to 绕过它 → 按钮一直没显示。
+	g._update_spot_buttons()
 
 
 ## 订单候选鱼池：所有已解锁钓点鱼池的并集（保证订单总能在某个已解锁钓点完成）。
