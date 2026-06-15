@@ -23,7 +23,8 @@
 - **每日订单**：每天 1 单，4 类（指定鱼种 / 指定品阶 / 大物≥Wkg / 完美品质），交付未锁渔获按鱼价 ×2.5；HUD 常驻进度，跨日刷新。
 - **流动鱼贩**：随机限时收购时段，卖价 ×1.5（HUD 金色提示）。
 - **图鉴**：60 种鱼，每种记录累计数 + 最大体重 + 长期徽章（集齐 10 条 / 巨物 / 完美）；钓点页显示各钓点鱼种收集进度。
-- **成就**：16 项（渔获/财富/收集/品阶/品相/装备线），达成发金币奖励。
+- **陈列/装饰**：把心爱渔获摆上「陈列架」（5 槽，可取下），离开鱼篓永久展示；每件 +1% 全局卖价、封顶 +5%。最契合桌面摆件的健康非数值长线 + 收集深度。
+- **成就**：25 项（渔获/财富/收集/品阶/品相/装备/陈列线），达成发金币奖励。
 - **离线收益**：回屏弹「离线小结」面板（时长 / 渔获数 / 最值钱一条 / 合计可卖 / 珍稀清单）；上限 8 小时、50% 效率、受背包格数截断。
 - **音频**：UI / 抛竿 / 入水 / 咬钩 / 捕获 / 金币 / 升级 音效 + 循环水声环境音；设置可调静音 / 主音量 / 音效 / 环境音。
 
@@ -56,7 +57,12 @@ godot --headless -s tools/balance_probe.gd
 
 | 文件 | 职责 |
 |---|---|
-| `main.gd` | 主控：透明窗形态/拖动、钓鱼状态机、经济、背包/订单/成就/图鉴、钓点切换/事件、面板、存档/离线 |
+| `main.gd` | `class_name CornerFishing` 主控：透明窗/拖动、钓鱼状态机、经济、背包/成就/图鉴、HUD、卖鱼/升级、存档/离线；面板/事件/钓点/订单均薄壳委托下列模块 |
+| `ui_panels.gd` | `class_name UIPanels`：所有面板/页签/卡片/样式构建（静态 g 模式） |
+| `events.gd` | `class_name Events`：随机事件管理器（EventData 驱动） |
+| `spots.gd` | `class_name Spots`：钓点鱼池/运气增值/解锁/切换/订单候选并集 |
+| `orders.gd` | `class_name Orders`：每日订单/周目标/今日统计 |
+| `decor.gd` | `class_name Decor`：陈列/装饰系统（陈列架、卖价加成） |
 | `scene_painter.gd` | 场景绘制：Codex 主图 + 动态层（水光/雾/雪/涟漪/灯光/小动物），按钓点切底图，缺资源回退程序化 |
 | `fish_data.gd` | `class_name FishData`：60 鱼种、品阶、生态标签、权重、体重定价、星级、鱼饵、鱼钩、按钓点鱼池抽取 |
 | `spot_data.gd` | `class_name SpotData`：钓点（鱼池 habitat_tags / 解锁条件 / 事件池 / 系数 / 背景） |
@@ -71,13 +77,13 @@ godot --headless -s tools/balance_probe.gd
 
 ## 存档
 
-`user://corner_fishing_save.json`（当前 v8）。每 10s 自动存 + 退出存 + 拖动后存 + 切钓点后存。
+`user://corner_fishing_save.json`（当前 v9）。每 10s 自动存 + 退出存 + 拖动后存 + 切钓点/陈列后存。
 历次结构升级均向后兼容迁移（v1 id 列表→图鉴纪录轴；inv 三元组→四元组→五元组；
 dex 2 元组→4 元组徽章；daily_order 补 kind/tier/minw；**v8 多钓点：current_spot / unlocked_spots /
-seen_spots / active_event，旧档默认 river_bend**），回归测试覆盖迁移。
+seen_spots / active_event，旧档默认 river_bend；v9 陈列：display 陈列架，旧档默认空**），回归测试覆盖迁移。
 
 ## 路线图（未实现）
 
 更多钓点（山涧溪流 stream/cold、远海深钓 deep）、昼夜与天气、稀有大鱼限时事件、
-展示/装饰系统（Chillquarium 式）、自动卖鱼（计划做成付费/长期解锁）、打包 itch.io / Steam。
-多钓点骨架（SpotData / EventData）已就位，新增钓点只需加数据 + 背景图。
+陈列架桌面小景渲染（数据已就位，待美术）、自动卖鱼（计划做成付费/长期解锁，待拍板）、打包 itch.io / Steam。
+模块骨架（UIPanels/Events/Spots/Orders/Decor + SpotData/EventData）已就位，便于并行扩展。

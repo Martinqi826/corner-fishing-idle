@@ -13,6 +13,7 @@
 | 2 | **重构②** 抽出 events.gd（随机事件管理器 7 函数） | events.gd | `4e99256` |
 | 3 | **重构③** 抽出 spots.gd（钓点控制/鱼池/解锁/切换 8 函数） | spots.gd | `90e13ce` |
 | 4 | **重构④** 抽出 orders.gd（订单/周目标/今日统计 20 函数），main.gd→1194 | orders.gd | `639490f` |
+| 5 | **新功能** 装饰/陈列系统：陈列架 5 槽 + 卖价加成（+1%/件，封顶 +5%）+ 存档 v9 + 陈列页签 + 2 成就 | decor.gd, ui_panels.gd, save_system.gd, achievements.gd | `51e2109` |
 
 ## 二、重构方式（行为零变化）
 
@@ -46,8 +47,10 @@
 
 - 长线 + 公平 F2P + 挂机轻操作 三目标的调研报告见
   `docs/fishing-design-inspiration-20260614.html`（现实垂钓 + 市面钓鱼游戏横评 + 对本项目启示）。
-- **下一步（并行铺功能）**：装饰/陈列系统（Chillquarium 式，新文件 decoration.gd，最契合桌面摆件
-  本质，健康非数值长线 + 未来外观变现点）、更多鱼种与图鉴深度、节日/天气、手感打磨。
+- ✅ 装饰/陈列系统已落地（decor.gd，见上表 #5）。
+- **下一步（并行铺功能）**：更多鱼种与图鉴深度、节日/天气、手感打磨、陈列桌面小景渲染（待美术）。
+- 坑记录：被全局类以常量引用的模块（如 ui_panels 引 `Decor.NUM_SLOTS`）会早解析，不能直接用 `Audio`
+  autoload（报 Identifier not found: Audio），改经 `g._play_sfx/_play_ui` 路由。详见记忆 module-extraction-pattern。
 - **待用户拍板（已记录、未擅自做）**：自动卖鱼/背包扩容等付费点——见
   `docs/fishing-design-inspiration-20260614.html` 第三部分的风险评估与替代方案。
 
