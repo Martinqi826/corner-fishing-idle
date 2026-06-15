@@ -1169,8 +1169,15 @@ func _check_effects() -> void:
 	_assert(p._ripple_tex.size() == 4, "浮漂涟漪应 4 帧，实际 %d" % p._ripple_tex.size())
 	_assert(p._glow_tex.size() == 4, "灯光呼吸应 4 帧，实际 %d" % p._glow_tex.size())
 	_assert(p._wild_tex.size() == 4, "小动物应 4 种，实际 %d" % p._wild_tex.size())
-	_assert(p._lantern.x > 440.0 and p._lantern.x < 490.0 and p._lantern.y > 300.0 and p._lantern.y < 355.0,
-		"灯笼锚点应自动定位到主图灯笼区域，实际 %s" % str(p._lantern))
+	# 统一叠加层：渔夫/灯笼为独立精灵，灯笼光晕锚点跟随固定灯笼锚点（不再从底图扫描）
+	_assert(p._fisher != null, "渔夫精灵应加载")
+	_assert(p._lantern_tex != null, "灯笼精灵应加载")
+	_assert(p._lantern == p.lantern_anchor + Vector2(0, -16),
+		"灯笼光晕锚点应跟随固定灯笼锚点，实际 %s" % str(p._lantern))
+	# 所有钓场底图都应为干净底图（渔夫/灯笼/钓线/按钮全代码叠加，无烤死特例）
+	for bg in ["river_bend", "still_lake", "coast_pier"]:
+		p.set_spot(bg)
+		_assert(p.uses_clean_bg(), "钓场底图 spot_%s.png 应存在且为干净底图" % bg)
 	# 小动物事件生命周期：fish 时长 0.7~1.1s，推进 2s 应结束并重排下次计时
 	p._start_wild("fish")
 	_assert(p._wild_kind == "fish", "应启动 fish 事件")

@@ -40,13 +40,16 @@ var dip := 0.0
 var use_composite := false
 var _base: Texture2D
 var _spot_base: Texture2D = null   # 当前钓点底图（缺图回退到 _base，不崩）
-var _fisher: Texture2D             # 独立渔夫精灵：干净 spot 底图上叠加（river 底图自带烤死渔夫）
+var _fisher: Texture2D             # 独立渔夫精灵（含鱼竿），叠加到所有干净底图上
+var _lantern_tex: Texture2D        # 独立灯笼精灵，叠加到所有干净底图上
 
-# 干净 spot 上渔夫的落座点（art 空间，脚底中心）与缩放、是否水平翻转。
-# river 底图自带渔夫不走这条路；spot 缺渔夫由此精灵补上。
-const FISHER_SCALE := 0.30   # 匹配 river 烤进底图的渔夫尺寸（精灵原 192px → ~58px），切钓点不忽大
-var fisher_anchor := Vector2(430, 300)
+# 统一叠加层锚点（art 空间）。所有钓场底图都是纯风景，渔夫/灯笼/钓线/浮漂都由代码叠加。
+const FISHER_SCALE := 0.30   # 渔夫精灵原 192px → ~58px，坐右岸
+var fisher_anchor := Vector2(430, 300)   # 渔夫脚底中心
 var fisher_flip := false
+const LANTERN_SCALE := 0.34  # 灯笼精灵原 96px → ~33px，立在渔夫旁
+var lantern_anchor := Vector2(462, 286)  # 灯笼底部中心（渔夫右侧岸上）
+var rod_tip_off := Vector2(-22, -50)     # 竿尖相对 fisher_anchor 的偏移（钓线起点）
 var phase_tint := Color(0, 0, 0, 0)  # 昼夜时段染色（A=0 不染色），main 经 set_phase_tint 设置
 var _water_overlay: Texture2D     # 旧版波光叠层（无新版帧动画时的回退）
 var _bobber_idle: Texture2D
@@ -84,11 +87,13 @@ var _prng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	_prng.randomize()
-	_base = _tex("res://assets/art/background/corner_scene_winter_base.png")
+	# 默认/回退底图用干净河湾（不再用烤死渔夫的旧图）；正常情况 set_spot 会按钓点覆盖
+	_base = _tex("res://assets/art/background/spot_river_bend.png")
 	_water_overlay = _tex("res://assets/art/background/water_highlight_overlay.png")
 	_bobber_idle = _tex("res://assets/art/props/bobber_idle.png")
 	_bobber_bite = _tex("res://assets/art/props/bobber_bite.png")
 	_fisher = _tex("res://assets/art/character/fisher_idle.png")
+	_lantern_tex = _tex("res://assets/art/props/lantern.png")
 	use_composite = _base != null
 	# 动态效果层
 	_shimmer_tex = _frames("res://assets/art/effects/water/water_shimmer_%02d.png", 6)
@@ -119,34 +124,8 @@ func _ready() -> void:
 		})
 	# 首次小动物事件提前到 12~25s（让玩家尽快看到一次），之后恢复 45~120s 低频
 	_wild_timer = _prng.randf_range(12.0, 25.0)
-	_lantern = _detect_lantern()
-
-
-## 在主图右下区域扫描暖橙色像素质心 = 灯笼位置（排除底部金色按钮行）。
-## 找不到足够暖色像素时回退 plan 给的近似锚点。
-func _detect_lantern() -> Vector2:
-	if _base == null:
-		return LANTERN_POS
-	var img := _base.get_image()
-	if img == null:
-		return LANTERN_POS
-	if img.is_compressed():
-		img.decompress()
-	var n := 0
-	var sx := 0.0
-	var sy := 0.0
-	var ymax: int = mini(358, img.get_height())
-	var xmax: int = mini(520, img.get_width())
-	for y in range(260, ymax):
-		for x in range(380, xmax):
-			var c := img.get_pixel(x, y)
-			if c.a > 0.5 and c.r > 0.59 and (c.r - c.b) > 0.235:
-				n += 1
-				sx += x
-				sy += y
-	if n < 30:
-		return LANTERN_POS
-	return Vector2(sx / n, sy / n)
+	# 灯笼为独立叠加精灵，光晕锚点取灯笼火焰处（不再从底图扫描暖色像素）
+	_lantern = lantern_anchor + Vector2(0, -16)
 
 
 func _tex(path: String) -> Texture2D:
@@ -278,7 +257,7 @@ func uses_clean_bg() -> bool:
 	return _spot_base != null
 
 
-## 干净 spot 底图上叠加独立渔夫精灵（脚底中心对齐 fisher_anchor，可水平翻转）。
+## 叠加独立渔夫精灵（脚底中心对齐 fisher_anchor，可水平翻转）。
 func _draw_fisher() -> void:
 	if _fisher == null:
 		return
@@ -289,6 +268,21 @@ func _draw_fisher() -> void:
 	draw_texture_rect(_fisher, Rect2(topleft, sz), false)
 	if fisher_flip:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## 叠加独立油灯精灵（底部中心对齐 lantern_anchor）。
+func _draw_lantern() -> void:
+	if _lantern_tex == null:
+		return
+	var sz := Vector2(_lantern_tex.get_size()) * LANTERN_SCALE
+	var topleft := lantern_anchor - Vector2(sz.x * 0.5, sz.y)
+	draw_texture_rect(_lantern_tex, Rect2(topleft, sz), false)
+
+
+## 钓线：竿尖 → 浮漂，淡白细线（底图不再烤死钓线，统一由此叠加）。
+func _draw_fishing_line() -> void:
+	var tip := fisher_anchor + rod_tip_off
+	draw_line(tip, bobber_pos(), Color(0.95, 0.96, 0.97, 0.55), 1.2, true)
 
 
 ## 昼夜时段染色（main 在跨段时调用；A=0 即白昼不染色）。
@@ -303,11 +297,12 @@ func _draw_phase_tint() -> void:
 		draw_rect(Rect2(0.0, 0.0, W, H), phase_tint)
 
 
-# —— 真实美术：主图 + 动态叠加层（图层顺序按 dynamic_art_plan.md）——
+# —— 干净底图 + 统一叠加层（所有钓场同一路径；底图均为纯风景，渔夫/灯笼/钓线/浮漂全代码叠加）——
 func _draw_composite() -> void:
 	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
-	if _spot_base != null:
-		_draw_fisher()   # 干净 spot 底图缺渔夫，叠加独立精灵（river 底图自带，不走这里）
+	_draw_fisher()          # 渔夫（含鱼竿）坐右岸
+	_draw_lantern()         # 渔夫旁的油灯
+	_draw_fishing_line()    # 竿尖 → 浮漂的钓线
 	_draw_mist_layer()
 	_draw_shimmer_layer()
 	_draw_snow_layer()
@@ -315,7 +310,7 @@ func _draw_composite() -> void:
 	_draw_wildlife()
 	_draw_ripples()
 	_draw_bobber_sprite()
-	_draw_glow_layer()
+	_draw_glow_layer()      # 灯光呼吸光晕（锚在灯笼火焰处）
 
 
 ## 雾气微风：每层异周期正弦漂移（约 ±20~40px），透明度做明显的浓淡呼吸。

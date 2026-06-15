@@ -591,7 +591,7 @@ var _spot_round_btns: Array = []   # 干净 spot 上显示的真实圆按钮（r
 
 func _build_buttons() -> void:
 	if painter.use_composite:
-		_build_hit_areas()
+		# 所有钓场都是干净底图，统一用独立图标按钮（不再有底图烤死按钮 + 命中区的特例）
 		_build_spot_buttons()
 		_update_spot_buttons()
 	else:
@@ -651,25 +651,6 @@ func _load_ui_layout() -> void:
 		if bp is Array and bp.size() >= 2:
 			painter.bite_point = Vector2(float(bp[0]), float(bp[1]))
 		return
-
-
-# 合成主图模式：按钮已烤进主图，这里只放透明命中区（带悬停高亮），点击可用、无重影。
-func _build_hit_areas() -> void:
-	for k in ["catch", "rod", "set"]:
-		var b := Button.new()
-		b.flat = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(30, 32)
-		b.size = Vector2(30, 32)
-		b.position = (btn_centers[k] as Vector2) + SCENE_OFF - Vector2(15, 16)
-		b.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-		b.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
-		var hov := StyleBoxFlat.new()
-		hov.bg_color = Color(1, 1, 1, 0.16)
-		hov.set_corner_radius_all(15)
-		b.add_theme_stylebox_override("hover", hov)
-		b.pressed.connect(_toggle_panel.bind(k))
-		ui_root.add_child(b)
 
 
 # 程序化回退模式：纸色圆按钮（篓/竿/设）。
