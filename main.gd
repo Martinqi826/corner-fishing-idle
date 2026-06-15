@@ -287,25 +287,17 @@ func _bag_full() -> bool:
 	return inventory.size() >= _bag_capacity()
 
 
-## 当前钓点鱼池（多钓点）：阶段④起 _do_catch / 离线按此池出鱼。
+## 钓点：薄壳委托 Spots（实现见 spots.gd，行为不变）。
 func _spot_pool() -> Array:
-	return SpotData.pool_for(current_spot)
+	return Spots.pool(self)
 
 
-## 钓点常驻 + 当前事件 叠加的品阶运气。
 func _catch_luck() -> int:
-	var l := SpotData.luck_bonus(current_spot)
-	if active_event != "":
-		l += EventData.luck(active_event)
-	return l
+	return Spots.catch_luck(self)
 
 
-## 钓点常驻 × 当前事件 叠加的渔获增值系数。
 func _catch_value_mult() -> float:
-	var m := SpotData.value_mult(current_spot)
-	if active_event != "":
-		m *= EventData.value_mult(active_event)
-	return m
+	return Spots.catch_value_mult(self)
 
 
 ## 钓一条鱼：限定当前钓点鱼池，应用钓点/事件增值系数。
@@ -1109,76 +1101,25 @@ func _fire_event(forced := "") -> void:
 
 # ============================ 多钓点 ============================
 
-## 补登已满足解锁条件的钓点；运行期（_unlocks_inited 后）新解锁会弹提示。
+## 钓点控制：薄壳委托 Spots（实现见 spots.gd，行为不变）。
 func _refresh_unlocks() -> void:
-	var species := dex.size()
-	for sid in SpotData.SPOT_ORDER:
-		if sid in unlocked_spots:
-			continue
-		if SpotData.unlock_met(sid, lifetime_catches, lifetime_coins, species):
-			unlocked_spots.append(sid)
-			if _unlocks_inited:
-				Audio.play_sfx("upgrade")
-				_toast("新钓点解锁：%s！（鱼篓→钓点 切换过去）" % SpotData.display_name(sid),
-					4.0, Color(0.6, 0.85, 0.55))
+	Spots.refresh_unlocks(self)
 
 
-## 切换到某钓点：换鱼池 / 事件 / 背景 / 订单建议。锁定钓点拒绝。
 func _switch_spot(id: String) -> void:
-	if not SpotData.has(id) or not (id in unlocked_spots):
-		Audio.play_ui("ui_error")
-		_toast("这个钓点还没解锁", 1.6, Color(1.0, 0.5, 0.4))
-		return
-	if id == current_spot:
-		return
-	current_spot = id
-	if not (id in seen_spots):
-		seen_spots.append(id)
-	# 换钓点 → 在场事件清空，按新钓点重排下一次事件
-	if active_event != "":
-		active_event = ""
-		_event_buff_t = 0.0
-	_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
-	_apply_spot_visuals()
-	_ensure_daily_order()
-	Audio.play_sfx("upgrade")
-	_toast("已来到 %s" % SpotData.display_name(id), 2.2, Color(0.6, 0.82, 0.95))
-	_begin_wait()  # 立刻按新钓点节奏重排
-	_update_hud()
-	_refresh_panel()
-	_save()
+	Spots.switch_to(self, id)
 
 
-## 把当前钓点的背景切给 ScenePainter（缺图自动回退现有主图，不崩）。
 func _apply_spot_visuals() -> void:
-	if painter.has_method("set_spot"):
-		painter.set_spot(str(SpotData.get_spot(current_spot).get("bg_key", "")))
+	Spots.apply_visuals(self)
 
 
-## 订单候选鱼池：所有已解锁钓点鱼池的并集（保证订单总能在某个已解锁钓点完成）。
 func _order_pool() -> Array:
-	var seen := {}
-	var out: Array = []
-	for sid in unlocked_spots:
-		for fid in SpotData.pool_for(sid):
-			if not seen.has(fid):
-				seen[fid] = true
-				out.append(fid)
-	out.sort_custom(func(a, b):
-		var ta := FishData.tier_of(str(a))
-		var tb := FishData.tier_of(str(b))
-		if ta != tb:
-			return ta < tb
-		return str(a) < str(b))
-	return out
+	return Spots.order_pool(self)
 
 
-## 某鱼最适合在哪个已解锁钓点钓（订单 UI 的“建议钓点”提示）。
 func _best_spot_for(fish_id: String) -> String:
-	for sid in SpotData.SPOT_ORDER:
-		if sid in unlocked_spots and fish_id in SpotData.pool_for(sid):
-			return sid
-	return current_spot
+	return Spots.best_spot_for(self, fish_id)
 
 
 func _try_expand_bag() -> void:
