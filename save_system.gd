@@ -5,6 +5,7 @@ class_name SaveSystem
 ## daily_order 补 kind/tier/minw；新增 hook/weekly/day_stat/best_q/giant/ach/seen_intro/focus/win_pos；
 ## v8 多钓点：spot(当前钓点)/unlocked(已解锁)/seen(已造访)/event(在场 buff)，旧档默认 river_bend。
 ## v9 陈列：display(陈列架上的鱼，最多 Decor.NUM_SLOTS)，旧档默认空。
+## v10 稀有变体：inv/display 第 6 元 var、dex 第 5 元 vmask、best_var；旧档默认普通(0)。
 
 const OFFLINE_CAP := 8.0 * 3600.0
 
@@ -14,13 +15,13 @@ static func collect(g) -> Dictionary:
 	var inv: Array = []
 	for c in g.inventory:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
-			1 if bool(c.get("lock", false)) else 0])
+			1 if bool(c.get("lock", false)) else 0, int(c.get("var", 0))])
 	var disp: Array = []
 	for c in g.display:
 		disp.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
-			1 if bool(c.get("lock", false)) else 0])
+			1 if bool(c.get("lock", false)) else 0, int(c.get("var", 0))])
 	var data := {
-		"ver": 9,
+		"ver": 10,
 		"coins": g.coins,
 		"rod_level": g.rod_level,
 		"bag_level": g.bag_level,
@@ -35,6 +36,7 @@ static func collect(g) -> Dictionary:
 		"weekly": g.weekly,
 		"day_stat": g.day_stat,
 		"best_q": g.best_quality,
+		"best_var": g.best_variant,
 		"giant": g.caught_giant,
 		"ach": g.achievements_done.keys(),
 		"opacity": g._opacity,
@@ -59,7 +61,8 @@ static func dex_to_save(g) -> Dictionary:
 		var r: Dictionary = g.dex[id]
 		out[id] = [int(r["n"]), float(r["w"]),
 			1 if bool(r.get("big", false)) else 0,
-			1 if bool(r.get("perf", false)) else 0]
+			1 if bool(r.get("perf", false)) else 0,
+			int(r.get("vmask", 0))]  # v10：见过的稀有变体位掩码
 	return out
 
 
@@ -101,17 +104,20 @@ static func apply(g, data: Dictionary) -> void:
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):
 			g.inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
 				"q": int(e[3]) if e.size() >= 4 else 0,    # v2 三元组 → 无星级
-				"lock": e.size() >= 5 and int(e[4]) == 1}) # v3 及更早 → 未锁定
+				"lock": e.size() >= 5 and int(e[4]) == 1,  # v3 及更早 → 未锁定
+				"var": int(e[5]) if e.size() >= 6 else 0}) # v9 及更早 → 普通变体
 	g.display = []                            # v9 陈列架；v8 及更早无 → 空
 	# 防御性上限 8（玩法层实际封顶 Decor.NUM_SLOTS=5；此处避免引入 SaveSystem→Decor 依赖环）
 	for e in data.get("display", []):
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])) and g.display.size() < 8:
 			g.display.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
 				"q": int(e[3]) if e.size() >= 4 else 0,
-				"lock": e.size() >= 5 and int(e[4]) == 1})
+				"lock": e.size() >= 5 and int(e[4]) == 1,
+				"var": int(e[5]) if e.size() >= 6 else 0})
 	g.lifetime_coins = int(data.get("lt_coins", 0))
 	g.lifetime_catches = int(data.get("lt_catches", 0))
 	g.best_quality = int(data.get("best_q", 0))
+	g.best_variant = int(data.get("best_var", 0))
 	g.caught_giant = bool(data.get("giant", false))
 	g.achievements_done = {}
 	for id in data.get("ach", []):
@@ -124,11 +130,12 @@ static func apply(g, data: Dictionary) -> void:
 				var e: Array = dex_raw[id]
 				g.dex[str(id)] = {"n": int(e[0]), "w": float(e[1]),
 					"big": e.size() >= 3 and int(e[2]) == 1,
-					"perf": e.size() >= 4 and int(e[3]) == 1}
+					"perf": e.size() >= 4 and int(e[3]) == 1,
+					"vmask": int(e[4]) if e.size() >= 5 else 0}  # v10 变体掩码
 	elif dex_raw is Array:                   # v1~v3：仅 id 列表 → 纪录从头积累
 		for id in dex_raw:
 			if FishData.FISH.has(str(id)):
-				g.dex[str(id)] = {"n": 1, "w": 0.0, "big": false, "perf": false}
+				g.dex[str(id)] = {"n": 1, "w": 0.0, "big": false, "perf": false, "vmask": 0}
 	g.daily_order = {}
 	var order_raw: Variant = data.get("daily_order", {})
 	if order_raw is Dictionary:

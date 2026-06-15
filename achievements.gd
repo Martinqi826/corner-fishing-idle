@@ -30,4 +30,7 @@ const LIST := [
 	# —— 陈列/装饰（健康非数值长线）——
 	{"id": "first_display", "name": "初次陈列", "desc": "把一条鱼摆上陈列架", "kind": "display", "n": 1, "reward": 200},
 	{"id": "display_full", "name": "满架珍藏", "desc": "陈列架摆满 5 件", "kind": "display", "n": 5, "reward": 1500},
+	# —— 稀有变体（Chillquarium 式收集深度）——
+	{"id": "first_variant", "name": "斑斓初见", "desc": "钓到一条稀有变体（斑斓及以上）", "kind": "variant", "n": 1, "reward": 500},
+	{"id": "rainbow", "name": "七彩之鳞", "desc": "钓到一条七彩变体", "kind": "variant", "n": 3, "reward": 5000},
 ]

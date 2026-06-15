@@ -823,12 +823,14 @@ static func fish_entry(g: CornerFishing, c: Dictionary, idx: int, featured := fa
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 0)
+	var vr := int(c.get("var", 0))
 	var nm := Label.new()
-	nm.text = "%s %s%s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(c["id"], c["w"]),
-		FishData.display_name(c["id"]), "★".repeat(int(c.get("q", 0)))]
+	nm.text = "%s %s%s%s%s" % [FishData.TIER_NAMES[tier], FishData.variant_label(vr),
+		FishData.size_tag(c["id"], c["w"]), FishData.display_name(c["id"]), "★".repeat(int(c.get("q", 0)))]
 	nm.clip_text = true
 	nm.add_theme_font_size_override("font_size", 12 if compact else (15 if featured else 13))
-	nm.add_theme_color_override("font_color", g._ui_tier_color(tier, featured) if featured else g._ui_tier_color(tier, false))
+	nm.add_theme_color_override("font_color",
+		FishData.variant_color(vr) if vr >= 1 else (g._ui_tier_color(tier, featured) if featured else g._ui_tier_color(tier, false)))
 	info.add_child(nm)
 	var meta := Label.new()
 	meta.text = "%.2fkg  %d 金币" % [c["w"], c["v"]]
@@ -862,7 +864,15 @@ static func fish_entry(g: CornerFishing, c: Dictionary, idx: int, featured := fa
 
 static func fill_dex_tab(g: CornerFishing, v: VBoxContainer) -> void:
 	var stat := Label.new()
-	stat.text = "收集 %d/%d  /  渔获 %d" % [g.dex.size(), FishData.FISH.size(), g.lifetime_catches]
+	var vc := 0  # 已收集稀有变体数（每种鱼 ×3 稀有）
+	for id in g.dex:
+		var vm := int(g.dex[id].get("vmask", 0))
+		for vi in range(1, FishData.VARIANT_NAMES.size()):
+			if vm & (1 << vi):
+				vc += 1
+	var vtotal := FishData.FISH.size() * (FishData.VARIANT_NAMES.size() - 1)
+	stat.text = "收集 %d/%d  ·  变体 %d/%d  ·  渔获 %d" % [
+		g.dex.size(), FishData.FISH.size(), vc, vtotal, g.lifetime_catches]
 	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	v.add_child(stat)
 	var sc := ScrollContainer.new()
@@ -945,6 +955,15 @@ static func dex_badges(r: Dictionary) -> Control:
 		p.add_theme_font_size_override("font_size", 10)
 		p.add_theme_color_override("font_color", Color(0.80, 0.62, 0.92))
 		row.add_child(p)
+	# 稀有变体收集点（斑斓/鎏金/七彩）：已见亮色圆点
+	var vm := int(r.get("vmask", 0))
+	for vi in range(1, FishData.VARIANT_NAMES.size()):
+		if vm & (1 << vi):
+			var d := Label.new()
+			d.text = "●"
+			d.add_theme_font_size_override("font_size", 10)
+			d.add_theme_color_override("font_color", FishData.variant_color(vi))
+			row.add_child(d)
 	return row
 
 

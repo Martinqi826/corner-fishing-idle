@@ -107,6 +107,19 @@ const BASE_WEIGHTS := {0: 58.0, 1: 25.0, 2: 11.0, 3: 4.5, 4: 1.3, 5: 0.2}
 # —— 星级品质（WEBFISHING 模板：逐级 roll，鱼饵决定每级通过率）——
 const QUALITY_NAMES := ["", "上品", "极品", "完美"]
 const QUALITY_MULTS := [1.0, 1.8, 4.0, 8.0]
+
+# —— 稀有变体（Chillquarium 式收集深度护城河）：与星级正交，独立 roll，决定外观色 + 价值倍率。
+# 概率与品阶/星级无关；普通占绝大多数，越华丽越稀有。收集轴：每种鱼 ×4 变体（60×3 稀有 = 180 收集格）。
+const VARIANT_NAMES := ["", "斑斓", "鎏金", "七彩"]
+const VARIANT_MULTS := [1.0, 2.0, 5.0, 12.0]
+const VARIANT_COLORS := [
+	Color(1, 1, 1),             # 0 普通（不染色）
+	Color(0.55, 0.85, 0.95),   # 1 斑斓 青蓝
+	Color(1.0, 0.84, 0.35),    # 2 鎏金 金
+	Color(0.95, 0.55, 0.95),   # 3 七彩 虹紫
+]
+# 各稀有变体出现概率（独立判定）：斑斓 6% / 鎏金 1.2% / 七彩 0.2%，其余普通。
+const VARIANT_PROBS := [0.0, 0.06, 0.012, 0.002]
 ## 鱼饵：金币永久升级（线性进阶，参考 Melvor 自动化的游戏币门控）。
 ## probs[i] = 从 i-1 星升到 i 星的通过率；P(★)=p1，P(★★)=p1·p2，P(★★★)=p1·p2·p3。
 const BAITS := [
@@ -141,6 +154,27 @@ static func quality_label(q: int) -> String:
 	if q <= 0:
 		return ""
 	return QUALITY_NAMES[clampi(q, 0, 3)] + "★".repeat(q) + "·"
+
+
+## 稀有变体抽取：从最稀有向常见累加判定，落空则普通。
+static func roll_variant(rng: RandomNumberGenerator) -> int:
+	var r := rng.randf()
+	var acc := 0.0
+	for vi in range(VARIANT_PROBS.size() - 1, 0, -1):
+		acc += float(VARIANT_PROBS[vi])
+		if r < acc:
+			return vi
+	return 0
+
+
+static func variant_label(v: int) -> String:
+	if v <= 0:
+		return ""
+	return VARIANT_NAMES[clampi(v, 0, VARIANT_NAMES.size() - 1)] + "·"
+
+
+static func variant_color(v: int) -> Color:
+	return VARIANT_COLORS[clampi(v, 0, VARIANT_COLORS.size() - 1)]
 
 
 ## 按权重抽品阶，再在该品阶内随机选种，返回鱼 id。
@@ -216,11 +250,13 @@ static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0
 	var rod_mult := 1.0 + float(rod_level - 1) * 0.08
 	var jitter := rng.randf_range(0.92, 1.08)
 	var q := roll_quality(bait_idx, rng)
+	var vr := roll_variant(rng)
 	return {
 		"id": id,
 		"w": snappedf(w, 0.01),
-		"v": max(1, int(round(base * rod_mult * jitter * QUALITY_MULTS[q]))),
+		"v": max(1, int(round(base * rod_mult * jitter * QUALITY_MULTS[q] * VARIANT_MULTS[vr]))),
 		"q": q,
+		"var": vr,
 	}
 
 

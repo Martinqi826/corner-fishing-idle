@@ -65,6 +65,9 @@ func _run() -> void:
 	print("=== 陈列/装饰系统 ===")
 	await _check_decor()
 
+	print("=== 稀有变体系统 ===")
+	await _check_variants()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -896,6 +899,70 @@ func _check_decor() -> void:
 	await process_frame
 	DirAccess.remove_absolute(path)
 	print("  陈列：上架/取下/加成封顶/成就/存档 v9 往返 通过")
+
+
+func _check_variants() -> void:
+	_assert(FishData.VARIANT_NAMES.size() == 4 and FishData.VARIANT_MULTS.size() == 4, "变体应 4 档")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var vc := {0: 0, 1: 0, 2: 0, 3: 0}
+	for i in 50000:
+		vc[FishData.roll_variant(rng)] += 1
+	print("  变体分布(5万)：%s" % str(vc))
+	_assert(vc[0] > vc[1] and vc[1] > vc[2] and vc[2] > vc[3], "变体越华丽越稀有")
+	_assert(vc[3] > 0, "5 万次内应出七彩")
+	_assert(FishData.VARIANT_MULTS[3] > FishData.VARIANT_MULTS[1], "高变体价值倍率更高")
+	# roll_catch 带 var 字段，且会出现变体
+	var seen := false
+	for i in 20000:
+		var c := FishData.roll_catch(rng, 1)
+		_assert(c.has("var"), "roll_catch 应含 var")
+		if int(c["var"]) >= 1:
+			seen = true
+	_assert(seen, "2 万次 roll_catch 应出现稀有变体")
+	# dex vmask 记录 + 成就
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.dex.clear()
+	g._dex_record("carp", 1.0, false, false, 2)
+	_assert(int(g.dex["carp"]["vmask"]) == (1 << 2), "应记录鎏金变体位")
+	g._dex_record("carp", 1.0, false, false, 1)
+	_assert(int(g.dex["carp"]["vmask"]) == ((1 << 2) | (1 << 1)), "应累积变体位（不覆盖）")
+	g.best_variant = 3
+	g._check_achievements()
+	_assert(g.achievements_done.has("first_variant") and g.achievements_done.has("rainbow"),
+		"变体成就应解锁")
+	g.queue_free()
+	await process_frame
+	# 存档 v10 往返：渔获 var / dex vmask / best_variant
+	var path := ProjectSettings.globalize_path(TEST_SAVE)
+	if FileAccess.file_exists(TEST_SAVE):
+		DirAccess.remove_absolute(path)
+	var g1: Node = load("res://main.tscn").instantiate()
+	g1.save_enabled = true
+	g1.save_path = TEST_SAVE
+	root.add_child(g1)
+	await process_frame
+	g1.inventory = [{"id": "koi", "w": 3.0, "v": 900, "q": 1, "lock": false, "var": 3}]
+	g1.dex = {"koi": {"n": 2, "w": 3.0, "big": false, "perf": false, "vmask": (1 << 3)}}
+	g1.best_variant = 3
+	g1._save()
+	g1.queue_free()
+	await process_frame
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(int(g2.inventory[0].get("var", 0)) == 3, "v10 应恢复渔获变体")
+	_assert(int(g2.dex["koi"].get("vmask", 0)) == (1 << 3), "v10 应恢复 dex 变体掩码")
+	_assert(g2.best_variant == 3, "v10 应恢复 best_variant")
+	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
+	print("  稀有变体：分布/抬价/dex掩码累积/成就/存档 v10 往返 通过")
 
 
 func _check_save_robust() -> void:

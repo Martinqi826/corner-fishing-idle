@@ -46,6 +46,7 @@ var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
 var dex := {}  # id -> {"n": 累计捕获数, "w": 最大体重纪录}（图鉴纪录轴）
 var best_quality := 0      # 历史最高星级（成就用）
+var best_variant := 0      # 历史最高稀有变体（成就用：斑斓/鎏金/七彩）
 var caught_giant := false  # 是否钓到过「巨物」（成就用）
 var achievements_done := {}  # id -> true，已达成的成就（toast 只触发一次）
 
@@ -265,9 +266,10 @@ func _begin_bite() -> void:
 
 ## 更新图鉴纪录（捕获数 +1、最大体重取大、巨物/完美徽章）。返回是否打破"既有"纪录：
 ## 该鱼种此前已钓 ≥5 条且新体重超过旧纪录才算（避免前期每条都播报）。
-func _dex_record(id: String, w: float, is_big := false, is_perfect := false) -> bool:
+func _dex_record(id: String, w: float, is_big := false, is_perfect := false, variant := 0) -> bool:
+	var vbit := (1 << variant) if variant > 0 else 0  # 记录见过的稀有变体（位掩码）
 	if not dex.has(id):
-		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect}
+		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect, "vmask": vbit}
 		return false
 	var r: Dictionary = dex[id]
 	var broke: bool = int(r["n"]) >= 5 and w > float(r["w"])
@@ -277,6 +279,7 @@ func _dex_record(id: String, w: float, is_big := false, is_perfect := false) -> 
 		r["big"] = true
 	if is_perfect:
 		r["perf"] = true
+	r["vmask"] = int(r.get("vmask", 0)) | vbit
 	return broke
 
 
@@ -318,20 +321,26 @@ func _do_catch() -> void:
 	var c := _roll_one(luck)
 	var tier := FishData.tier_of(c["id"])
 	var q := int(c.get("q", 0))
-	var fname := FishData.quality_label(q) + FishData.size_tag(c["id"], c["w"]) \
+	var vr := int(c.get("var", 0))
+	var fname := FishData.variant_label(vr) + FishData.quality_label(q) + FishData.size_tag(c["id"], c["w"]) \
 		+ FishData.display_name(c["id"])
 	inventory.append(c)
 	lifetime_catches += 1
 	best_quality = maxi(best_quality, q)
+	best_variant = maxi(best_variant, vr)
 	var is_big := FishData.size_tag(c["id"], c["w"]) == "巨物·"
 	if is_big:
 		caught_giant = true
-	var broke_record := _dex_record(c["id"], float(c["w"]), is_big, q >= 3)
+	var broke_record := _dex_record(c["id"], float(c["w"]), is_big, q >= 3, vr)
 	var col: Color = FishData.TIER_COLORS[tier]
-	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2) else "catch_common")
-	_popup("%s %.2fkg" % [fname, c["w"]], painter.position + painter.bobber_pos() + Vector2(-22, -8), col)
+	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2 or vr >= 1) else "catch_common")
+	_popup("%s %.2fkg" % [fname, c["w"]], painter.position + painter.bobber_pos() + Vector2(-22, -8),
+		FishData.variant_color(vr) if vr >= 1 else col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
-	if broke_record:
+	if vr >= 1:
+		_toast("✨ 变体！%s%s（%.2fkg，%d 金币）" % [FishData.variant_label(vr),
+			FishData.display_name(c["id"]), c["w"], c["v"]], 2.8, FishData.variant_color(vr))
+	elif broke_record:
 		_toast("破纪录！%s %.2fkg，刷新个人最大" % [FishData.display_name(c["id"]), c["w"]],
 			2.6, Color(0.95, 0.82, 0.45))
 	elif tier >= 3 or q >= 2:
@@ -343,7 +352,7 @@ func _do_catch() -> void:
 		var have := mini(_daily_order_indices().size(), need)
 		_toast("订单进度：%s %d/%d" % [_order_short(), have, need],
 			2.0, Color(0.96, 0.78, 0.38))
-	if tier >= 4 or q >= 3:
+	if tier >= 4 or q >= 3 or vr >= 2:
 		_flash()
 	# 鱼钩双钩：一定几率再上一条（受背包剩余格数限制）
 	if hook_level > 0 and not _bag_full() \
@@ -352,10 +361,11 @@ func _do_catch() -> void:
 		inventory.append(c2)
 		lifetime_catches += 1
 		best_quality = maxi(best_quality, int(c2.get("q", 0)))
+		best_variant = maxi(best_variant, int(c2.get("var", 0)))
 		var ib2 := FishData.size_tag(c2["id"], c2["w"]) == "巨物·"
 		if ib2:
 			caught_giant = true
-		_dex_record(c2["id"], float(c2["w"]), ib2, int(c2.get("q", 0)) >= 3)
+		_dex_record(c2["id"], float(c2["w"]), ib2, int(c2.get("q", 0)) >= 3, int(c2.get("var", 0)))
 		_popup("双钩 +%s" % FishData.display_name(c2["id"]),
 			painter.position + painter.bobber_pos() + Vector2(24, -22), Color(0.62, 0.86, 0.74))
 		Audio.play_sfx("catch_common")
@@ -1008,6 +1018,7 @@ func _ach_done(a: Dictionary) -> bool:
 		"hook": return hook_level >= int(a["n"])
 		"maxweight": return _dex_max_weight() >= float(a["n"])
 		"display": return display.size() >= int(a["n"])
+		"variant": return best_variant >= int(a["n"])
 	return false
 
 
@@ -1169,18 +1180,19 @@ func _offline_catch(elapsed: float) -> int:
 	var top: Dictionary = {}
 	var notable: Array = []
 	for i in n:
-		var c := FishData.roll_catch(rng, rod_level, bait_level, 0, _spot_pool())
+		var c := _roll_one(0)  # 离线也按当前钓点鱼池 + 钓点增值，含稀有变体
 		inventory.append(c)
 		var ib := FishData.size_tag(c["id"], c["w"]) == "巨物·"
-		_dex_record(c["id"], float(c["w"]), ib, int(c.get("q", 0)) >= 3)
+		_dex_record(c["id"], float(c["w"]), ib, int(c.get("q", 0)) >= 3, int(c.get("var", 0)))
 		lifetime_catches += 1
 		best_quality = maxi(best_quality, int(c.get("q", 0)))
+		best_variant = maxi(best_variant, int(c.get("var", 0)))
 		if ib:
 			caught_giant = true
 		total_v += int(c["v"])
 		if top.is_empty() or int(c["v"]) > int(top["v"]):
 			top = c
-		if FishData.tier_of(c["id"]) >= 3 or int(c.get("q", 0)) >= 2:
+		if FishData.tier_of(c["id"]) >= 3 or int(c.get("q", 0)) >= 2 or int(c.get("var", 0)) >= 1:
 			notable.append(c)
 	if n > 0:
 		_offline_report = {"count": n, "value": total_v, "top": top, "notable": notable}
