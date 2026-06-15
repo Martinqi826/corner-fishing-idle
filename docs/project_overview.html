@@ -329,10 +329,10 @@
     <section id="overview">
       <h2>项目总览</h2>
       <div class="stats">
-        <div class="stat"><strong>60</strong><span>正式鱼种，覆盖 6 个稀有度档位、8 类生态标签。</span></div>
+        <div class="stat"><strong>60</strong><span>正式鱼种 × 4 稀有变体 = 180 格变体收集；6 品阶、8 类生态标签。</span></div>
         <div class="stat"><strong>3</strong><span>可玩钓点（河湾 / 静水湖泊 / 海岸码头），按渔获解锁。</span></div>
         <div class="stat"><strong>7</strong><span>随机事件，数据驱动、低干扰、按钓点触发。</span></div>
-        <div class="stat"><strong>25</strong><span>成就目标，覆盖捕获、财富、图鉴、品相、装备与陈列。</span></div>
+        <div class="stat"><strong>27</strong><span>成就目标，覆盖捕获、财富、图鉴、品相、装备、陈列与变体。</span></div>
       </div>
       <div class="two" style="margin-top:14px">
         <div class="card">
@@ -363,7 +363,7 @@
         </div>
         <div class="card">
           <h3>图鉴</h3>
-          <p>按稀有度展示 60 种鱼。已发现鱼记录捕获次数、最大体重，并解锁长期徽章：集齐 10 条、巨物、完美★★★。未发现鱼保持隐藏剪影；缺专属图标时回退按品阶通用鱼图标。</p>
+          <p>按稀有度展示 60 种鱼。已发现鱼记录捕获次数、最大体重，并解锁长期徽章：集齐 10 条、巨物、完美★★★。<b>稀有变体</b>（斑斓/鎏金/七彩，6%/1.2%/0.2%，价值 ×2/5/12）按种记录，60×3=180 格收集轴。未发现鱼保持隐藏剪影；缺图标回退按品阶通用鱼图标。</p>
         </div>
         <div class="card">
           <h3>每日订单</h3>
@@ -611,8 +611,8 @@
           <p>`fish_data.gd`（60 鱼/生态标签/按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`achievements.gd`（成就）均为 `class_name` 纯数据，逻辑与数据解耦，便于扩展。</p>
         </div>
         <div class="card">
-          <h3>存档（v9）</h3>
-          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置；v8 新增 current_spot / unlocked_spots / seen_spots / active_event，v9 新增 display（陈列架）。旧档逐版兼容迁移，默认落点 river_bend、陈列默认空。</p>
+          <h3>存档（v10）</h3>
+          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置；v8 多钓点、v9 陈列架、v10 稀有变体（inv/dex var/vmask + best_var）。旧档逐版兼容迁移，默认落点 river_bend、陈列空、变体普通。</p>
         </div>
         <div class="card">
           <h3>验证工具</h3>
