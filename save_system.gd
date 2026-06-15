@@ -4,6 +4,7 @@ class_name SaveSystem
 ## 存档结构升级历史：v1 id列表→图鉴纪录轴；inv 三→四→五元组；dex 2→4元组徽章；
 ## daily_order 补 kind/tier/minw；新增 hook/weekly/day_stat/best_q/giant/ach/seen_intro/focus/win_pos；
 ## v8 多钓点：spot(当前钓点)/unlocked(已解锁)/seen(已造访)/event(在场 buff)，旧档默认 river_bend。
+## v9 陈列：display(陈列架上的鱼，最多 Decor.NUM_SLOTS)，旧档默认空。
 
 const OFFLINE_CAP := 8.0 * 3600.0
 
@@ -14,14 +15,19 @@ static func collect(g) -> Dictionary:
 	for c in g.inventory:
 		inv.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0])
+	var disp: Array = []
+	for c in g.display:
+		disp.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
+			1 if bool(c.get("lock", false)) else 0])
 	var data := {
-		"ver": 8,
+		"ver": 9,
 		"coins": g.coins,
 		"rod_level": g.rod_level,
 		"bag_level": g.bag_level,
 		"bait": g.bait_level,
 		"hook": g.hook_level,
 		"inv": inv,
+		"display": disp,
 		"lt_coins": g.lifetime_coins,
 		"lt_catches": g.lifetime_catches,
 		"dex": dex_to_save(g),
@@ -96,6 +102,13 @@ static func apply(g, data: Dictionary) -> void:
 			g.inventory.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
 				"q": int(e[3]) if e.size() >= 4 else 0,    # v2 三元组 → 无星级
 				"lock": e.size() >= 5 and int(e[4]) == 1}) # v3 及更早 → 未锁定
+	g.display = []                            # v9 陈列架；v8 及更早无 → 空
+	# 防御性上限 8（玩法层实际封顶 Decor.NUM_SLOTS=5；此处避免引入 SaveSystem→Decor 依赖环）
+	for e in data.get("display", []):
+		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])) and g.display.size() < 8:
+			g.display.append({"id": str(e[0]), "w": float(e[1]), "v": int(e[2]),
+				"q": int(e[3]) if e.size() >= 4 else 0,
+				"lock": e.size() >= 5 and int(e[4]) == 1})
 	g.lifetime_coins = int(data.get("lt_coins", 0))
 	g.lifetime_catches = int(data.get("lt_catches", 0))
 	g.best_quality = int(data.get("best_q", 0))

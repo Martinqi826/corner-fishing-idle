@@ -27,4 +27,7 @@ const LIST := [
 	{"id": "bag_max", "name": "巨型鱼篓", "desc": "鱼篓扩到 55 格", "kind": "bag", "n": 8, "reward": 0},
 	{"id": "whopper", "name": "大鱼出水", "desc": "钓到一条 ≥10kg 的鱼", "kind": "maxweight", "n": 10, "reward": 2000},
 	{"id": "leviathan", "name": "深渊巨怪", "desc": "钓到一条 ≥100kg 的鱼", "kind": "maxweight", "n": 100, "reward": 8000},
+	# —— 陈列/装饰（健康非数值长线）——
+	{"id": "first_display", "name": "初次陈列", "desc": "把一条鱼摆上陈列架", "kind": "display", "n": 1, "reward": 200},
+	{"id": "display_full", "name": "满架珍藏", "desc": "陈列架摆满 5 件", "kind": "display", "n": 5, "reward": 1500},
 ]

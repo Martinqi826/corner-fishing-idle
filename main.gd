@@ -41,6 +41,7 @@ var bag_level := 1
 var bait_level := 0  # FishData.BAITS 下标，金币永久升级
 var hook_level := 0  # FishData.HOOKS 下标，决定双钩几率
 var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占一格
+var display: Array = []     # 陈列架上的鱼（离开鱼篓、永久展示），最多 Decor.NUM_SLOTS 件
 var lifetime_coins := 0    # 累计卖鱼所得
 var lifetime_catches := 0
 var dex := {}  # id -> {"n": 累计捕获数, "w": 最大体重纪录}（图鉴纪录轴）
@@ -829,10 +830,20 @@ func _toggle_lock(idx: int) -> void:
 
 
 # 流动鱼贩在场时卖价 ×1.5（向上取整）。
+# 音频薄壳：供早解析的全局类（如 Decor）经 g 调用，避开它们直接引用 Audio 自动加载。
+func _play_sfx(n: String) -> void:
+	Audio.play_sfx(n)
+
+
+func _play_ui(n: String) -> void:
+	Audio.play_ui(n)
+
+
 func _sell_value(c: Dictionary) -> int:
+	var v := float(c["v"]) * (1.0 + Decor.value_bonus(self))  # 陈列加成（封顶 +5%）
 	if _merchant_active:
-		return int(ceil(float(c["v"]) * MERCHANT_MULT))
-	return int(c["v"])
+		v *= MERCHANT_MULT
+	return int(ceil(v))
 
 
 func _sell_one(idx: int) -> void:
@@ -996,6 +1007,7 @@ func _ach_done(a: Dictionary) -> bool:
 		"bait": return bait_level >= int(a["n"])
 		"hook": return hook_level >= int(a["n"])
 		"maxweight": return _dex_max_weight() >= float(a["n"])
+		"display": return display.size() >= int(a["n"])
 	return false
 
 

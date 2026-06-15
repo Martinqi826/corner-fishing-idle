@@ -62,6 +62,9 @@ func _run() -> void:
 	print("=== 多钓点：切换 / 鱼池 / 解锁 ===")
 	await _check_spots()
 
+	print("=== 陈列/装饰系统 ===")
+	await _check_decor()
+
 	print("=== 存档 v2 往返 ===")
 	await _check_save_v2()
 
@@ -833,6 +836,66 @@ func _check_save_v8() -> void:
 	g3.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
+
+
+func _check_decor() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.inventory = [
+		{"id": "koi", "w": 3.0, "v": 300, "q": 0},
+		{"id": "carp", "w": 1.0, "v": 20, "q": 0},
+	]
+	g.display = []
+	_assert(g._sell_value(g.inventory[0]) == 300, "无陈列时卖价应无加成")
+	Decor.add_from_inventory(g, 0)
+	_assert(g.display.size() == 1 and g.inventory.size() == 1, "上架应从鱼篓移入陈列")
+	_assert(str(g.display[0]["id"]) == "koi", "陈列的应是 koi")
+	_assert(g.achievements_done.has("first_display"), "首次陈列应解锁成就")
+	_assert(absf(Decor.value_bonus(g) - 0.01) < 0.0001, "1 件陈列应 +1%%")
+	_assert(g._sell_value({"id": "carp", "w": 1.0, "v": 100, "q": 0}) == int(ceil(100 * 1.01)),
+		"陈列加成应计入卖价")
+	Decor.remove_to_inventory(g, 0)
+	_assert(g.display.is_empty() and g.inventory.size() == 2, "取下应放回鱼篓")
+	# 满架 + 封顶 + 成就 + 拒绝超额
+	g.inventory = []
+	for i in 8:
+		g.inventory.append({"id": "crucian", "w": 0.4, "v": 5, "q": 0})
+	for i in Decor.NUM_SLOTS:
+		Decor.add_from_inventory(g, 0)
+	_assert(g.display.size() == Decor.NUM_SLOTS, "应摆满 %d 件" % Decor.NUM_SLOTS)
+	_assert(g.achievements_done.has("display_full"), "满架应解锁成就")
+	var before: int = g.inventory.size()
+	Decor.add_from_inventory(g, 0)
+	_assert(g.display.size() == Decor.NUM_SLOTS and g.inventory.size() == before, "满架不应再上架")
+	_assert(absf(Decor.value_bonus(g) - 0.05) < 0.0001, "5 件应封顶 +5%%")
+	g.queue_free()
+	await process_frame
+	# 存档 v9 往返：display 应完整恢复
+	var path := ProjectSettings.globalize_path(TEST_SAVE)
+	if FileAccess.file_exists(TEST_SAVE):
+		DirAccess.remove_absolute(path)
+	var g1: Node = load("res://main.tscn").instantiate()
+	g1.save_enabled = true
+	g1.save_path = TEST_SAVE
+	root.add_child(g1)
+	await process_frame
+	g1.display = [{"id": "kaluga", "w": 80.0, "v": 9000, "q": 2, "lock": false}]
+	g1._save()
+	g1.queue_free()
+	await process_frame
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(g2.display.size() == 1 and str(g2.display[0]["id"]) == "kaluga",
+		"v9 应恢复陈列架内容")
+	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
+	print("  陈列：上架/取下/加成封顶/成就/存档 v9 往返 通过")
 
 
 func _check_save_robust() -> void:

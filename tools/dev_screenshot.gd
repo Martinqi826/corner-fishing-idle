@@ -56,6 +56,15 @@ func _run() -> void:
 	_main._open_panel("catch")
 	await _settle(2)
 	_snap("panel_spot.png")
+	# 陈列页：先钓几条并陈列一条，展示陈列架 + 上架列表
+	for i in 4:
+		_main._do_catch()
+	if not _main.inventory.is_empty():
+		Decor.add_from_inventory(_main, 0)
+	_main._catch_tab = 6
+	_main._open_panel("catch")
+	await _settle(2)
+	_snap("panel_decor.png")
 	_main._close_panel()
 	_main._switch_spot("still_lake")
 	_main._fire_event("morning_fog")  # 让 HUD 角标显示「静水湖泊 · 晨雾」
