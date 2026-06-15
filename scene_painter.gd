@@ -40,6 +40,13 @@ var dip := 0.0
 var use_composite := false
 var _base: Texture2D
 var _spot_base: Texture2D = null   # 当前钓点底图（缺图回退到 _base，不崩）
+var _fisher: Texture2D             # 独立渔夫精灵：干净 spot 底图上叠加（river 底图自带烤死渔夫）
+
+# 干净 spot 上渔夫的落座点（art 空间，脚底中心）与缩放、是否水平翻转。
+# river 底图自带渔夫不走这条路；spot 缺渔夫由此精灵补上。
+const FISHER_SCALE := 0.30   # 匹配 river 烤进底图的渔夫尺寸（精灵原 192px → ~58px），切钓点不忽大
+var fisher_anchor := Vector2(430, 300)
+var fisher_flip := false
 var phase_tint := Color(0, 0, 0, 0)  # 昼夜时段染色（A=0 不染色），main 经 set_phase_tint 设置
 var _water_overlay: Texture2D     # 旧版波光叠层（无新版帧动画时的回退）
 var _bobber_idle: Texture2D
@@ -81,6 +88,7 @@ func _ready() -> void:
 	_water_overlay = _tex("res://assets/art/background/water_highlight_overlay.png")
 	_bobber_idle = _tex("res://assets/art/props/bobber_idle.png")
 	_bobber_bite = _tex("res://assets/art/props/bobber_bite.png")
+	_fisher = _tex("res://assets/art/character/fisher_idle.png")
 	use_composite = _base != null
 	# 动态效果层
 	_shimmer_tex = _frames("res://assets/art/effects/water/water_shimmer_%02d.png", 6)
@@ -265,6 +273,24 @@ func set_spot(bg_key: String) -> void:
 	queue_redraw()
 
 
+## 当前是否用干净 spot 底图（渔夫/按钮需由代码补上）；river 回退 _base 时为 false。
+func uses_clean_bg() -> bool:
+	return _spot_base != null
+
+
+## 干净 spot 底图上叠加独立渔夫精灵（脚底中心对齐 fisher_anchor，可水平翻转）。
+func _draw_fisher() -> void:
+	if _fisher == null:
+		return
+	var sz := Vector2(_fisher.get_size()) * FISHER_SCALE
+	var topleft := fisher_anchor - Vector2(sz.x * 0.5, sz.y)
+	if fisher_flip:
+		draw_set_transform(Vector2(fisher_anchor.x * 2.0, 0.0), 0.0, Vector2(-1.0, 1.0))
+	draw_texture_rect(_fisher, Rect2(topleft, sz), false)
+	if fisher_flip:
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 ## 昼夜时段染色（main 在跨段时调用；A=0 即白昼不染色）。
 func set_phase_tint(c: Color) -> void:
 	phase_tint = c
@@ -280,6 +306,8 @@ func _draw_phase_tint() -> void:
 # —— 真实美术：主图 + 动态叠加层（图层顺序按 dynamic_art_plan.md）——
 func _draw_composite() -> void:
 	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
+	if _spot_base != null:
+		_draw_fisher()   # 干净 spot 底图缺渔夫，叠加独立精灵（river 底图自带，不走这里）
 	_draw_mist_layer()
 	_draw_shimmer_layer()
 	_draw_snow_layer()

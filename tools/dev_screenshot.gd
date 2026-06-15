@@ -26,7 +26,7 @@ func _run() -> void:
 	_main.coins = 1234
 	_main._update_hud()
 	_main._toast("传说！钓到 锦鲤（3.20kg）", 3.0, FishData.TIER_COLORS[4])
-	_main._popup("锦鲤 3.20kg", _main.painter.bobber_pos() + Vector2(-22, -8), FishData.TIER_COLORS[4])
+	_main._popup("锦鲤 3.20kg", _main.painter.position + _main.painter.bobber_pos() + Vector2(-22, -8), FishData.TIER_COLORS[4])
 	await _settle(2)
 	_snap("scene.png")
 

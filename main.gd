@@ -10,9 +10,9 @@ class_name CornerFishing
 
 # 窗口比美术画布(520x400)更大，多出的空间透明、留给弹出面板自由展开；
 # 场景靠 SCENE_OFF 偏移钉在窗口右下角（视觉上仍是角落小挂件）。
-const WIN := Vector2i(760, 560)
+const WIN := Vector2i(1040, 720)
 const ART := Vector2(520, 400)
-const SCENE_OFF := Vector2(240, 160)  # = WIN - ART，场景绘制/按钮/落水点统一加此偏移
+const SCENE_OFF := Vector2(520, 320)  # = WIN - ART，场景绘制/按钮/落水点统一加此偏移
 
 # 可交互区（美术画布坐标，绘制时加 SCENE_OFF）：右下角可见场景 + 按钮；其余透明区穿透。
 const INTERACT_RECT := Rect2(160, 148, 360, 252)
@@ -119,10 +119,16 @@ func _ready() -> void:
 	_setup_theme()
 	painter.position = SCENE_OFF
 	if painter.material is ShaderMaterial:
-		(painter.material as ShaderMaterial).set_shader_parameter("center", Vector2(478, 388) + SCENE_OFF)
-	coins_label.position = SCENE_OFF + Vector2(22, 96)
-	# 钓点签 72 / 金币 96 / 订单 120 三行栈占到 ~138；toast 落到 150 清开，上鱼提示不再盖住订单行
-	toast_label.position = SCENE_OFF + Vector2(24, 150)
+		var fmat := painter.material as ShaderMaterial
+		fmat.set_shader_parameter("center", Vector2(478, 388) + SCENE_OFF)
+		# 深色桌面上明亮内容（如湖泊晨雾）在羽化边界会显出"硬切"。
+		# 用很长的渐变（core 低、半径大）让所有底图都柔和淡入桌面，跨钓点观感一致。
+		fmat.set_shader_parameter("radii", Vector2(560, 460))
+		fmat.set_shader_parameter("core", 0.20)
+	# HUD 贴住可见场景的左上角（窗口放大后，美术左侧被羽化淡掉，故 x 偏移到可见区起点）
+	coins_label.position = SCENE_OFF + Vector2(196, 150)
+	# 钓点签 126 / 金币 150 / 订单 174 三行栈占到 ~192；toast 落到 204 清开订单行
+	toast_label.position = SCENE_OFF + Vector2(198, 204)
 	toast_label.size = Vector2(440, 28)
 	_build_spot_chip()
 	_build_order_chip()
@@ -440,7 +446,7 @@ func _build_spot_chip() -> void:
 	spot_chip = Button.new()
 	spot_chip.flat = true
 	spot_chip.focus_mode = Control.FOCUS_NONE
-	spot_chip.position = SCENE_OFF + Vector2(22, 72)
+	spot_chip.position = SCENE_OFF + Vector2(196, 126)
 	spot_chip.add_theme_font_size_override("font_size", 14)
 	spot_chip.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	spot_chip.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
@@ -470,7 +476,7 @@ func _build_order_chip() -> void:
 	order_chip = Button.new()
 	order_chip.flat = true
 	order_chip.focus_mode = Control.FOCUS_NONE
-	order_chip.position = SCENE_OFF + Vector2(22, 120)
+	order_chip.position = SCENE_OFF + Vector2(196, 174)
 	order_chip.add_theme_font_size_override("font_size", 13)
 	order_chip.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 	order_chip.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
@@ -580,11 +586,46 @@ func _flash() -> void:
 
 # ============================ 按钮 / 面板 ============================
 
+var _spot_round_btns: Array = []   # 干净 spot 上显示的真实圆按钮（river 隐藏，用底图烤死的+命中区）
+
+
 func _build_buttons() -> void:
 	if painter.use_composite:
 		_build_hit_areas()
+		_build_spot_buttons()
+		_update_spot_buttons()
 	else:
 		_build_round_buttons()
+
+
+# 干净 spot 底图没有烤死的按钮，这里补一组金色圆按钮（呼应 river 的金按钮观感）。
+# river 用底图自带按钮 + 透明命中区，这组隐藏；切钓点时在 _apply_spot_visuals 里切显隐。
+func _build_spot_buttons() -> void:
+	for d in [["篓", "catch"], ["竿", "rod"], ["设", "set"]]:
+		var b := _round_button(d[0])
+		var gold := StyleBoxFlat.new()
+		gold.bg_color = Color(0.66, 0.49, 0.25, 0.95)
+		gold.set_corner_radius_all(16)
+		gold.set_border_width_all(1)
+		gold.border_color = Color(1.0, 0.87, 0.55, 0.5)
+		b.add_theme_stylebox_override("normal", gold)
+		var goldh := gold.duplicate() as StyleBoxFlat
+		goldh.bg_color = Color(0.78, 0.59, 0.31, 1.0)
+		b.add_theme_stylebox_override("hover", goldh)
+		b.add_theme_stylebox_override("pressed", goldh)
+		b.add_theme_color_override("font_color", Color(0.18, 0.15, 0.10))
+		b.position = (btn_centers[d[1]] as Vector2) + SCENE_OFF - Vector2(16, 16)
+		b.visible = false
+		b.pressed.connect(_toggle_panel.bind(d[1]))
+		ui_root.add_child(b)
+		_spot_round_btns.append(b)
+
+
+func _update_spot_buttons() -> void:
+	var clean: bool = painter.has_method("uses_clean_bg") and painter.uses_clean_bg()
+	for b in _spot_round_btns:
+		if is_instance_valid(b):
+			b.visible = clean
 
 
 ## 读取 ui_layout.json（若 Codex 提供），覆盖按钮中心与落水点。
@@ -1013,6 +1054,7 @@ func _switch_spot(id: String) -> void:
 
 func _apply_spot_visuals() -> void:
 	Spots.apply_visuals(self)
+	_update_spot_buttons()
 
 
 func _order_pool() -> Array:
