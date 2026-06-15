@@ -712,247 +712,86 @@ func _set_catch_tab(tab: int) -> void:
 
 # ============================ 每日订单 ============================
 
+## 订单/周目标/今日统计：薄壳委托 Orders（实现见 orders.gd，行为不变）。
 func _today_key() -> String:
-	var d := Time.get_date_dict_from_system()
-	return "%04d-%02d-%02d" % [int(d["year"]), int(d["month"]), int(d["day"])]
+	return Orders.today_key()
 
 
-## 维护当日起点快照（跨天自动重置）。用于统计页"今日渔获/收入"。
 func _ensure_day_stat() -> void:
-	var today := _today_key()
-	if str(day_stat.get("date", "")) != today:
-		day_stat = {"date": today, "catches": lifetime_catches, "coins": lifetime_coins}
+	Orders.ensure_day_stat(self)
 
 
 func _today_catches() -> int:
-	_ensure_day_stat()
-	return maxi(0, lifetime_catches - int(day_stat.get("catches", 0)))
+	return Orders.today_catches(self)
 
 
 func _today_income() -> int:
-	_ensure_day_stat()
-	return maxi(0, lifetime_coins - int(day_stat.get("coins", 0)))
+	return Orders.today_income(self)
 
 
 func _ensure_daily_order() -> void:
-	var today := _today_key()
-	if daily_order.has("date") and str(daily_order.get("date", "")) == today \
-			and FishData.FISH.has(str(daily_order.get("fish", ""))) \
-			and int(daily_order.get("need", 0)) > 0:
-		return
-	daily_order = _make_daily_order(today)
+	Orders.ensure_daily_order(self)
 
 
-# ============================ 周目标 ============================
-
-func _week_id() -> int:
-	return int(Time.get_unix_time_from_system() / 86400.0 / 7.0)
-
-
-func _ensure_weekly() -> void:
-	var wk := _week_id()
-	if weekly.has("week") and int(weekly.get("week", -1)) == wk \
-			and weekly.has("kind") and int(weekly.get("target", 0)) > 0:
-		return
-	weekly = _make_weekly(wk)
-
-
-func _make_weekly(wk: int) -> Dictionary:
-	var local := RandomNumberGenerator.new()
-	local.seed = int(abs(("week:%d" % wk).hash()))
-	var kind: String = "catches" if local.randi() % 2 == 0 else "coins"
-	var target := 0
-	var base := 0
-	if kind == "catches":
-		target = 120 + rod_level * 40
-		base = lifetime_catches
-	else:
-		target = 4000 + rod_level * 2500
-		base = lifetime_coins
-	return {"week": wk, "kind": kind, "target": target, "base": base,
-		"reward": 3000 + rod_level * 1500, "done": false}
-
-
-func _weekly_progress() -> int:
-	var cur := lifetime_catches if str(weekly.get("kind", "catches")) == "catches" else lifetime_coins
-	return maxi(0, cur - int(weekly.get("base", 0)))
-
-
-func _weekly_desc() -> String:
-	if str(weekly.get("kind", "catches")) == "catches":
-		return "本周累计钓到 %d 条鱼" % int(weekly.get("target", 0))
-	return "本周累计卖鱼赚 %d 金币" % int(weekly.get("target", 0))
-
-
-func _try_claim_weekly() -> void:
-	_ensure_weekly()
-	if bool(weekly.get("done", false)):
-		return
-	if _weekly_progress() < int(weekly.get("target", 0)):
-		Audio.play_ui("ui_error")
-		_toast("周目标还没达成", 1.6, Color(1.0, 0.5, 0.4))
-		return
-	var reward := int(weekly.get("reward", 0))
-	coins += reward
-	weekly["done"] = true
-	Audio.play_sfx("coin")
-	_toast("周目标达成：+%d 金币！" % reward, 3.0, Color(0.98, 0.82, 0.40))
-	_check_achievements()
-	_update_hud()
-	_refresh_panel()
-	_save()
-
-
-## 生成每日订单。kind ∈ species/tier/weight/perfect（perfect 需鱼饵≥2 才出，避免难以达成）。
-## fish 字段恒为一个有效鱼 id（作图标与 species 目标），保证旧存档守卫兼容。
 func _make_daily_order(date_key: String) -> Dictionary:
-	var local := RandomNumberGenerator.new()
-	local.seed = int(abs(("%s:%d" % [date_key, rod_level]).hash()))
-	var max_tier := clampi(1 + int(float(rod_level - 1) / 3.0), 1, 3)
-	# 候选鱼 = 所有已解锁钓点鱼池的并集（保证订单可在某已解锁钓点完成；多钓点感知）
-	var ids := _order_pool()
-	if ids.is_empty():
-		ids = FishData.FISH.keys()
-	var candidates: Array = []
-	for id in ids:
-		if FishData.tier_of(str(id)) <= max_tier:
-			candidates.append(str(id))
-	if candidates.is_empty():
-		candidates = ids
-	var fish_id: String = candidates[local.randi() % candidates.size()]
-	var kinds := ["species", "species", "species", "tier", "weight"]
-	if bait_level >= 2:
-		kinds.append("perfect")
-	var kind: String = kinds[local.randi() % kinds.size()]
-	var order := {"date": date_key, "kind": kind, "fish": fish_id, "done": false,
-		"need": 1, "tier": 1, "minw": 1.0}
-	match kind:
-		"tier":
-			var mt := local.randi_range(1, max_tier)
-			order["tier"] = mt
-			order["need"] = clampi(4 - mt, 1, 3)
-			order["fish"] = _rep_fish_of_tier(mt, local, ids)
-		"weight":
-			order["minw"] = [1.0, 2.0, 3.0][local.randi_range(0, 2)]
-			order["need"] = local.randi_range(1, 2)
-		"perfect":
-			order["need"] = 1
-		_:  # species
-			match FishData.tier_of(fish_id):
-				0: order["need"] = local.randi_range(3, 5)
-				1: order["need"] = local.randi_range(2, 3)
-				2: order["need"] = local.randi_range(1, 2)
-				_: order["need"] = 1
-	order["spot"] = _best_spot_for(str(order["fish"]))  # 建议钓点提示
-	return order
+	return Orders.make_daily_order(self, date_key)
 
 
-## 取某品阶的代表鱼 id（仅用于订单图标/建议）。pool 限定候选鱼范围。
 func _rep_fish_of_tier(t: int, local: RandomNumberGenerator, pool: Array = []) -> String:
-	var src: Array = pool if not pool.is_empty() else FishData.FISH.keys()
-	var bucket: Array = []
-	for id in src:
-		if FishData.tier_of(str(id)) == t:
-			bucket.append(str(id))
-	if bucket.is_empty():
-		return str(src[0]) if not src.is_empty() else str(FishData.FISH.keys()[0])
-	bucket.sort()
-	return str(bucket[local.randi() % bucket.size()])
+	return Orders.rep_fish_of_tier(t, local, pool)
 
 
-## 一条渔获是否满足当前订单（不含上锁判定）。
 func _order_matches(c: Dictionary) -> bool:
-	match str(daily_order.get("kind", "species")):
-		"tier":
-			return FishData.tier_of(str(c.get("id", ""))) >= int(daily_order.get("tier", 1))
-		"weight":
-			return float(c.get("w", 0.0)) >= float(daily_order.get("minw", 1.0))
-		"perfect":
-			return int(c.get("q", 0)) >= 3
-		_:
-			return str(c.get("id", "")) == str(daily_order.get("fish", ""))
+	return Orders.order_matches(self, c)
 
 
-## 订单一句话标题。
 func _order_title() -> String:
-	var need := int(daily_order.get("need", 1))
-	match str(daily_order.get("kind", "species")):
-		"tier":
-			return "收 %d 条 %s及以上" % [need, FishData.TIER_NAMES[int(daily_order.get("tier", 1))]]
-		"weight":
-			return "收 %d 条 ≥%.1fkg 的鱼" % [need, float(daily_order.get("minw", 1.0))]
-		"perfect":
-			return "收 %d 条 完美★★★渔获" % need
-		_:
-			return "收 %d 条 %s" % [need, FishData.display_name(str(daily_order.get("fish", "")))]
+	return Orders.order_title(self)
 
 
-## HUD 用的订单短标签。
 func _order_short() -> String:
-	match str(daily_order.get("kind", "species")):
-		"tier":
-			return "%s+" % FishData.TIER_NAMES[int(daily_order.get("tier", 1))]
-		"weight":
-			return "≥%.1fkg" % float(daily_order.get("minw", 1.0))
-		"perfect":
-			return "完美★"
-		_:
-			return FishData.display_name(str(daily_order.get("fish", "")))
+	return Orders.order_short(self)
 
 
 func _is_daily_order_target(id: String) -> bool:
-	_ensure_daily_order()
-	return not bool(daily_order.get("done", false)) and id == str(daily_order.get("fish", ""))
+	return Orders.is_daily_order_target(self, id)
 
 
 func _daily_order_indices() -> Array:
-	_ensure_daily_order()
-	var out: Array = []
-	for i in inventory.size():
-		var c: Dictionary = inventory[i]
-		if _order_matches(c) and not bool(c.get("lock", false)):
-			out.append(i)
-	out.sort_custom(func(a, b):
-		return int(inventory[int(a)]["v"]) > int(inventory[int(b)]["v"]))
-	return out
+	return Orders.daily_order_indices(self)
 
 
 func _daily_order_reward(indices: Array) -> int:
-	var need := int(daily_order.get("need", 0))
-	var total := 0
-	for i in mini(need, indices.size()):
-		total += int(inventory[int(indices[i])]["v"])
-	var mult := DAILY_ORDER_MULT
-	if _merchant_active:
-		mult *= MERCHANT_MULT  # 收鱼郎在场：订单结算再 ×1.5（黄金时刻）
-	return int(ceil(float(total) * mult))
+	return Orders.daily_order_reward(self, indices)
 
 
 func _try_complete_daily_order() -> void:
-	_ensure_daily_order()
-	if bool(daily_order.get("done", false)):
-		_toast("今日订单已经完成", 1.6, Color(0.76, 0.72, 0.64))
-		return
-	var need := int(daily_order.get("need", 0))
-	var indices := _daily_order_indices()
-	if indices.size() < need:
-		_toast("目标鱼还不够", 1.6, Color(1.0, 0.5, 0.4))
-		return
-	var reward := _daily_order_reward(indices)
-	var chosen := indices.slice(0, need)
-	chosen.sort_custom(func(a, b): return int(a) > int(b))
-	for idx in chosen:
-		inventory.remove_at(int(idx))
-	coins += reward
-	lifetime_coins += reward
-	daily_order["done"] = true
-	Audio.play_sfx("coin")
-	_toast("每日订单完成：+%d 金币%s" % [reward, "（收鱼郎×1.5）" if _merchant_active else ""],
-		2.6, Color(0.98, 0.82, 0.40))
-	_check_achievements()
-	_update_hud()
-	_refresh_panel()
-	_save()
+	Orders.try_complete_daily_order(self)
+
+
+func _week_id() -> int:
+	return Orders.week_id()
+
+
+func _ensure_weekly() -> void:
+	Orders.ensure_weekly(self)
+
+
+func _make_weekly(wk: int) -> Dictionary:
+	return Orders.make_weekly(self, wk)
+
+
+func _weekly_progress() -> int:
+	return Orders.weekly_progress(self)
+
+
+func _weekly_desc() -> String:
+	return Orders.weekly_desc(self)
+
+
+func _try_claim_weekly() -> void:
+	Orders.try_claim_weekly(self)
+
 
 
 ## 按当前排序返回背包显示用的真实索引序列。filter_order=true 时只保留符合当前订单的鱼
