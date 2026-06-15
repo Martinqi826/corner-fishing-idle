@@ -305,6 +305,7 @@
         <span class="chip">挂机放置</span>
         <span class="chip">多钓点生态</span>
         <span class="chip">随机事件</span>
+        <span class="chip">昼夜时段</span>
         <span class="chip">鱼类收集</span>
         <span class="chip">低干扰音频</span>
       </div>
@@ -376,6 +377,10 @@
         <div class="card">
           <h3>陈列 / 装饰</h3>
           <p>把心爱渔获摆上「陈列架」（5 槽，可取下），离开鱼篓永久展示；每件 +1% 全局卖价、封顶 +5%。最契合桌面摆件的健康非数值长线 + 收集深度，也是未来外观变现的落点。</p>
+        </div>
+        <div class="card">
+          <h3>昼夜时段</h3>
+          <p>按真实时钟流转 黎明 / 白昼 / 黄昏 / 夜晚——随你这一天自然变化。金色时段（晨昏）咬钩更勤、渔获略增值；夜晚静谧但偶有大物。场景随时段轻染色、HUD 显示，低干扰、零存档。</p>
         </div>
       </div>
       <div class="wide-asset" style="margin-top:14px">
@@ -608,7 +613,7 @@
         </div>
         <div class="card">
           <h3>数据</h3>
-          <p>`fish_data.gd`（60 鱼/生态标签/按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`achievements.gd`（成就）均为 `class_name` 纯数据，逻辑与数据解耦，便于扩展。</p>
+          <p>`fish_data.gd`（60 鱼/生态标签/变体/按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`weather.gd`（昼夜时段）、`decor.gd`（陈列）、`achievements.gd`（成就）均为 `class_name` 模块，逻辑与数据解耦，便于并行扩展。</p>
         </div>
         <div class="card">
           <h3>存档（v10）</h3>

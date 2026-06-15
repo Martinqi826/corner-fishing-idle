@@ -16,6 +16,8 @@
 | 5 | **新功能** 装饰/陈列系统：陈列架 5 槽 + 卖价加成（+1%/件，封顶 +5%）+ 存档 v9 + 陈列页签 + 2 成就 | decor.gd, ui_panels.gd, save_system.gd, achievements.gd | `51e2109` |
 | 6 | **文档** 白皮书 project_overview.html 同步陈列系统（v9 / 25 成就 / panel_decor 截图 / 看板） | docs/project_overview.html | `1e7bdd4` |
 | 7 | **新功能** 稀有变体系统（Chillquarium 式）：普通/斑斓/鎏金/七彩，价值 ×1/2/5/12，60×3=180 收集轴 + 存档 v10 + 2 成就（共 27） | fish_data.gd, main.gd, save_system.gd, ui_panels.gd, achievements.gd | `2fd16b7` |
+| 8 | **文档** README/白皮书同步稀有变体（v10/27 成就/180 格） | README.md, docs/project_overview.html | `a06c067` |
+| 9 | **新功能** 昼夜时段系统 weather.gd：黎明/白昼/黄昏/夜晚（按真实时钟），金色时段加成 + 场景染色 + HUD，零存档 | weather.gd, main.gd, spots.gd, scene_painter.gd | `88a4fa0` |
 
 ## 二、重构方式（行为零变化）
 
