@@ -62,8 +62,11 @@ func _run() -> void:
 	print("=== 多钓点：切换 / 鱼池 / 解锁 ===")
 	await _check_spots()
 
-	print("=== 陈列/装饰系统 ===")
+	print("=== 水族箱/陈列系统 ===")
 	await _check_decor()
+
+	print("=== 活水族箱（鱼缸游动）===")
+	await _check_aquarium()
 
 	print("=== 稀有变体系统 ===")
 	await _check_variants()
@@ -92,8 +95,17 @@ func _run() -> void:
 	print("=== 动态美术层 ===")
 	await _check_effects()
 
-	print("=== 专注模式 ===")
+	print("=== 专注模式（手动安静）===")
 	await _check_focus()
+
+	print("=== 专注奖励（离开有惊喜）===")
+	await _check_focus_reward()
+
+	print("=== 桌面宠物（小馋猫）===")
+	await _check_pet()
+
+	print("=== 存档 v11 往返 / v10→v11 迁移 ===")
+	await _check_save_v11()
 
 	print("=== 结果: %d 失败 ===" % failures)
 	quit(1 if failures > 0 else 0)
@@ -405,6 +417,7 @@ func _check_fish_run() -> void:
 	g.save_enabled = false
 	root.add_child(g)
 	await process_frame
+	g.day_phase = "day"  # 钉死白昼，剔除真实时钟带来的昼夜运气/等待修正干扰（同 _check_weather）
 	_assert(g.active_event == "", "起始无 buff 事件")
 	# 河湾事件池
 	var elig: Array = g._eligible_events()
@@ -493,6 +506,157 @@ func _check_focus() -> void:
 	print("  专注模式 通过")
 	g.queue_free()
 	await process_frame
+
+
+## 专注奖励：失焦累计达 25/50 分钟 → 下一竿强制升级；切回清零；每日封顶。
+func _check_focus_reward() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.focus_mode = true   # 顺便关掉宠物偷鱼，使升级断言确定（与专注奖励逻辑无关）
+	g.bag_level = 8
+	g.focus_reward_date = g._today_key()
+	g.focus_reward_today = 0
+	# 失焦 + 静默累计到 25 分钟阈值（喂一个超阈值的 delta）
+	g._window_focused = false
+	g._tick_focus(g.FOCUS_T1 + 1.0)
+	_assert(g.focus_pending >= 1, "失焦满 25 分钟应挂起专注奖励")
+	_assert(g.focus_reward_today == 1, "应计一次每日奖励")
+	_assert(g.focus_minutes_total >= 25.0, "应累计专注分钟，实际 %.1f" % g.focus_minutes_total)
+	# 下一竿强制升级（保底极品★★），并清空挂起
+	g.inventory = []
+	g._do_catch()
+	_assert(g.focus_pending == 0, "上钩后应消费掉专注奖励")
+	_assert(int(g.inventory.back()["q"]) >= 2,
+		"专注奖励应保底高星（q>=2），实际 %d" % int(g.inventory.back()["q"]))
+	# 切回窗口即清零当前这段（不可连刷）
+	g._window_focused = false
+	g._tick_focus(60.0)
+	_assert(g._focus_away_t > 0.0, "失焦应累计专注段")
+	g._notification(g.NOTIFICATION_APPLICATION_FOCUS_IN)
+	_assert(g._focus_away_t == 0.0, "切回窗口应清零当前专注段")
+	# 50 分钟档：保底鎏金变体（var>=2）
+	g._window_focused = false
+	g._focus_t1_done = true   # 直接验证 50 分钟档
+	g._tick_focus(g.FOCUS_T2 + 1.0)
+	_assert(g.focus_pending == 2, "失焦满 50 分钟应保底鎏金（pending=2），实际 %d" % g.focus_pending)
+	g.inventory = []
+	g._do_catch()
+	_assert(int(g.inventory.back().get("var", 0)) >= 2, "50 分钟奖励应保底鎏金变体（var>=2）")
+	# 每日封顶：达上限后不再发奖励
+	g.focus_reward_today = g.FOCUS_REWARD_DAILY_CAP
+	g._reset_focus_streak()
+	g._window_focused = false
+	g._tick_focus(g.FOCUS_T1 + 1.0)
+	_assert(g.focus_pending == 0, "达每日封顶后不应再发奖励")
+	# 成就：累计专注分钟达标
+	g.focus_minutes_total = 200.0
+	g._check_achievements()
+	_assert(g.achievements_done.has("flow_state"), "累计专注 ≥120 分钟应解锁心流时刻")
+	print("  专注奖励：25/50 分钟保底升级 / 切回清零 / 每日封顶 / 成就 通过")
+	g.queue_free()
+	await process_frame
+
+
+## 桌面宠物：只偷最廉价的可舍弃杂鱼，锁定/订单/贵鱼受保护。
+func _check_pet() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	# 谁都匹配不上的订单，排除订单保护干扰本用例
+	g.daily_order = {"date": g._today_key(), "kind": "weight", "fish": "carp", "tier": 1, "need": 1, "minw": 9999.0, "done": false}
+	g.display = []
+	g.pet_steals = 0
+	g.inventory = [
+		{"id": "koi", "w": 3.0, "v": 300, "q": 0, "lock": false},       # 贵，不偷
+		{"id": "crucian", "w": 0.4, "v": 5, "q": 0, "lock": true},      # 锁定，不偷
+		{"id": "whitebait", "w": 0.02, "v": 3, "q": 0, "lock": false},  # 最廉价 → 被偷
+		{"id": "carp", "w": 1.0, "v": 20, "q": 0, "lock": false},
+	]
+	var stolen: String = g._pet_steal_cheapest()
+	_assert(stolen == "whitebait", "应叼走最廉价的白条，实际 %s" % stolen)
+	_assert(g.pet_steals == 1, "偷鱼计数应 +1")
+	_assert(g.inventory.size() == 3, "应少一条")
+	for c in g.inventory:
+		_assert(str(c["id"]) != "whitebait", "白条应已被叼走")
+	# 全是贵鱼/锁定/订单 → 绝不偷
+	g.daily_order = {"date": g._today_key(), "kind": "species", "fish": "koi", "tier": 1, "need": 1, "minw": 1.0, "done": false}
+	g.inventory = [
+		{"id": "koi", "w": 3.0, "v": 300, "q": 0, "lock": false},   # 订单目标，保护
+		{"id": "kaluga", "w": 80.0, "v": 9000, "q": 0, "lock": true},
+	]
+	var none: String = g._pet_steal_cheapest()
+	_assert(none == "", "无可舍弃廉价鱼时不应偷")
+	_assert(g.inventory.size() == 2, "珍藏/订单鱼不应被动")
+	# 成就
+	g.pet_steals = 1
+	g._check_achievements()
+	_assert(g.achievements_done.has("cat_tax"), "被偷过应解锁猫税成就")
+	print("  桌面宠物：偷最廉价杂鱼 / 保护锁定与订单 / 成就 通过")
+	g.queue_free()
+	await process_frame
+
+
+## 存档 v11：dex 首捕日期 + 专注/宠物计数往返；v10→v11 无损迁移。
+func _check_save_v11() -> void:
+	var path := ProjectSettings.globalize_path(TEST_SAVE)
+	if FileAccess.file_exists(TEST_SAVE):
+		DirAccess.remove_absolute(path)
+	var g1: Node = load("res://main.tscn").instantiate()
+	g1.save_enabled = true
+	g1.save_path = TEST_SAVE
+	root.add_child(g1)
+	await process_frame
+	g1.dex = {"koi": {"n": 3, "w": 5.0, "big": true, "perf": false, "vmask": (1 << 2), "fd": "2026-06-15"}}
+	g1.display = [{"id": "koi", "w": 5.0, "v": 1600, "q": 1, "lock": false, "var": 2}]
+	g1.focus_minutes_total = 137.5
+	g1.focus_reward_today = 2
+	g1.focus_reward_date = g1._today_key()
+	g1.focus_pending = 1
+	g1.pet_steals = 4
+	g1._save()
+	g1.queue_free()
+	await process_frame
+	var g2: Node = load("res://main.tscn").instantiate()
+	g2.save_enabled = true
+	g2.save_path = TEST_SAVE
+	root.add_child(g2)
+	await process_frame
+	_assert(str(g2.dex["koi"].get("fd", "")) == "2026-06-15", "v11 应恢复 dex 首捕日期")
+	_assert(g2.display.size() == 1 and str(g2.display[0]["id"]) == "koi", "v11 应恢复缸内鱼")
+	_assert(absf(g2.focus_minutes_total - 137.5) < 0.01, "v11 应恢复累计专注分钟")
+	_assert(g2.focus_reward_today == 2 and g2.focus_pending == 1, "v11 应恢复专注奖励计数/挂起")
+	_assert(g2.pet_steals == 4, "v11 应恢复宠物偷鱼计数")
+	g2.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
+	# v10 → v11 迁移：旧档无 fd/专注/宠物 → 默认零、display(缸内鱼) 无损
+	var old := {
+		"ver": 10, "coins": 10, "rod_level": 1, "bag_level": 1, "bait": 0, "hook": 0,
+		"inv": [], "display": [["kaluga", 80.0, 9000, 2, 0, 3]],
+		"lt_coins": 0, "lt_catches": 5,
+		"dex": {"kaluga": [1, 80.0, 1, 0, (1 << 3)]},   # v10 五元组，无 fd
+		"opacity": 1.0, "ts": Time.get_unix_time_from_system() - 5.0,
+	}
+	var f := FileAccess.open(TEST_SAVE, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f = null
+	var g3: Node = load("res://main.tscn").instantiate()
+	g3.save_enabled = true
+	g3.save_path = TEST_SAVE
+	root.add_child(g3)
+	await process_frame
+	_assert(g3.display.size() == 1 and str(g3.display[0]["id"]) == "kaluga", "v10→v11 应无损保留缸内鱼")
+	_assert(str(g3.dex["kaluga"].get("fd", "x")) == "", "v10 dex 无 fd → 迁移默认空")
+	_assert(int(g3.dex["kaluga"].get("vmask", 0)) == (1 << 3), "v10→v11 应保留 dex 变体掩码")
+	_assert(g3.focus_minutes_total == 0.0 and g3.pet_steals == 0 and g3.focus_pending == 0,
+		"v10→v11 专注/宠物计数应默认零")
+	print("  存档 v11：dex首捕/专注/宠物 往返 + v10→v11 无损迁移 通过")
+	g3.queue_free()
+	await process_frame
+	DirAccess.remove_absolute(path)
 
 
 func _check_bag_sort() -> void:
@@ -878,12 +1042,12 @@ func _check_decor() -> void:
 		g.inventory.append({"id": "crucian", "w": 0.4, "v": 5, "q": 0})
 	for i in Decor.NUM_SLOTS:
 		Decor.add_from_inventory(g, 0)
-	_assert(g.display.size() == Decor.NUM_SLOTS, "应摆满 %d 件" % Decor.NUM_SLOTS)
-	_assert(g.achievements_done.has("display_full"), "满架应解锁成就")
+	_assert(g.display.size() == Decor.NUM_SLOTS, "应养满 %d 条" % Decor.NUM_SLOTS)
+	_assert(g.achievements_done.has("display_full"), "满缸应解锁成就")
 	var before: int = g.inventory.size()
 	Decor.add_from_inventory(g, 0)
-	_assert(g.display.size() == Decor.NUM_SLOTS and g.inventory.size() == before, "满架不应再上架")
-	_assert(absf(Decor.value_bonus(g) - 0.05) < 0.0001, "5 件应封顶 +5%%")
+	_assert(g.display.size() == Decor.NUM_SLOTS and g.inventory.size() == before, "满缸不应再放入")
+	_assert(absf(Decor.value_bonus(g) - 0.05) < 0.0001, "满缸应封顶 +5%%（观赏加成）")
 	g.queue_free()
 	await process_frame
 	# 存档 v9 往返：display 应完整恢复
@@ -909,7 +1073,38 @@ func _check_decor() -> void:
 	g2.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
-	print("  陈列：上架/取下/加成封顶/成就/存档 v9 往返 通过")
+	print("  水族箱：放入/捞回/加成封顶/成就/存档 v9 往返 通过")
+
+
+## 活水族箱：开缸视图、游鱼数量、后台上鱼不重建、捞回鱼篓。
+func _check_aquarium() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	g.display = [
+		{"id": "koi", "w": 3.0, "v": 900, "q": 1, "lock": false, "var": 3},
+		{"id": "carp", "w": 1.0, "v": 20, "q": 0, "lock": false, "var": 0},
+	]
+	g._catch_tab = g.TANK_TAB
+	g._open_panel("catch")
+	_assert(is_instance_valid(g._panel), "鱼缸页签应能打开")
+	var aq: Node = g._panel.find_child("Aquarium", true, false)
+	_assert(aq != null, "鱼缸页应含 Aquarium 视图")
+	_assert(aq != null and aq.swimmers.size() == 2,
+		"缸内应有 2 条游鱼，实际 %d" % (aq.swimmers.size() if aq != null else -1))
+	# 后台上鱼（_refresh_panel）不应重建鱼缸，否则游动会被打断
+	var same: Variant = g._panel
+	g._refresh_panel()
+	_assert(g._panel == same, "鱼缸页签时后台刷新不应重建面板")
+	if aq != null:
+		aq._process(0.2)  # 推进动画不应崩
+	# 捞回鱼篓：display 减少且会强制重建
+	Decor.remove_to_inventory(g, 0)
+	_assert(g.display.size() == 1, "捞回一条后缸内应剩 1，实际 %d" % g.display.size())
+	print("  活水族箱：开缸/游鱼数/后台不重建/捞回 通过")
+	g.queue_free()
+	await process_frame
 
 
 func _check_variants() -> void:
@@ -1244,7 +1439,17 @@ func _check_effects() -> void:
 	_assert(p._wild_tex.size() == 4, "小动物应 4 种，实际 %d" % p._wild_tex.size())
 	# 统一叠加层：渔夫/灯笼为独立精灵，灯笼光晕锚点跟随固定灯笼锚点（不再从底图扫描）
 	_assert(p._fisher != null, "渔夫精灵应加载")
+	_assert(p._fisher_pull.size() == 2, "渔夫收竿帧应 2 帧，实际 %d" % p._fisher_pull.size())
 	_assert(p._lantern_tex != null, "灯笼精灵应加载")
+	# 渔夫情绪 / 桌面宠物 API（Task 4）
+	p.fisher_cheer()
+	_assert(p.fisher_mood == "cheer", "高星上鱼应触发欢呼情绪")
+	p.set_fisher_context(true, true)
+	_assert(p.ctx_night and p.ctx_idle, "应接收昼夜/久坐上下文")
+	p.pet_react("paw")
+	_assert(p.pet_action == "paw", "上鱼应触发宠物扒拉动作")
+	p._tick_pet(2.0)
+	_assert(p.pet_action == "", "宠物动作应在时长结束后清除")
 	_assert(p._lantern == p.lantern_anchor + Vector2(0, -16),
 		"灯笼光晕锚点应跟随固定灯笼锚点，实际 %s" % str(p._lantern))
 	# 所有钓场底图都应为干净底图（渔夫/灯笼/钓线/按钮全代码叠加，无烤死特例）

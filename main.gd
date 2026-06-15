@@ -119,6 +119,29 @@ var daily_order := {}  # {"date": yyyy-mm-dd, "fish": id, "need": int, "done": b
 var weekly := {}  # {week:int, kind:"catches"/"coins", target, base, reward, done}
 var day_stat := {}  # {date, catches, coins} 当日起点快照，用于"今日渔获/收入"
 
+# —— 专注奖励（Task 5）：窗口失焦 + 无操作 = 你在别处忙，累计连续专注时长；
+# 达 25/50 分钟阈值 → 下一竿强制升级（保底高星 / 保底鎏金变体），给"一直开着"一个正向理由。
+# 与手动「专注/安静模式」(focus_mode) 是两回事：那是少打扰开关，这是离开时的惊喜渔获。
+const FOCUS_T1 := 25.0 * 60.0          # 25 分钟 → 保底极品★★
+const FOCUS_T2 := 50.0 * 60.0          # 50 分钟 → 再保底鎏金变体
+const FOCUS_REWARD_DAILY_CAP := 4      # 每日封顶，防刷
+var _window_focused := true            # 窗口是否聚焦（FOCUS_IN/OUT 通知维护）
+var _focus_away_t := 0.0               # 当前连续失焦累计秒（切回/操作即清零）
+var _focus_t1_done := false            # 本段是否已发 25 分钟奖励
+var _focus_t2_done := false            # 本段是否已发 50 分钟奖励
+var focus_pending := 0                 # 待兑奖励等级（0 无 / 1 高星 / 2 鎏金），下一竿消费
+var focus_minutes_total := 0.0         # 累计专注分钟（成就/统计）
+var focus_reward_today := 0            # 今日已发奖励次数（封顶）
+var focus_reward_date := ""            # 今日封顶计数对应日期
+var _idle_t := 0.0                     # 距上次操作的秒数（渔夫打盹 / 专注无操作判定）
+
+# —— 桌面宠物（Task 4）：渔夫旁的小馋猫，上鱼时偶尔扒拉，小概率叼走最廉价的一条当趣味事件 ——
+const PET_STEAL_CHANCE := 0.02         # 每次上鱼的偷鱼概率
+const PET_STEAL_MAX_VALUE := 30        # 只偷便宜杂鱼（卖价 ≤ 此值），珍藏绝不动
+var pet_steals := 0                    # 被叼走的鱼计数（成就/趣味）
+
+const TANK_TAB := 6                    # 鱼篓面板「鱼缸」页签下标（names 第 7 项）
+
 
 func _ready() -> void:
 	rng.randomize()
@@ -235,6 +258,16 @@ func _update_passthrough() -> void:
 	DisplayServer.window_set_mouse_passthrough(pts)
 
 
+# 任意操作刷新"无操作"计时；点击/按键还会清掉当前这段专注（你回来动手了）。
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton or event is InputEventKey:
+		if event.is_pressed():
+			_idle_t = 0.0
+			_reset_focus_streak()
+	elif event is InputEventMouseMotion:
+		_idle_t = 0.0
+
+
 # 拖动窗口：在场景空白处按住左键拖拽（按钮/面板会先消费事件，不会误触发）。
 func _unhandled_input(event: InputEvent) -> void:
 	if DisplayServer.get_name() == "headless":
@@ -263,6 +296,7 @@ func _process(delta: float) -> void:
 	_tick_merchant(delta)
 	_tick_events(delta)
 	_tick_phase()
+	_tick_focus(delta)
 	_state_t -= delta
 	match _state:
 		ST_WAIT:
@@ -314,7 +348,8 @@ func _begin_bite() -> void:
 func _dex_record(id: String, w: float, is_big := false, is_perfect := false, variant := 0) -> bool:
 	var vbit := (1 << variant) if variant > 0 else 0  # 记录见过的稀有变体（位掩码）
 	if not dex.has(id):
-		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect, "vmask": vbit}
+		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect, "vmask": vbit,
+			"fd": _today_key()}  # v11：首次捕获日期（水族箱纪录卡）
 		return false
 	var r: Dictionary = dex[id]
 	var broke: bool = int(r["n"]) >= 5 and w > float(r["w"])
@@ -365,6 +400,7 @@ func _do_catch() -> void:
 		return
 	var luck := _catch_luck()
 	var c := _roll_one(luck)
+	var focus_up := _apply_focus_reward(c)   # 专注奖励：把这一竿强制升级（保底高星/鎏金）
 	var tier := FishData.tier_of(c["id"])
 	var q := int(c.get("q", 0))
 	var vr := int(c.get("var", 0))
@@ -400,6 +436,9 @@ func _do_catch() -> void:
 			2.0, Color(0.96, 0.78, 0.38))
 	if tier >= 4 or q >= 3 or vr >= 2:
 		_flash()
+	# 渔夫性格：钓到高星/七彩，举手欢呼一下（Task 4）
+	if (q >= 2 or vr >= 3) and painter.has_method("fisher_cheer"):
+		painter.fisher_cheer()
 	# 鱼钩双钩：一定几率再上一条（受背包剩余格数限制）
 	if hook_level > 0 and not _bag_full() \
 			and rng.randf() < float(FishData.HOOKS[hook_level]["double"]):
@@ -417,9 +456,17 @@ func _do_catch() -> void:
 		Audio.play_sfx("catch_common")
 	if _bag_full():
 		_toast("鱼篓满了，先去卖鱼或扩容～", 3.0, Color(1.0, 0.75, 0.4))
+	_maybe_pet_steal()   # 桌面宠物：小概率叼走最廉价的一条（Task 4）
+	if painter.has_method("pet_react") and not focus_mode and rng.randf() < 0.3:
+		painter.pet_react("paw")  # 上鱼时偶尔扒拉一下鱼篓
 	_check_achievements()
 	_update_hud()
 	_refresh_panel()
+	if focus_up > 0:  # 专注奖励到手：用最醒目的 toast 收尾（最后调用者覆盖前面的飘字）
+		var rname := FishData.variant_label(int(c.get("var", 0))) + FishData.quality_label(int(c.get("q", 0))) \
+			+ FishData.display_name(str(c["id"]))
+		_toast("🎁 专注奖励到手：%s（%.2fkg，%d 金币）" % [rname, float(c["w"]), int(c["v"])],
+			4.0, Color(0.74, 0.86, 0.98))
 	_begin_wait()
 
 
@@ -569,10 +616,14 @@ func _update_order_chip() -> void:
 
 
 ## 面板开着时数据变了（上鱼/卖鱼/扩容），原地重建内容。
+## 例外：鱼缸页签开着时不因后台上鱼而重建——否则游动的鱼每几秒被重置。
+## 放入/捞出鱼等主动操作走 _rebuild_panel() 强制重建。
 func _refresh_panel() -> void:
-	if _panel_kind != "":
-		var kind := _panel_kind
-		_open_panel(kind)
+	if _panel_kind == "":
+		return
+	if _panel_kind == "catch" and _catch_tab == TANK_TAB:
+		return
+	_open_panel(_panel_kind)
 
 
 # 常驻 HUD 文字（金币行 / 钓点签 / 订单签）叠在水彩背景上，原先只设字色、
@@ -768,12 +819,16 @@ func _fish_icon(id: String, size := 42) -> TextureRect:
 	var tr := TextureRect.new()
 	tr.custom_minimum_size = Vector2(size, size)
 	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	tr.texture = _fish_texture(id)
+	return tr
+
+
+## 取鱼的贴图（专属图缺失则回退品阶通用图），供水族箱等需要裸 Texture2D 的地方复用。
+func _fish_texture(id: String) -> Texture2D:
 	var path := "res://assets/art/fish/%s.png" % id
 	if ResourceLoader.exists(path):
-		tr.texture = load(path) as Texture2D
-	else:
-		tr.texture = _generic_fish_texture(FishData.tier_of(id))
-	return tr
+		return load(path) as Texture2D
+	return _generic_fish_texture(FishData.tier_of(id))
 
 
 ## 按品阶的通用鱼图标：先找 Codex 通用图，缺则程序化生成（品阶色小鱼剪影），按品阶缓存。
@@ -1152,6 +1207,8 @@ func _ach_done(a: Dictionary) -> bool:
 		"maxweight": return _dex_max_weight() >= float(a["n"])
 		"display": return display.size() >= int(a["n"])
 		"variant": return best_variant >= int(a["n"])
+		"focus_minutes": return focus_minutes_total >= float(a["n"])
+		"pet_steals": return pet_steals >= int(a["n"])
 	return false
 
 
@@ -1265,6 +1322,124 @@ func _set_focus(on: bool) -> void:
 		painter.modulate.a = _opacity * 0.8
 
 
+# ============================ 专注奖励（Task 5）============================
+
+## 每帧推进专注/无操作计时；失焦累计连续专注，达阈值发奖励；并同步渔夫情绪上下文。
+func _tick_focus(delta: float) -> void:
+	if _window_focused:
+		_idle_t += delta            # 看着它发呆 → 渔夫会打盹
+	else:
+		_focus_away_t += delta      # 你在别处忙 → 累计专注
+		focus_minutes_total += delta / 60.0
+		_check_focus_thresholds()
+	_update_fisher_context()
+
+
+## 跨越 25/50 分钟阈值则发奖励（每段每档只发一次，且受每日封顶约束）。
+func _check_focus_thresholds() -> void:
+	_ensure_focus_day()
+	if focus_reward_today >= FOCUS_REWARD_DAILY_CAP:
+		return
+	if not _focus_t1_done and _focus_away_t >= FOCUS_T1:
+		_focus_t1_done = true
+		_grant_focus_reward(1)
+	if not _focus_t2_done and _focus_away_t >= FOCUS_T2 and focus_reward_today < FOCUS_REWARD_DAILY_CAP:
+		_focus_t2_done = true
+		_grant_focus_reward(2)
+
+
+func _grant_focus_reward(level: int) -> void:
+	focus_pending = maxi(focus_pending, level)
+	focus_reward_today += 1
+	var mins := 25 if level == 1 else 50
+	_toast("专注 %d 分钟，下一竿留了份惊喜给你 ✨" % mins, 4.0, Color(0.74, 0.86, 0.98))
+	_check_achievements()
+	_save()
+
+
+## 当前若有待兑专注奖励，就把这一竿强制升级（保底高星 / 50 分钟再保底鎏金）。返回消费的等级。
+func _apply_focus_reward(c: Dictionary) -> int:
+	if focus_pending <= 0:
+		return 0
+	var level := focus_pending
+	focus_pending = 0
+	var old_q := int(c.get("q", 0))
+	var old_v := int(c.get("var", 0))
+	var new_q := maxi(old_q, 2)                       # 保底极品★★
+	var new_var := maxi(old_v, 2) if level >= 2 else old_v  # 50 分钟再保底鎏金
+	var mult: float = FishData.QUALITY_MULTS[new_q] / FishData.QUALITY_MULTS[old_q] \
+		* FishData.VARIANT_MULTS[new_var] / FishData.VARIANT_MULTS[old_v]
+	c["q"] = new_q
+	c["var"] = new_var
+	c["v"] = maxi(1, int(round(float(c["v"]) * mult)))
+	_save()
+	return level
+
+
+func _ensure_focus_day() -> void:
+	var today := _today_key()
+	if focus_reward_date != today:
+		focus_reward_date = today
+		focus_reward_today = 0
+
+
+## 切回窗口 / 主动操作 → 当前这段专注清零（不清待兑奖励：已挣到的留着下一竿兑）。
+func _reset_focus_streak() -> void:
+	_focus_away_t = 0.0
+	_focus_t1_done = false
+	_focus_t2_done = false
+
+
+## 把昼夜/久未操作等上下文喂给绘制层，驱动渔夫情绪动画（Task 4）。
+func _update_fisher_context() -> void:
+	if painter.has_method("set_fisher_context"):
+		painter.set_fisher_context(day_phase == "night", _idle_t > 45.0 and _window_focused)
+
+
+# ============================ 桌面宠物（Task 4）============================
+
+## 上鱼后的趣味事件：小概率让宠物叼走鱼。安静模式不打扰。
+func _maybe_pet_steal() -> void:
+	if focus_mode:
+		return
+	if rng.randf() >= PET_STEAL_CHANCE:
+		return
+	var id := _pet_steal_cheapest()
+	if id != "" and painter.has_method("pet_react"):
+		painter.pet_react("steal")
+
+
+## 叼走鱼篓里最廉价且「可舍弃」（未上锁、非订单目标、卖价 ≤ 上限）的一条。返回鱼 id（没合适的返回 ""）。
+func _pet_steal_cheapest() -> String:
+	var worst := -1
+	var worst_v := 0
+	for i in inventory.size():
+		var f: Dictionary = inventory[i]
+		if bool(f.get("lock", false)) or _order_matches(f):
+			continue
+		var fv := _sell_value(f)
+		if worst == -1 or fv < worst_v:
+			worst = i
+			worst_v = fv
+	if worst < 0 or worst_v > PET_STEAL_MAX_VALUE:
+		return ""   # 没有可舍弃的廉价鱼 → 绝不动珍藏
+	var c: Dictionary = inventory[worst]
+	inventory.remove_at(worst)
+	pet_steals += 1
+	_toast("🐱 小馋猫叼走了一条%s当点心～" % FishData.display_name(str(c["id"])), 2.6, Color(0.95, 0.80, 0.5))
+	_check_achievements()
+	_update_hud()
+	_rebuild_panel()
+	_save()
+	return str(c["id"])
+
+
+## 从鱼篓/图鉴把鱼放进水族箱后用：强制重建面板（含会游动的水族箱视图）。
+func _rebuild_panel() -> void:
+	if _panel_kind != "":
+		_open_panel(_panel_kind)
+
+
 # ============================ 存档 / 离线 ============================
 
 func _save() -> void:
@@ -1349,8 +1524,11 @@ func _offline_catch(elapsed: float) -> int:
 	_offline_report["overflow_n"] = overflow
 	_offline_report["overflow_v"] = overflow_v
 	if stored > 0 or overflow > 0:
-		_offline_report = {"count": n, "value": total_v, "top": top, "notable": notable}
-	return n
+		_offline_report["count"] = stored          # 入篓条数（满篓溢出走 overflow_n/v）
+		_offline_report["value"] = total_v
+		_offline_report["top"] = top
+		_offline_report["notable"] = notable
+	return stored + overflow
 
 
 func _fmt_dur(sec: float) -> String:
@@ -1362,9 +1540,16 @@ func _fmt_dur(sec: float) -> String:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		_save()
-		get_tree().quit()
+	match what:
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			_save()
+			get_tree().quit()
+		NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			_window_focused = false   # 你切去别的程序 → 开始累计专注
+		NOTIFICATION_APPLICATION_FOCUS_IN, NOTIFICATION_WM_WINDOW_FOCUS_IN:
+			_window_focused = true    # 切回挂件 → 当前这段专注清零
+			_reset_focus_streak()
+			_idle_t = 0.0
 
 
 func _quit_game() -> void:

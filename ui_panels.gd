@@ -183,7 +183,7 @@ static func panel_drag_input(g: CornerFishing, event: InputEvent, panel: Control
 static func fill_bag_panel(g: CornerFishing, v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴", "订单", "成就", "统计", "钓点", "陈列"]
+	var names := ["背包", "图鉴", "订单", "成就", "统计", "钓点", "鱼缸"]
 	for i in range(names.size()):
 		var tb := Button.new()
 		tb.text = names[i]
@@ -228,6 +228,8 @@ static func fill_stats_tab(g: CornerFishing, v: VBoxContainer) -> void:
 		["最高品相", q_txt],
 		["最大渔获", biggest],
 		["巨物纪录", "已钓到" if g.caught_giant else "尚无"],
+		["累计专注", "%d 分钟" % int(g.focus_minutes_total)],
+		["猫税", "被叼走 %d 条" % g.pet_steals],
 		["鱼篓容量", "%d 格" % g._bag_capacity()],
 		["当前装备", "鱼竿 Lv.%d · %s · %s" % [
 			g.rod_level, FishData.BAITS[g.bait_level]["name"], FishData.HOOKS[g.hook_level]["name"]]],
@@ -357,28 +359,33 @@ static func spot_card(g: CornerFishing, sid: String) -> Control:
 	return panel
 
 
-# ============================ 陈列页 ============================
+# ============================ 鱼缸页（活水族箱）============================
 
 static func fill_decor_tab(g: CornerFishing, v: VBoxContainer) -> void:
 	var stat := Label.new()
-	stat.text = "陈列架 · %d/%d 件　卖价加成 +%d%%" % [
+	stat.text = "🐟 水族箱 · %d/%d 条　观赏卖价加成 +%d%%" % [
 		g.display.size(), Decor.NUM_SLOTS, int(round(Decor.value_bonus(g) * 100.0))]
 	stat.add_theme_color_override("font_color", Color(0.78, 0.74, 0.66))
 	v.add_child(stat)
-	# 陈列架：N 个槽位
-	var shelf := VBoxContainer.new()
-	shelf.add_theme_constant_override("separation", 5)
-	for slot in range(Decor.NUM_SLOTS):
-		shelf.add_child(decor_slot(g, slot))
-	v.add_child(shelf)
-	# 从鱼篓上架
-	var sep := HSeparator.new()
-	v.add_child(sep)
+	# 活水族箱视图：缸内鱼沿平滑路径游动，点鱼看纪录
+	var aq := Aquarium.new()
+	aq.name = "Aquarium"
+	aq.setup(g)
+	v.add_child(aq)
+	var tip := Label.new()
+	tip.text = "点缸里的鱼看它的纪录，也能把它捞回鱼篓。鎏金/七彩会发光。"
+	tip.add_theme_font_size_override("font_size", 12)
+	tip.add_theme_color_override("font_color", Color(0.70, 0.66, 0.58))
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip.custom_minimum_size = Vector2(440, 0)
+	v.add_child(tip)
+	v.add_child(HSeparator.new())
+	# 从鱼篓放入
 	var pick_lbl := Label.new()
 	if Decor.is_full(g):
-		pick_lbl.text = "陈列架已满，取下一件才能再上架。"
+		pick_lbl.text = "水族箱满了（%d 条），先捞回一条再放新的。" % Decor.NUM_SLOTS
 	else:
-		pick_lbl.text = "从鱼篓挑一条摆上架（离开鱼篓、永久展示，可再取下）："
+		pick_lbl.text = "从鱼篓挑一条放进缸（离开鱼篓、永久展示，可再捞回）："
 	pick_lbl.add_theme_font_size_override("font_size", 12)
 	pick_lbl.add_theme_color_override("font_color", Color(0.70, 0.66, 0.58))
 	pick_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -386,60 +393,17 @@ static func fill_decor_tab(g: CornerFishing, v: VBoxContainer) -> void:
 	v.add_child(pick_lbl)
 	if not Decor.is_full(g) and not g.inventory.is_empty():
 		var sc := ScrollContainer.new()
-		sc.custom_minimum_size = Vector2(0, 188)
+		sc.custom_minimum_size = Vector2(0, 144)
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		var list := VBoxContainer.new()
 		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		list.add_theme_constant_override("separation", 4)
-		# 价值降序，便于挑“最值得陈列”的
+		# 价值降序，便于挑“最值得养”的
 		var idxs := g._sorted_bag_indices(false)
 		for i in idxs:
 			list.add_child(decor_pick_row(g, g.inventory[i], i))
 		sc.add_child(list)
 		v.add_child(sc)
-
-
-static func decor_slot(g: CornerFishing, slot: int) -> Control:
-	var filled := slot < g.display.size()
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", paper_style(0.9) if filled else dark_row_style(0.4))
-	var margin := MarginContainer.new()
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 8 if side in ["left", "right"] else 5)
-	panel.add_child(margin)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	margin.add_child(row)
-	if not filled:
-		var empty := Label.new()
-		empty.text = "◇ 空位"
-		empty.add_theme_color_override("font_color", Color(0.6, 0.57, 0.5))
-		row.add_child(empty)
-		return panel
-	var c: Dictionary = g.display[slot]
-	var tier := FishData.tier_of(str(c["id"]))
-	row.add_child(g._fish_icon(str(c["id"]), 44))
-	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 0)
-	var nm := Label.new()
-	nm.text = "%s %s%s%s" % [FishData.TIER_NAMES[tier], FishData.size_tag(str(c["id"]), float(c["w"])),
-		FishData.display_name(str(c["id"])), "★".repeat(int(c.get("q", 0)))]
-	nm.add_theme_color_override("font_color", g._ui_tier_color(tier, true))
-	info.add_child(nm)
-	var meta := Label.new()
-	meta.text = "%.2fkg" % float(c["w"])
-	meta.add_theme_font_size_override("font_size", 12)
-	meta.add_theme_color_override("font_color", Color(0.5, 0.46, 0.4))
-	info.add_child(meta)
-	row.add_child(info)
-	var btn := Button.new()
-	btn.text = "取下"
-	btn.custom_minimum_size = Vector2(54, 30)
-	apply_button_skin(btn, false)
-	btn.pressed.connect(func() -> void: Decor.remove_to_inventory(g, slot))
-	row.add_child(btn)
-	return panel
 
 
 static func decor_pick_row(g: CornerFishing, c: Dictionary, idx: int) -> Control:
@@ -468,7 +432,7 @@ static func decor_pick_row(g: CornerFishing, c: Dictionary, idx: int) -> Control
 	meta.add_theme_color_override("font_color", Color(0.78, 0.68, 0.45))
 	row.add_child(meta)
 	var btn := Button.new()
-	btn.text = "上架"
+	btn.text = "放入"
 	btn.custom_minimum_size = Vector2(48, 28)
 	apply_button_skin(btn, true)
 	btn.pressed.connect(func() -> void: Decor.add_from_inventory(g, idx))
@@ -1263,6 +1227,15 @@ static func fill_offline_report(g: CornerFishing, v: VBoxContainer) -> void:
 	total.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	total.custom_minimum_size = Vector2(360, 0)
 	v.add_child(total)
+	var ov_n := int(rep.get("overflow_n", 0))
+	if ov_n > 0:
+		var ov := Label.new()
+		ov.text = "鱼篓装满后，另有 %d 条折价兑成 +%d 金币（已自动入账）" % [ov_n, int(rep.get("overflow_v", 0))]
+		ov.add_theme_font_size_override("font_size", 12)
+		ov.add_theme_color_override("font_color", Color(0.6, 0.52, 0.34))
+		ov.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ov.custom_minimum_size = Vector2(360, 0)
+		v.add_child(ov)
 	var notable: Array = rep.get("notable", [])
 	if not notable.is_empty():
 		var nlbl := Label.new()

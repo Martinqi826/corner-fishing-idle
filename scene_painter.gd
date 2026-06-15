@@ -84,6 +84,20 @@ var _wild_timer := 60.0
 var _lantern := LANTERN_POS
 var _prng := RandomNumberGenerator.new()
 
+# —— 渔夫情绪 / 桌面宠物（Task 4）：尽量零存档、瞬态，用变换驱动 ——
+var _fisher_pull: Array = []        # 收竿/上鱼姿势帧（咬钩时切换，给渔夫加动作）
+var fisher_mood := "idle"           # idle / cheer / yawn / shiver / doze
+var _mood_t := 0.0                  # 当前非 idle 情绪剩余时长
+var _mood_dur := 1.0
+var _mood_gap := 10.0               # 距下一次环境小情绪
+var ctx_night := false              # 由 main 喂入：夜间时段
+var ctx_idle := false              # 由 main 喂入：久未操作
+var pet_anchor := Vector2(410, 305) # 小馋猫坐处（脚底中心，渔夫左前的雪岸上）
+var pet_action := ""                # "" idle / paw / steal
+var _pet_action_t := 0.0
+var _pet_action_dur := 1.0
+var _pet_blink_t := 3.0
+
 
 func _ready() -> void:
 	_prng.randomize()
@@ -93,6 +107,7 @@ func _ready() -> void:
 	_bobber_idle = _tex("res://assets/art/props/bobber_idle.png")
 	_bobber_bite = _tex("res://assets/art/props/bobber_bite.png")
 	_fisher = _tex("res://assets/art/character/fisher_idle.png")
+	_fisher_pull = _frames("res://assets/art/character/fisher_pull_%02d.png", 2)
 	_lantern_tex = _tex("res://assets/art/props/lantern.png")
 	use_composite = _base != null
 	# 动态效果层
@@ -153,6 +168,8 @@ func _process(delta: float) -> void:
 	if use_composite:
 		_tick_idle_pulse(delta)
 		_tick_wildlife(delta)
+		_tick_fisher(delta)
+		_tick_pet(delta)
 	queue_redraw()
 
 
@@ -257,17 +274,170 @@ func uses_clean_bg() -> bool:
 	return _spot_base != null
 
 
-## 叠加独立渔夫精灵（脚底中心对齐 fisher_anchor，可水平翻转）。
+## 渔夫情绪状态机（Task 4）：cheer/yawn/shiver/doze 为瞬态小情绪，零存档。
+## cheer 由 main 在高星/七彩上鱼时触发；其余按 main 喂入的夜间/久坐上下文低频自发。
+func _tick_fisher(delta: float) -> void:
+	if _mood_t > 0.0:
+		_mood_t -= delta
+		if _mood_t <= 0.0:
+			fisher_mood = "idle"
+		return
+	_mood_gap -= delta
+	if _mood_gap <= 0.0:
+		_mood_gap = _prng.randf_range(14.0, 26.0)
+		_start_ambient_mood()
+
+
+func _start_ambient_mood() -> void:
+	if quiet:
+		return  # 安静模式不主动演小情绪
+	var pool := ["shiver"]    # 冬日钓场总有点冷
+	if ctx_night:
+		pool.append("yawn")
+	if ctx_idle:
+		pool.append("doze")
+		pool.append("doze")   # 久坐更容易打盹
+	fisher_mood = pool[_prng.randi() % pool.size()]
+	match fisher_mood:
+		"shiver": _mood_dur = 1.8
+		"yawn": _mood_dur = 2.4
+		"doze": _mood_dur = 3.6
+		_: _mood_dur = 1.6
+	_mood_t = _mood_dur
+
+
+## main 喂入昼夜 / 久未操作上下文，决定自发小情绪倾向。
+func set_fisher_context(night: bool, idle: bool) -> void:
+	ctx_night = night
+	ctx_idle = idle
+
+
+## 钓到高星/七彩 → 举手欢呼（一次性，最高优先）。
+func fisher_cheer() -> void:
+	fisher_mood = "cheer"
+	_mood_dur = 1.6
+	_mood_t = _mood_dur
+
+
+## 叠加独立渔夫精灵（脚底中心对齐 fisher_anchor）。咬钩时切收竿姿势；情绪用变换叠加。
 func _draw_fisher() -> void:
 	if _fisher == null:
 		return
-	var sz := Vector2(_fisher.get_size()) * FISHER_SCALE
-	var topleft := fisher_anchor - Vector2(sz.x * 0.5, sz.y)
-	if fisher_flip:
-		draw_set_transform(Vector2(fisher_anchor.x * 2.0, 0.0), 0.0, Vector2(-1.0, 1.0))
-	draw_texture_rect(_fisher, Rect2(topleft, sz), false)
-	if fisher_flip:
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var tex := _fisher
+	if dip > 0.5 and not _fisher_pull.is_empty():
+		tex = _fisher_pull[int(t * 6.0) % _fisher_pull.size()]  # 咬钩收竿，帧间切换
+	var sz := Vector2(tex.get_size()) * FISHER_SCALE
+	var off := Vector2.ZERO
+	var rot := 0.0
+	var sc := Vector2.ONE
+	sc.y *= 1.0 + 0.02 * sin(t * 2.0)   # 呼吸
+	var p := 0.0
+	match fisher_mood:
+		"cheer":
+			p = 1.0 - _mood_t / _mood_dur
+			off.y = -sin(p * PI) * 12.0        # 蹦一下
+			sc *= 1.0 + 0.08 * sin(p * PI)
+			rot = 0.05 * sin(p * TAU * 2.0)    # 小幅摇摆
+		"yawn":
+			p = 1.0 - _mood_t / _mood_dur
+			var yy := sin(p * PI)
+			sc.y *= 1.0 + 0.06 * yy            # 缓慢伸展
+			off.y -= 2.0 * yy
+			rot = -0.05 * yy                   # 微微后仰
+		"shiver":
+			off.x = sin(t * 34.0) * 1.4        # 快速发抖
+			off.y += 1.0                        # 缩脖
+			sc.y *= 0.98
+		"doze":
+			rot = 0.06 * sin(t * 0.8)          # 一点一点打盹
+			off.y += 1.5 * sin(t * 0.8) + 1.0
+	var flip := -1.0 if fisher_flip else 1.0
+	draw_set_transform(fisher_anchor + off, rot, Vector2(flip * sc.x, sc.y))
+	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+# ============================ 桌面宠物：小馋猫（Task 4，程序化占位）============================
+
+## 上鱼扒拉 / 偷鱼时由 main 触发，瞬态动作。
+func pet_react(kind: String) -> void:
+	pet_action = kind
+	_pet_action_dur = 0.9 if kind == "paw" else 1.4
+	_pet_action_t = _pet_action_dur
+
+
+func _tick_pet(delta: float) -> void:
+	if _pet_action_t > 0.0:
+		_pet_action_t -= delta
+		if _pet_action_t <= 0.0:
+			pet_action = ""
+	_pet_blink_t -= delta
+	if _pet_blink_t <= 0.0:
+		_pet_blink_t = _prng.randf_range(2.6, 6.0)
+
+
+func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
+	draw_set_transform(center, 0.0, Vector2(rx, ry))
+	draw_circle(Vector2.ZERO, 1.0, col)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## 程序化橘猫（坐姿，面朝渔夫/水面）：尾巴轻摆、偶尔眨眼、上鱼/偷鱼时抬爪。
+## 美术补图前的占位实现（机制可用）；需要的反应帧见结尾清单。
+func _draw_pet() -> void:
+	var B := pet_anchor
+	var body := Color(0.86, 0.55, 0.28)
+	var dark := Color(0.66, 0.40, 0.18)
+	var belly := Color(0.96, 0.85, 0.66)
+	# 动作进度（抬爪/前倾）
+	var lean := 0.0
+	var paw_lift := 0.0
+	if pet_action != "":
+		var pp: float = 1.0 - _pet_action_t / _pet_action_dur
+		paw_lift = sin(pp * PI) * 7.0
+		if pet_action == "steal":
+			lean = sin(pp * PI) * 3.0   # 偷鱼时朝鱼篓前倾
+	# 影子
+	_pet_ellipse(B + Vector2(1, 1), 12.0, 3.0, Color(0, 0, 0, 0.16))
+	# 尾巴（身后，左侧上扬，轻摆）
+	var sway := sin(t * 1.6) * 6.0
+	var t0 := B + Vector2(-8, -6)
+	var t1 := B + Vector2(-14, -14)
+	var t2 := B + Vector2(-9 + sway, -24)
+	var tail := PackedVector2Array()
+	for i in 7:
+		var u := float(i) / 6.0
+		var a := t0.lerp(t1, u)
+		var b := t1.lerp(t2, u)
+		tail.append(a.lerp(b, u))
+	draw_polyline(tail, dark, 3.4, true)
+	# 身体（坐姿臀部 + 前胸）
+	_pet_ellipse(B + Vector2(-1 + lean, -9), 9.5, 11.0, body)
+	_pet_ellipse(B + Vector2(4 + lean, -9), 6.5, 9.0, body)
+	_pet_ellipse(B + Vector2(4 + lean, -6), 3.6, 6.0, belly)
+	# 前腿/爪（右爪在动作时抬起扒拉）
+	_pet_ellipse(B + Vector2(2 + lean, -3), 2.0, 4.0, body)
+	_pet_ellipse(B + Vector2(7 + lean, -3 - paw_lift), 2.0, 4.0, body)
+	# 头
+	var HC := B + Vector2(7 + lean, -19)
+	_pet_ellipse(HC, 6.5, 6.0, body)
+	# 耳朵
+	draw_colored_polygon(PackedVector2Array([
+		HC + Vector2(-5, -4), HC + Vector2(-1, -9), HC + Vector2(0, -3)]), body)
+	draw_colored_polygon(PackedVector2Array([
+		HC + Vector2(2, -3), HC + Vector2(4, -9), HC + Vector2(6, -3)]), body)
+	draw_colored_polygon(PackedVector2Array([
+		HC + Vector2(-3, -4), HC + Vector2(-1, -7), HC + Vector2(-0.5, -4)]), dark)
+	draw_colored_polygon(PackedVector2Array([
+		HC + Vector2(3, -4), HC + Vector2(4, -7), HC + Vector2(5, -4)]), dark)
+	# 眼睛（偶尔眨）+ 鼻子
+	if _pet_blink_t < 0.14:
+		draw_line(HC + Vector2(0, -1), HC + Vector2(2, -1), dark, 1.0)
+		draw_line(HC + Vector2(4, -1), HC + Vector2(6, -1), dark, 1.0)
+	else:
+		draw_circle(HC + Vector2(1, -1), 1.0, dark)
+		draw_circle(HC + Vector2(5, -1), 1.0, dark)
+	draw_circle(HC + Vector2(3, 1), 0.9, Color(0.5, 0.3, 0.3))
 
 
 ## 叠加独立油灯精灵（底部中心对齐 lantern_anchor）。
@@ -301,6 +471,7 @@ func _draw_phase_tint() -> void:
 func _draw_composite() -> void:
 	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
 	_draw_fisher()          # 渔夫（含鱼竿）坐右岸
+	_draw_pet()             # 渔夫旁的小馋猫
 	_draw_lantern()         # 渔夫旁的油灯
 	_draw_fishing_line()    # 竿尖 → 浮漂的钓线
 	_draw_mist_layer()

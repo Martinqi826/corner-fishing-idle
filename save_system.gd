@@ -6,6 +6,8 @@ class_name SaveSystem
 ## v8 多钓点：spot(当前钓点)/unlocked(已解锁)/seen(已造访)/event(在场 buff)，旧档默认 river_bend。
 ## v9 陈列：display(陈列架上的鱼，最多 Decor.NUM_SLOTS)，旧档默认空。
 ## v10 稀有变体：inv/display 第 6 元 var、dex 第 5 元 vmask、best_var；旧档默认普通(0)。
+## v11 陪伴向：dex 第 6 元 fd(首捕日期，水族箱纪录卡用)；专注奖励 focus_min/rt/rd/pend；
+##     桌面宠物 pet_steals。旧档默认 fd=""、专注/宠物计数 0（display 复用为水族箱，无损）。
 
 const OFFLINE_CAP := 8.0 * 3600.0
 
@@ -21,7 +23,7 @@ static func collect(g) -> Dictionary:
 		disp.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0, int(c.get("var", 0))])
 	var data := {
-		"ver": 10,
+		"ver": 11,
 		"coins": g.coins,
 		"rod_level": g.rod_level,
 		"bag_level": g.bag_level,
@@ -47,6 +49,12 @@ static func collect(g) -> Dictionary:
 		"unlocked": g.unlocked_spots,
 		"seen": g.seen_spots,
 		"event": {"id": g.active_event, "t": g._event_buff_t} if g.active_event != "" else {},
+		# —— v11 陪伴向 ——
+		"focus_min": g.focus_minutes_total,   # 累计专注分钟
+		"focus_rt": g.focus_reward_today,      # 今日已发专注奖励次数（封顶）
+		"focus_rd": g.focus_reward_date,       # 封顶计数对应日期
+		"focus_pend": g.focus_pending,         # 待兑专注奖励等级
+		"pet_steals": g.pet_steals,            # 桌面宠物叼走鱼计数
 		"ts": Time.get_unix_time_from_system(),
 	}
 	if DisplayServer.get_name() != "headless":
@@ -62,7 +70,8 @@ static func dex_to_save(g) -> Dictionary:
 		out[id] = [int(r["n"]), float(r["w"]),
 			1 if bool(r.get("big", false)) else 0,
 			1 if bool(r.get("perf", false)) else 0,
-			int(r.get("vmask", 0))]  # v10：见过的稀有变体位掩码
+			int(r.get("vmask", 0)),       # v10：见过的稀有变体位掩码
+			str(r.get("fd", ""))]          # v11：首次捕获日期（水族箱纪录卡）
 	return out
 
 
@@ -131,7 +140,8 @@ static func apply(g, data: Dictionary) -> void:
 				g.dex[str(id)] = {"n": int(e[0]), "w": float(e[1]),
 					"big": e.size() >= 3 and int(e[2]) == 1,
 					"perf": e.size() >= 4 and int(e[3]) == 1,
-					"vmask": int(e[4]) if e.size() >= 5 else 0}  # v10 变体掩码
+					"vmask": int(e[4]) if e.size() >= 5 else 0,   # v10 变体掩码
+					"fd": str(e[5]) if e.size() >= 6 else ""}      # v11 首捕日期
 	elif dex_raw is Array:                   # v1~v3：仅 id 列表 → 纪录从头积累
 		for id in dex_raw:
 			if FishData.FISH.has(str(id)):
@@ -174,6 +184,12 @@ static func apply(g, data: Dictionary) -> void:
 	g.seen_intro = bool(data.get("seen_intro", true))  # 有存档=老玩家，默认已看过引导
 	if bool(data.get("focus", false)):
 		g._set_focus(true)
+	# —— v11 陪伴向（旧档无 → 全部归零，无损迁移）——
+	g.focus_minutes_total = float(data.get("focus_min", 0.0))
+	g.focus_reward_today = int(data.get("focus_rt", 0))
+	g.focus_reward_date = str(data.get("focus_rd", ""))
+	g.focus_pending = clampi(int(data.get("focus_pend", 0)), 0, 2)
+	g.pet_steals = int(data.get("pet_steals", 0))
 	var wp: Variant = data.get("win_pos", null)
 	if wp is Array and wp.size() >= 2:
 		g._saved_win_pos = Vector2i(int(wp[0]), int(wp[1]))

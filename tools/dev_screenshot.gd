@@ -56,14 +56,18 @@ func _run() -> void:
 	_main._open_panel("catch")
 	await _settle(2)
 	_snap("panel_spot.png")
-	# 陈列页：先钓几条并陈列一条，展示陈列架 + 上架列表
+	# 鱼缸页（活水族箱）：放几条含变体的鱼进缸，展示游动 + 鎏金/七彩光晕 + 上架列表
 	for i in 4:
 		_main._do_catch()
-	if not _main.inventory.is_empty():
-		Decor.add_from_inventory(_main, 0)
+	_main.display = [
+		{"id": "koi", "w": 6.2, "v": 1600, "q": 2, "lock": false, "var": 3},
+		{"id": "kaluga", "w": 120.0, "v": 9000, "q": 1, "lock": false, "var": 2},
+		{"id": "mandarin", "w": 2.4, "v": 180, "q": 0, "lock": false, "var": 1},
+		{"id": "bass", "w": 2.1, "v": 110, "q": 1, "lock": false, "var": 0},
+	]
 	_main._catch_tab = 6
 	_main._open_panel("catch")
-	await _settle(2)
+	await _settle(30)  # 让缸里的鱼游开、光晕脉动起来再拍
 	_snap("panel_decor.png")
 	_main._close_panel()
 	_main._switch_spot("still_lake")
@@ -96,6 +100,12 @@ func _run() -> void:
 	_main.painter.add_ripple(_main.painter.bobber_pos(), 28.0)
 	await _settle(4)
 	_snap("scene_dynamic.png")
+
+	# 4b) 渔夫情绪 + 桌面宠物：触发欢呼 + 宠物扒拉，拍一帧（Task 4）
+	_main.painter.fisher_cheer()
+	_main.painter.pet_react("paw")
+	await _settle(6)
+	_snap("scene_pet_cheer.png")
 
 	# 5) 动效校验：间隔 3 秒拍两帧，供外部做像素差对比（证明肉眼可见的动态）
 	await _settle(6)

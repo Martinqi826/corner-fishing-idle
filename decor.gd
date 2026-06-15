@@ -1,12 +1,13 @@
 class_name Decor
-## 陈列/装饰系统（新模块）：把心爱渔获摆上「陈列架」做桌面小景。
-## 设计取向（见 docs/fishing-design-inspiration-20260614.html）：最契合"桌面摆件"本质的
-## 健康非数值长线 + 收集深度 + 未来外观变现点；带一个小而封顶的卖价加成给参与理由（靠玩earned，非付费）。
-## 状态在主节点 g 上（g.display：已陈列的鱼，最多 NUM_SLOTS 个）；纯静态 + g。
+## 水族箱/陈列系统：把心爱渔获放进「水族箱」养着——会游动的活水族箱（渲染见 aquarium.gd）。
+## 设计取向（见 docs/fishing-design-inspiration-20260614.html）：兑现 Chillquarium 式收集深度，
+## 最契合"桌面摆件"本质的健康非数值长线；带一个小而封顶的观赏卖价加成给参与理由（靠玩earned，非付费）。
+## 状态在主节点 g 上（g.display：缸内鱼，最多 NUM_SLOTS 条）；纯静态 + g。
+## 注：内部字段沿用 display（不另起炉灶），UI/纪录卡以「水族箱」呈现。
 
-const NUM_SLOTS := 5
-const VALUE_BONUS_PER := 0.01   # 每件陈列 +1% 全局卖价
-const VALUE_BONUS_CAP := 0.05   # 封顶 +5%（防数值膨胀）
+const NUM_SLOTS := 8            # 缸位（养更多鱼让缸更活；观赏加成仍封顶，见下）
+const VALUE_BONUS_PER := 0.01   # 每条 +1% 全局卖价
+const VALUE_BONUS_CAP := 0.05   # 封顶 +5%（防数值膨胀；满 5 条即到顶，更多纯观赏）
 
 
 ## 当前陈列加成（全局卖价系数增量），封顶。
@@ -24,16 +25,16 @@ static func add_from_inventory(g, idx: int) -> void:
 		return
 	if is_full(g):
 		g._play_ui("ui_error")
-		g._toast("陈列架满了（最多 %d 件），先取下一件" % NUM_SLOTS, 2.0, Color(1.0, 0.6, 0.4))
+		g._toast("水族箱满了（最多 %d 条），先捞出一条" % NUM_SLOTS, 2.0, Color(1.0, 0.6, 0.4))
 		return
 	var c: Dictionary = g.inventory[idx]
 	g.inventory.remove_at(idx)
 	g.display.append(c)
 	g._play_sfx("upgrade")
-	g._toast("把 %s 摆上了陈列架" % FishData.display_name(str(c["id"])), 2.0, Color(0.6, 0.82, 0.95))
+	g._toast("把 %s 放进了水族箱" % FishData.display_name(str(c["id"])), 2.0, Color(0.6, 0.82, 0.95))
 	g._check_achievements()
 	g._update_hud()
-	g._refresh_panel()
+	g._rebuild_panel()   # 强制重建（含水族箱视图）；普通后台上鱼不重建，见 main._refresh_panel
 	g._save()
 
 
@@ -49,7 +50,7 @@ static func remove_to_inventory(g, slot: int) -> void:
 	g.display.remove_at(slot)
 	g.inventory.append(c)
 	g._play_ui("ui_click")
-	g._toast("把 %s 收回了鱼篓" % FishData.display_name(str(c["id"])), 1.8, Color(0.78, 0.74, 0.66))
+	g._toast("把 %s 捞回了鱼篓" % FishData.display_name(str(c["id"])), 1.8, Color(0.78, 0.74, 0.66))
 	g._update_hud()
-	g._refresh_panel()
+	g._rebuild_panel()
 	g._save()

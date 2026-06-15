@@ -27,10 +27,13 @@ const LIST := [
 	{"id": "bag_max", "name": "巨型鱼篓", "desc": "鱼篓扩到 55 格", "kind": "bag", "n": 8, "reward": 0},
 	{"id": "whopper", "name": "大鱼出水", "desc": "钓到一条 ≥10kg 的鱼", "kind": "maxweight", "n": 10, "reward": 2000},
 	{"id": "leviathan", "name": "深渊巨怪", "desc": "钓到一条 ≥100kg 的鱼", "kind": "maxweight", "n": 100, "reward": 8000},
-	# —— 陈列/装饰（健康非数值长线）——
-	{"id": "first_display", "name": "初次陈列", "desc": "把一条鱼摆上陈列架", "kind": "display", "n": 1, "reward": 200},
-	{"id": "display_full", "name": "满架珍藏", "desc": "陈列架摆满 5 件", "kind": "display", "n": 5, "reward": 1500},
+	# —— 水族箱/陈列（健康非数值长线）——
+	{"id": "first_display", "name": "初入鱼缸", "desc": "把一条鱼放进水族箱", "kind": "display", "n": 1, "reward": 200},
+	{"id": "display_full", "name": "满缸珍藏", "desc": "水族箱养满 8 条", "kind": "display", "n": 8, "reward": 1500},
 	# —— 稀有变体（Chillquarium 式收集深度）——
 	{"id": "first_variant", "name": "斑斓初见", "desc": "钓到一条稀有变体（斑斓及以上）", "kind": "variant", "n": 1, "reward": 500},
 	{"id": "rainbow", "name": "七彩之鳞", "desc": "钓到一条七彩变体", "kind": "variant", "n": 3, "reward": 5000},
+	# —— 陪伴向（专注奖励 / 桌面宠物）——
+	{"id": "flow_state", "name": "心流时刻", "desc": "累计专注满 120 分钟（开着它去忙别的）", "kind": "focus_minutes", "n": 120, "reward": 1500},
+	{"id": "cat_tax", "name": "猫税", "desc": "被小馋猫叼走过一条鱼", "kind": "pet_steals", "n": 1, "reward": 100},
 ]
