@@ -332,7 +332,7 @@
         <div class="stat"><strong>60</strong><span>正式鱼种，覆盖 6 个稀有度档位、8 类生态标签。</span></div>
         <div class="stat"><strong>3</strong><span>可玩钓点（河湾 / 静水湖泊 / 海岸码头），按渔获解锁。</span></div>
         <div class="stat"><strong>7</strong><span>随机事件，数据驱动、低干扰、按钓点触发。</span></div>
-        <div class="stat"><strong>23</strong><span>成就目标，覆盖捕获、财富、图鉴、品相和装备。</span></div>
+        <div class="stat"><strong>25</strong><span>成就目标，覆盖捕获、财富、图鉴、品相、装备与陈列。</span></div>
       </div>
       <div class="two" style="margin-top:14px">
         <div class="card">
@@ -373,6 +373,15 @@
           <h3>鱼篓整理</h3>
           <p>排序（最新 / 价值 / 品阶 / 重量）与「订单鱼」筛选；收藏锁保留心爱渔获不被批量卖出或订单交付。</p>
         </div>
+        <div class="card">
+          <h3>陈列 / 装饰</h3>
+          <p>把心爱渔获摆上「陈列架」（5 槽，可取下），离开鱼篓永久展示；每件 +1% 全局卖价、封顶 +5%。最契合桌面摆件的健康非数值长线 + 收集深度，也是未来外观变现的落点。</p>
+        </div>
+      </div>
+      <div class="wide-asset" style="margin-top:14px">
+        <div class="preview scene"><img src="img/panel_decor.png" alt="陈列页签"></div>
+        <code>docs/img/panel_decor.png</code>
+        <p>鱼篓 → 陈列页签：陈列架槽位（取下）+ 从鱼篓上架列表，7 页签布局。</p>
       </div>
     </section>
 
@@ -602,8 +611,8 @@
           <p>`fish_data.gd`（60 鱼/生态标签/按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`achievements.gd`（成就）均为 `class_name` 纯数据，逻辑与数据解耦，便于扩展。</p>
         </div>
         <div class="card">
-          <h3>存档（v8）</h3>
-          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置，及 v8 新增 current_spot / unlocked_spots / seen_spots / active_event。旧档逐版兼容迁移，默认落点 river_bend。</p>
+          <h3>存档（v9）</h3>
+          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置；v8 新增 current_spot / unlocked_spots / seen_spots / active_event，v9 新增 display（陈列架）。旧档逐版兼容迁移，默认落点 river_bend、陈列默认空。</p>
         </div>
         <div class="card">
           <h3>验证工具</h3>
@@ -622,7 +631,7 @@
         <div class="card">
           <h3>测试结果（多钓点扩展后）</h3>
           <ul>
-            <li><code>godot --headless -s tools/validate_game.gd</code> → <strong>0 失败</strong>（含：钓点/事件数据、三钓点鱼池隔离、随机事件、多钓点切换、存档 v2/v8 往返与旧档迁移、鱼图标回退，及原有全部回归段）。</li>
+            <li><code>godot --headless -s tools/validate_game.gd</code> → <strong>0 失败</strong>（含：钓点/事件数据、三钓点鱼池隔离、随机事件、多钓点切换、陈列/装饰、存档 v2/v8/v9 往返与旧档迁移、鱼图标回退，及原有全部回归段）。</li>
             <li><code>godot --headless -s tools/balance_probe.gd</code> → 经济健康：鱼竿回本 0.3→7.1 分递增、鱼饵 4~17 分、鱼钩 5~46 分，全裸→全满约 ×20。扩鱼后各档期望仅微动。</li>
             <li><code>godot --path . -s tools/dev_screenshot.gd</code> → 截图含 panel_spot / scene_lake / scene_coast，UI 无溢出。</li>
           </ul>
@@ -665,6 +674,7 @@
             <tr><td>核心挂机循环</td><td><span class="pill">已实现</span></td><td>继续调等待节奏、咬钩反馈和鱼篓满时提示。</td></tr>
             <tr><td>鱼类与经济</td><td><span class="pill">已实现</span></td><td>60 鱼/生态标签已上线；用长时模拟检查各钓点高阶鱼、订单和收鱼郎对通胀的影响。</td></tr>
             <tr><td>多钓点生态</td><td><span class="pill">已实现</span></td><td>3 钓点 + 7 事件 + 存档 v8 已上线；下一步加山涧溪流 / 远海深钓（数据骨架已就位）。</td></tr>
+            <tr><td>陈列 / 装饰</td><td><span class="pill">已实现</span></td><td>陈列架 5 槽 + 卖价加成 + 存档 v9 已上线；下一步把陈列鱼渲染成桌面小景（待美术）、更多陈列形态。</td></tr>
             <tr><td>图鉴/成就</td><td><span class="pill">已实现</span></td><td>图鉴扩到 60 种；补齐更明确的奖励节奏和未发现鱼剪影表现。</td></tr>
             <tr><td>美术资源</td><td><span class="pill">已接入</span></td><td>继续拆分前景/角色/水面层，减少整图依赖，提升局部动画空间。</td></tr>
             <tr><td>音频资源</td><td><span class="pill">已接入</span></td><td>实机调混音，重点检查长时间挂机时环境音疲劳度。</td></tr>
