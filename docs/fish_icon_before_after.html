@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>角落垂钓鱼类图标对照</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #eee8dc;
+      --ink: #34302a;
+      --muted: #706a60;
+      --line: rgba(88, 76, 58, 0.16);
+      --tile: rgba(255, 255, 255, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+    }
+
+    main {
+      width: min(1480px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .meta {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 22px;
+      margin-top: 22px;
+    }
+
+    section {
+      min-width: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      gap: 10px;
+    }
+
+    .fish {
+      min-width: 0;
+      padding: 10px 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--tile);
+      text-align: center;
+    }
+
+    .checker {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 8px;
+      display: grid;
+      place-items: center;
+      background-color: #fff;
+      background-image:
+        linear-gradient(45deg, #ddd 25%, transparent 25%),
+        linear-gradient(-45deg, #ddd 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ddd 75%),
+        linear-gradient(-45deg, transparent 75%, #ddd 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+
+    img {
+      width: 64px;
+      height: 64px;
+      display: block;
+      image-rendering: auto;
+    }
+
+    .name {
+      min-height: 20px;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .id {
+      margin-top: 3px;
+      color: var(--muted);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 11px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 900px) {
+      header {
+        display: block;
+      }
+
+      .columns {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>鱼类图标对照</h1>
+        <p class="meta">左栏是已批准的 28 个生产基准图标，右栏是今天新增的 46 个待返修图标；右栏必须按左栏质感重新验收。</p>
+      </div>
+      <p class="meta">运行图路径：assets/art/fish/&lt;id&gt;.png</p>
+    </header>
+
+    <div class="columns">
+      <section>
+        <div class="section-title">
+          <h2>以前已有（生产基准）</h2>
+          <span class="count">28 种</span>
+        </div>
+        <div class="grid">
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/whitebait.png" alt="whitebait"></div><div class="name">白条</div><div class="id">whitebait</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/topmouth.png" alt="topmouth"></div><div class="name">麦穗鱼</div><div class="id">topmouth</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/loach.png" alt="loach"></div><div class="name">泥鳅</div><div class="id">loach</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/crucian.png" alt="crucian"></div><div class="name">鲫鱼</div><div class="id">crucian</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/bighead.png" alt="bighead"></div><div class="name">鲢鳙</div><div class="id">bighead</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/yellowhead.png" alt="yellowhead"></div><div class="name">黄颡鱼</div><div class="id">yellowhead</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/dace.png" alt="dace"></div><div class="name">雅罗鱼</div><div class="id">dace</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/carp.png" alt="carp"></div><div class="name">鲤鱼</div><div class="id">carp</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/grass.png" alt="grass"></div><div class="name">草鱼</div><div class="id">grass</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/bream.png" alt="bream"></div><div class="name">鳊鱼</div><div class="id">bream</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/blackcarp.png" alt="blackcarp"></div><div class="name">青鱼</div><div class="id">blackcarp</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/bass.png" alt="bass"></div><div class="name">鲈鱼</div><div class="id">bass</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/fangbream.png" alt="fangbream"></div><div class="name">三角鲂</div><div class="id">fangbream</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/barbel.png" alt="barbel"></div><div class="name">花䱻</div><div class="id">barbel</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/culter.png" alt="culter"></div><div class="name">翘嘴鲌</div><div class="id">culter</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/mandarin.png" alt="mandarin"></div><div class="name">鳜鱼</div><div class="id">mandarin</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/snakehead.png" alt="snakehead"></div><div class="name">黑鱼</div><div class="id">snakehead</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/trout.png" alt="trout"></div><div class="name">虹鳟</div><div class="id">trout</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/pike.png" alt="pike"></div><div class="name">白斑狗鱼</div><div class="id">pike</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/zander.png" alt="zander"></div><div class="name">梭鲈</div><div class="id">zander</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/longsnout.png" alt="longsnout"></div><div class="name">江团</div><div class="id">longsnout</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/lenok.png" alt="lenok"></div><div class="name">细鳞鱼</div><div class="id">lenok</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/koi.png" alt="koi"></div><div class="name">锦鲤</div><div class="id">koi</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/salmon.png" alt="salmon"></div><div class="name">大马哈鱼</div><div class="id">salmon</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/sturgeon.png" alt="sturgeon"></div><div class="name">施氏鲟</div><div class="id">sturgeon</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/taimen.png" alt="taimen"></div><div class="name">哲罗鲑</div><div class="id">taimen</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/chinese_sturgeon.png" alt="chinese_sturgeon"></div><div class="name">中华鲟</div><div class="id">chinese_sturgeon</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/kaluga.png" alt="kaluga"></div><div class="name">达氏鳇</div><div class="id">kaluga</div></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <h2>今天新增（待返修）</h2>
+          <span class="count">46 种，未最终批准</span>
+        </div>
+        <div class="grid">
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/minnow.png" alt="minnow"></div><div class="name">马口鱼</div><div class="id">minnow</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/zacco.png" alt="zacco"></div><div class="name">宽鳍鱲</div><div class="id">zacco</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/gudgeon.png" alt="gudgeon"></div><div class="name">棒花鱼</div><div class="id">gudgeon</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/spined_loach.png" alt="spined_loach"></div><div class="name">中华花鳅</div><div class="id">spined_loach</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/ricefish.png" alt="ricefish"></div><div class="name">青鳉</div><div class="id">ricefish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/paradisefish.png" alt="paradisefish"></div><div class="name">斗鱼</div><div class="id">paradisefish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/anchovy.png" alt="anchovy"></div><div class="name">鳀鱼</div><div class="id">anchovy</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/halfbeak.png" alt="halfbeak"></div><div class="name">鱵鱼</div><div class="id">halfbeak</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/sandlance.png" alt="sandlance"></div><div class="name">玉筋鱼</div><div class="id">sandlance</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/redeye.png" alt="redeye"></div><div class="name">赤眼鳟</div><div class="id">redeye</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/wuchang.png" alt="wuchang"></div><div class="name">武昌鱼</div><div class="id">wuchang</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/spotted_steed.png" alt="spotted_steed"></div><div class="name">唇䱻</div><div class="id">spotted_steed</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/bigscale_loach.png" alt="bigscale_loach"></div><div class="name">大鳞副泥鳅</div><div class="id">bigscale_loach</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/yellowtail_fish.png" alt="yellowtail_fish"></div><div class="name">黄尾鲴</div><div class="id">yellowtail_fish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/yellow_drum.png" alt="yellow_drum"></div><div class="name">黄姑鱼</div><div class="id">yellow_drum</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/greenling.png" alt="greenling"></div><div class="name">六线鱼</div><div class="id">greenling</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/haarder.png" alt="haarder"></div><div class="name">梭鱼</div><div class="id">haarder</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/flathead_fish.png" alt="flathead_fish"></div><div class="name">鲬</div><div class="id">flathead_fish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/spinibarbus.png" alt="spinibarbus"></div><div class="name">光倒刺鲃</div><div class="id">spinibarbus</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/mongolian_redfin.png" alt="mongolian_redfin"></div><div class="name">蒙古鲌</div><div class="id">mongolian_redfin</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/small_snakehead.png" alt="small_snakehead"></div><div class="name">月鳢</div><div class="id">small_snakehead</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/yellowfin_seabream.png" alt="yellowfin_seabream"></div><div class="name">黄鳍鲷</div><div class="id">yellowfin_seabream</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/crimson_snapper.png" alt="crimson_snapper"></div><div class="name">红笛鲷</div><div class="id">crimson_snapper</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/spotted_scat.png" alt="spotted_scat"></div><div class="name">金钱鱼</div><div class="id">spotted_scat</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/octopus.png" alt="octopus"></div><div class="name">章鱼</div><div class="id">octopus</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/squid.png" alt="squid"></div><div class="name">鱿鱼</div><div class="id">squid</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/cuttlefish.png" alt="cuttlefish"></div><div class="name">墨鱼</div><div class="id">cuttlefish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/chinese_sucker.png" alt="chinese_sucker"></div><div class="name">胭脂鱼</div><div class="id">chinese_sucker</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/burbot.png" alt="burbot"></div><div class="name">江鳕</div><div class="id">burbot</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/manchurian_trout.png" alt="manchurian_trout"></div><div class="name">花羔红点鲑</div><div class="id">manchurian_trout</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/amur_catfish.png" alt="amur_catfish"></div><div class="name">怀头鲇</div><div class="id">amur_catfish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/amberjack.png" alt="amberjack"></div><div class="name">高体鰤</div><div class="id">amberjack</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/cobia.png" alt="cobia"></div><div class="name">军曹鱼</div><div class="id">cobia</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/barramundi.png" alt="barramundi"></div><div class="name">尖吻鲈</div><div class="id">barramundi</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/miiuy_croaker.png" alt="miiuy_croaker"></div><div class="name">鮸鱼</div><div class="id">miiuy_croaker</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/mahseer.png" alt="mahseer"></div><div class="name">结鱼</div><div class="id">mahseer</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/marbled_eel.png" alt="marbled_eel"></div><div class="name">花鳗鲡</div><div class="id">marbled_eel</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/marlin.png" alt="marlin"></div><div class="name">马林鱼</div><div class="id">marlin</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/giant_trevally.png" alt="giant_trevally"></div><div class="name">浪人鲹</div><div class="id">giant_trevally</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/mahimahi.png" alt="mahimahi"></div><div class="name">鲯鳅</div><div class="id">mahimahi</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/swordfish.png" alt="swordfish"></div><div class="name">剑鱼</div><div class="id">swordfish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/wahoo.png" alt="wahoo"></div><div class="name">刺鲅</div><div class="id">wahoo</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/paddlefish.png" alt="paddlefish"></div><div class="name">白鲟</div><div class="id">paddlefish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/coelacanth.png" alt="coelacanth"></div><div class="name">矛尾鱼</div><div class="id">coelacanth</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/oarfish.png" alt="oarfish"></div><div class="name">皇带鱼</div><div class="id">oarfish</div></div>
+          <div class="fish"><div class="checker"><img src="../assets/art/fish/whale_shark.png" alt="whale_shark"></div><div class="name">鲸鲨</div><div class="id">whale_shark</div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

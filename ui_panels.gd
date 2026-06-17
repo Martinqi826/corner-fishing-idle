@@ -13,7 +13,7 @@ static func open_panel(g: CornerFishing, kind: String) -> void:
 	if is_instance_valid(g._panel):
 		g._panel_saved_pos = g._panel.position
 	close_panel(g)
-	var titles := {"catch": "鱼篓", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结", "intro": "欢迎来到角落垂钓"}
+	var titles := {"catch": "垂钓手册", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结", "intro": "欢迎来到角落垂钓"}
 	var card := make_card(g, str(titles.get(kind, "")))
 	if kind != "offline" and kind != "intro" and g._panel_saved_pos != null:
 		card.position = clamp_panel_position(g, g._panel_saved_pos, card.custom_minimum_size)
@@ -60,8 +60,8 @@ static func panel_bg_style() -> StyleBoxFlat:
 	sb.set_border_width_all(1)
 	sb.border_color = Color(0.88, 0.84, 0.74, 0.72)
 	sb.shadow_color = Color(0, 0, 0, 0.32)
-	sb.shadow_size = 10
-	sb.shadow_offset = Vector2(4, 6)
+	sb.shadow_size = 18
+	sb.shadow_offset = Vector2(0, 6)  # 柔化：更大模糊、纯垂直（设计令牌 --shadow-panel 22px）
 	return sb
 
 
@@ -135,6 +135,7 @@ static func make_card(g: CornerFishing, title: String) -> Control:
 	var tl := Label.new()
 	tl.text = title
 	tl.add_theme_font_size_override("font_size", 20)
+	tl.add_theme_font_override("font", g._serif)  # 面板标题用衬线（设计令牌 --font-display）
 	tl.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
 	tl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hb.add_child(tl)
@@ -183,7 +184,7 @@ static func panel_drag_input(g: CornerFishing, event: InputEvent, panel: Control
 static func fill_bag_panel(g: CornerFishing, v: VBoxContainer) -> void:
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 6)
-	var names := ["背包", "图鉴", "订单", "成就", "统计", "钓点", "鱼缸"]
+	var names := ["背包", "图鉴", "订单", "成就", "统计", "钓点", "鱼缸", "装备", "设置"]
 	for i in range(names.size()):
 		var tb := Button.new()
 		tb.text = names[i]
@@ -201,7 +202,9 @@ static func fill_bag_panel(g: CornerFishing, v: VBoxContainer) -> void:
 		3: fill_ach_tab(g, v)
 		4: fill_stats_tab(g, v)
 		5: fill_spot_tab(g, v)
-		_: fill_decor_tab(g, v)
+		6: fill_decor_tab(g, v)
+		7: fill_upgrades(g, v)   # 装备：鱼竿/鱼饵/鱼钩升级（原主界面「竿」面板）
+		_: fill_settings(g, v)   # 8 设置：音量/专注/不透明度/退出（原主界面「设」面板）
 
 
 ## 统计页：长期成长看板（只读）。
@@ -215,6 +218,52 @@ static func fill_stats_tab(g: CornerFishing, v: VBoxContainer) -> void:
 	var biggest := "—"
 	if big_id != "":
 		biggest = "%s %.2fkg" % [FishData.display_name(big_id), big_w]
+	# 🏆 英雄数字（设计令牌 --fs-numeral）：史上最大体重，衬线 + 等宽大号，仪式感。
+	if big_id != "":
+		var hero := PanelContainer.new()
+		hero.add_theme_stylebox_override("panel", paper_style(0.95))
+		var hm := MarginContainer.new()
+		for s in ["left", "right"]:
+			hm.add_theme_constant_override("margin_" + s, 10)
+		for s in ["top", "bottom"]:
+			hm.add_theme_constant_override("margin_" + s, 7)
+		hero.add_child(hm)
+		var hr := HBoxContainer.new()
+		hr.add_theme_constant_override("separation", 10)
+		hm.add_child(hr)
+		hr.add_child(g._fish_icon(big_id, 52))
+		var hinfo := VBoxContainer.new()
+		hinfo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hinfo.add_theme_constant_override("separation", 1)
+		var hd := Label.new()
+		hd.text = "🏆 个人最佳 · 史上最大一条"
+		hd.add_theme_font_size_override("font_size", 12)
+		hd.add_theme_color_override("font_color", Color(0.80, 0.62, 0.26))
+		hinfo.add_child(hd)
+		var ht := FishData.tier_of(big_id)
+		var wrow := HBoxContainer.new()
+		wrow.add_theme_constant_override("separation", 3)
+		var wnum := Label.new()
+		wnum.text = "%.2f" % big_w
+		wnum.add_theme_font_override("font", g._serif_num)
+		wnum.add_theme_font_size_override("font_size", 30)
+		wnum.add_theme_color_override("font_color", g._ui_tier_color(ht, true))
+		wnum.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		wrow.add_child(wnum)
+		var wunit := Label.new()
+		wunit.text = "kg"
+		wunit.add_theme_font_size_override("font_size", 13)
+		wunit.add_theme_color_override("font_color", Color(0.46, 0.43, 0.37))
+		wunit.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		wrow.add_child(wunit)
+		hinfo.add_child(wrow)
+		var hnm := Label.new()
+		hnm.text = "%s%s" % [FishData.TIER_NAMES[ht], FishData.display_name(big_id)]
+		hnm.add_theme_font_size_override("font_size", 13)
+		hnm.add_theme_color_override("font_color", g._ui_tier_color(ht, true))
+		hinfo.add_child(hnm)
+		hr.add_child(hinfo)
+		v.add_child(hero)
 	var q := g.best_quality
 	var q_txt: String = (str(FishData.QUALITY_NAMES[clampi(q, 0, 3)]) + "★".repeat(q)) if q > 0 else "普通"
 	var rows := [
@@ -312,6 +361,7 @@ static func spot_card(g: CornerFishing, sid: String) -> Control:
 	var nm := Label.new()
 	nm.text = ("📍 " if is_cur else "") + str(s["name"])
 	nm.add_theme_font_size_override("font_size", 17)
+	nm.add_theme_font_override("font", g._serif)  # 钓点名用衬线（设计令牌 --font-display）
 	nm.add_theme_color_override("font_color",
 		Color(0.24, 0.30, 0.40) if unlocked else Color(0.70, 0.66, 0.58))
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -908,6 +958,8 @@ static func dex_card(g: CornerFishing, id: String) -> Control:
 	name.text = FishData.display_name(id) if known else "未发现"
 	name.add_theme_font_size_override("font_size", 12)
 	name.add_theme_color_override("font_color", g._ui_tier_color(tier, true) if known else Color(0.58, 0.56, 0.50))
+	if known:
+		badge_legible(name)   # 品阶色（尤其优良绿）在米黄纸背景上对比不足，加暖墨描边托起
 	box.add_child(name)
 	if known:
 		var r: Dictionary = g.dex[id]
@@ -917,10 +969,18 @@ static func dex_card(g: CornerFishing, id: String) -> Control:
 		rec.text = "×%d · 最大 %.2fkg" % [int(r["n"]), float(r["w"])] \
 			if float(r["w"]) > 0.0 else "×%d" % int(r["n"])
 		rec.add_theme_font_size_override("font_size", 10)
-		rec.add_theme_color_override("font_color", Color(0.55, 0.50, 0.42))
+		rec.add_theme_color_override("font_color", Color(0.40, 0.36, 0.30))
+		badge_legible(rec)
 		box.add_child(rec)
 		box.add_child(dex_badges(r))
 	return panel
+
+
+## 卡片小字描边：彩色徽章/纪录叠在浅米黄纸背景上时一眼可读
+## （保留各自颜色语义，只补一圈暖墨细描边把字「托」起来）。
+static func badge_legible(lbl: Label) -> void:
+	lbl.add_theme_color_override("font_outline_color", Color(0.16, 0.12, 0.08, 0.92))
+	lbl.add_theme_constant_override("outline_size", 2)
 
 
 static func dex_badges(r: Dictionary) -> Control:
@@ -932,22 +992,25 @@ static func dex_badges(r: Dictionary) -> Control:
 	col10.add_theme_font_size_override("font_size", 10)
 	if n >= 10:
 		col10.text = "✦集齐"
-		col10.add_theme_color_override("font_color", Color(0.95, 0.80, 0.35))
+		col10.add_theme_color_override("font_color", Color(0.97, 0.82, 0.38))
 	else:
 		col10.text = "%d/10" % n
-		col10.add_theme_color_override("font_color", Color(0.52, 0.49, 0.43))
+		col10.add_theme_color_override("font_color", Color(0.62, 0.58, 0.50))
+	badge_legible(col10)
 	row.add_child(col10)
 	if bool(r.get("big", false)):
 		var b := Label.new()
 		b.text = "巨"
 		b.add_theme_font_size_override("font_size", 10)
-		b.add_theme_color_override("font_color", Color(0.90, 0.66, 0.34))
+		b.add_theme_color_override("font_color", Color(0.95, 0.70, 0.36))
+		badge_legible(b)
 		row.add_child(b)
 	if bool(r.get("perf", false)):
 		var p := Label.new()
 		p.text = "完★"
 		p.add_theme_font_size_override("font_size", 10)
-		p.add_theme_color_override("font_color", Color(0.80, 0.62, 0.92))
+		p.add_theme_color_override("font_color", Color(0.84, 0.66, 0.95))
+		badge_legible(p)
 		row.add_child(p)
 	# 稀有变体收集点（斑斓/鎏金/七彩）：已见亮色圆点
 	var vm := int(r.get("vmask", 0))
@@ -957,6 +1020,7 @@ static func dex_badges(r: Dictionary) -> Control:
 			d.text = "●"
 			d.add_theme_font_size_override("font_size", 10)
 			d.add_theme_color_override("font_color", FishData.variant_color(vi))
+			badge_legible(d)
 			row.add_child(d)
 	return row
 

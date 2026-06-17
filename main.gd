@@ -27,12 +27,11 @@ const FEATHER_CORE := 0.20
 # —— UI 布局契约 ——
 # 主图烤入按钮/落水点的坐标随 Codex 美术版本漂移。优先从 ui_layout.json 读取
 # （Codex 更新美术时同步改 json 即可，不用动代码）；无 json 时用下面实测的回退值。
-# json 格式：{"buttons": {"catch": [x,y], "rod": [x,y], "set": [x,y]}, "bite_point": [x,y]}
+# json 格式：{"buttons": {"catch": [x,y]}, "bite_point": [x,y]}
+# 升级（鱼竿/鱼饵/鱼钩）与设置都已并入鱼篓面板页签，主界面只留一个「鱼篓」按钮。
 const UI_LAYOUT_PATHS := ["res://ui_layout.json", "res://assets/art/ui/ui_layout.json"]
 var btn_centers := {
-	"catch": Vector2(424, 371),
-	"rod": Vector2(452, 371),
-	"set": Vector2(481, 371),
+	"catch": Vector2(452, 371),
 }
 
 # —— 钓鱼状态机 ——
@@ -65,6 +64,8 @@ const BAG_COSTS := [100, 250, 600, 1500, 4000, 10000, 25000]
 var save_enabled := true
 var rng := RandomNumberGenerator.new()
 var _font: SystemFont
+var _serif: Font               # Noto Serif SC —— 标题/钓点名/英雄数字的衬线展示声音
+var _serif_num: FontVariation  # 同字体 + 等宽数字
 var _msg_id := 0
 var _panel: Control = null
 var _panel_kind := ""
@@ -158,6 +159,13 @@ func _ready() -> void:
 		fmat.set_shader_parameter("core", FEATHER_CORE)
 	# HUD 贴住可见场景的左上角（窗口放大后，美术左侧被羽化淡掉，故 x 偏移到可见区起点）
 	coins_label.position = SCENE_OFF + Vector2(196, 150)
+	# 点金币栏 = 打开多功能面板(默认背包页)。主界面不再放独立按钮，入口全收进 HUD
+	# （金币栏 / 钓点签 / 订单签）。金币栏落在羽化椭圆穿透区内，故可点且不穿透到桌面（见 _update_passthrough）。
+	coins_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	coins_label.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			_catch_tab = 0
+			_toggle_panel("catch"))
 	# 钓点签 126 / 金币 150 / 订单 174 三行栈占到 ~192；toast 落到 204 清开订单行
 	toast_label.position = SCENE_OFF + Vector2(198, 204)
 	toast_label.size = Vector2(440, 28)
@@ -523,6 +531,13 @@ func _setup_theme() -> void:
 	_font = SystemFont.new()
 	_font.font_names = PackedStringArray([
 		"Microsoft YaHei UI", "Microsoft YaHei", "SimHei", "Noto Sans CJK SC"])
+	# 衬线展示字体（设计令牌 --font-display）：标题与英雄数字用，呼应水彩卷轴气质。
+	_serif = load("res://assets/fonts/NotoSerifSC-Bold.woff2")
+	if _serif == null:
+		_serif = _font  # 字体缺失时优雅回退系统字体，绝不崩
+	_serif_num = FontVariation.new()
+	_serif_num.base_font = _serif
+	_serif_num.opentype_features = {"tnum": 1, "lnum": 1}  # 等宽数字（字体支持时）
 	var th := Theme.new()
 	th.default_font = _font
 	th.default_font_size = 15
@@ -723,7 +738,7 @@ const SPOT_BTN_ICONS := {
 }
 
 func _build_spot_buttons() -> void:
-	for k in ["catch", "rod", "set"]:
+	for k in []:   # 入口已全收进金币栏(点金币开面板)，主界面不再放独立按钮（撤鱼篓按钮）
 		var b := TextureButton.new()
 		b.texture_normal = load(SPOT_BTN_ICONS[k])
 		b.ignore_texture_size = true
@@ -768,10 +783,10 @@ func _load_ui_layout() -> void:
 		return
 
 
-# 程序化回退模式：纸色圆按钮（篓/竿/设）。
+# 程序化回退模式：纸色圆按钮（只剩篓；升级/设置都并入鱼篓面板页签）。
 func _build_round_buttons() -> void:
-	var defs := [["篓", "catch"], ["竿", "rod"], ["设", "set"]]
-	var x := 404.0
+	var defs := []   # 入口已收进金币栏，主界面无独立圆按钮（程序化回退模式同步）
+	var x := 436.0
 	for d in defs:
 		var b := _round_button(d[0])
 		b.position = Vector2(x, 362) + SCENE_OFF
@@ -813,8 +828,46 @@ var _bag_filter_order := false  # 只看订单目标鱼
 const BAG_SORT_NAMES := ["最新", "价值", "品阶", "重量"]
 
 
-## 鱼图标：优先专属图；缺失时回退「按品阶通用鱼图标」（Codex 资源或程序化生成），绝不空白/崩。
+## 鱼图标：只加载已通过美术验收的专属图；未批准/缺失时回退到同品阶旧风格图标。
 var _tier_icon_cache := {}
+const APPROVED_FISH_ICON_IDS := {
+	"whitebait": true,
+	"topmouth": true,
+	"loach": true,
+	"crucian": true,
+	"bighead": true,
+	"yellowhead": true,
+	"dace": true,
+	"carp": true,
+	"grass": true,
+	"bream": true,
+	"blackcarp": true,
+	"bass": true,
+	"fangbream": true,
+	"barbel": true,
+	"culter": true,
+	"mandarin": true,
+	"snakehead": true,
+	"trout": true,
+	"pike": true,
+	"zander": true,
+	"longsnout": true,
+	"lenok": true,
+	"koi": true,
+	"salmon": true,
+	"sturgeon": true,
+	"taimen": true,
+	"chinese_sturgeon": true,
+	"kaluga": true,
+}
+const GENERIC_FISH_ICON_BY_TIER := [
+	"whitebait",
+	"carp",
+	"bass",
+	"snakehead",
+	"koi",
+	"chinese_sturgeon",
+]
 func _fish_icon(id: String, size := 42) -> TextureRect:
 	var tr := TextureRect.new()
 	tr.custom_minimum_size = Vector2(size, size)
@@ -823,25 +876,27 @@ func _fish_icon(id: String, size := 42) -> TextureRect:
 	return tr
 
 
-## 取鱼的贴图（专属图缺失则回退品阶通用图），供水族箱等需要裸 Texture2D 的地方复用。
+## 取鱼的贴图（未批准或专属图缺失则回退品阶通用图），供水族箱等需要裸 Texture2D 的地方复用。
 func _fish_texture(id: String) -> Texture2D:
-	var path := "res://assets/art/fish/%s.png" % id
-	if ResourceLoader.exists(path):
-		return load(path) as Texture2D
+	if APPROVED_FISH_ICON_IDS.has(id):
+		var path := "res://assets/art/fish/%s.png" % id
+		if ResourceLoader.exists(path):
+			return load(path) as Texture2D
 	return _generic_fish_texture(FishData.tier_of(id))
 
 
-## 按品阶的通用鱼图标：先找 Codex 通用图，缺则程序化生成（品阶色小鱼剪影），按品阶缓存。
+## 按品阶的通用鱼图标：使用旧有已批准水彩图标，最后才生成中性占位，按品阶缓存。
 func _generic_fish_texture(tier: int) -> Texture2D:
 	tier = clampi(tier, 0, FishData.TIER_COLORS.size() - 1)
 	if _tier_icon_cache.has(tier):
 		return _tier_icon_cache[tier]
-	var asset := "res://assets/art/fish/generic_tier%d.png" % tier
+	var approved_id := str(GENERIC_FISH_ICON_BY_TIER[tier])
+	var asset := "res://assets/art/fish/%s.png" % approved_id
 	var tex: Texture2D
 	if ResourceLoader.exists(asset):
 		tex = load(asset) as Texture2D
 	else:
-		tex = _make_generic_fish(_tier_color(tier))
+		tex = _make_generic_fish(Color(0.55, 0.53, 0.46))
 	_tier_icon_cache[tier] = tex
 	return tex
 
@@ -1265,7 +1320,7 @@ func _try_upgrade_rod() -> void:
 	_check_achievements()
 	_update_hud()
 	_toast("鱼竿升到 Lv.%d！" % rod_level, 2.0, Color(0.5, 0.8, 1.0))
-	_open_panel("rod")
+	_refresh_panel()   # 升级页已是鱼篓面板「装备」页签，原地刷新即可
 
 
 func _try_upgrade_bait() -> void:
@@ -1284,7 +1339,7 @@ func _try_upgrade_bait() -> void:
 	_update_hud()
 	_toast("换上了%s，星级渔获概率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
 	_save()
-	_open_panel("rod")
+	_refresh_panel()   # 升级页已是鱼篓面板「装备」页签，原地刷新即可
 
 
 func _try_upgrade_hook() -> void:
@@ -1303,7 +1358,7 @@ func _try_upgrade_hook() -> void:
 	_update_hud()
 	_toast("换上了%s，双钩几率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
 	_save()
-	_open_panel("rod")
+	_refresh_panel()   # 升级页已是鱼篓面板「装备」页签，原地刷新即可
 
 
 func _set_opacity(val: float) -> void:
@@ -1398,9 +1453,10 @@ func _update_fisher_context() -> void:
 
 # ============================ 桌面宠物（Task 4）============================
 
-## 上鱼后的趣味事件：小概率让宠物叼走鱼。安静模式不打扰。
+## 上鱼后的趣味事件：小概率让宠物叼走鱼。安静模式不打扰；
+## 测试/截图实例（save_enabled=false）不触发随机偷鱼，避免污染钓鱼数量断言。
 func _maybe_pet_steal() -> void:
-	if focus_mode:
+	if focus_mode or not save_enabled:
 		return
 	if rng.randf() >= PET_STEAL_CHANCE:
 		return

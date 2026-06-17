@@ -3,15 +3,7 @@
 	"art_version": "corner_scene_winter_base 雪雾晨光版 2026-06-13",
 	"buttons": {
 		"catch": [
-			424,
-			371
-		],
-		"rod": [
 			452,
-			371
-		],
-		"set": [
-			481,
 			371
 		]
 	},

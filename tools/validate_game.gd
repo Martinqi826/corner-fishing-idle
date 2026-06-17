@@ -107,6 +107,9 @@ func _run() -> void:
 	print("=== 存档 v11 往返 / v10→v11 迁移 ===")
 	await _check_save_v11()
 
+	print("=== 主界面入口收敛（点金币开面板）===")
+	await _check_hud_entry()
+
 	print("=== 结果: %d 失败 ===" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -555,6 +558,28 @@ func _check_focus_reward() -> void:
 	g._check_achievements()
 	_assert(g.achievements_done.has("flow_state"), "累计专注 ≥120 分钟应解锁心流时刻")
 	print("  专注奖励：25/50 分钟保底升级 / 切回清零 / 每日封顶 / 成就 通过")
+	g.queue_free()
+	await process_frame
+
+
+## 主界面入口收敛：金币栏可点、主界面无独立按钮、点金币开关背包页。
+func _check_hud_entry() -> void:
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	_assert(g.coins_label.mouse_filter == Control.MOUSE_FILTER_STOP, "金币栏应可点(mouse_filter=STOP)")
+	_assert(g._spot_round_btns.is_empty(), "主界面应无独立按钮(已撤鱼篓按钮)，实际 %d" % g._spot_round_btns.size())
+	# 点金币 → 开背包页(tab 0)
+	g._catch_tab = 0
+	g._toggle_panel("catch")
+	_assert(g._panel_kind == "catch" and g._catch_tab == 0, "点金币应打开面板背包页")
+	# 再点金币 → 关闭(toggle)
+	g._toggle_panel("catch")
+	_assert(g._panel_kind == "", "再点金币应关闭面板")
+	# 钓点签/订单签深链仍在
+	_assert(is_instance_valid(g.spot_chip) and is_instance_valid(g.order_chip), "钓点签/订单签应仍存在")
+	print("  主界面入口收敛：金币栏可点 / 无独立按钮 / 开关背包页 通过")
 	g.queue_free()
 	await process_frame
 

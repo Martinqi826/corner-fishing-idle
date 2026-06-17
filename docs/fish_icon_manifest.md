@@ -1,6 +1,10 @@
 # Fish Icon Manifest
 
-All fish in `fish_data.gd` now have production-style painterly icons.
+This file tracks fish icon paths, but production approval is governed by
+`docs/fish_icon_art_standard.md`.
+
+The original 28 icons are the approved production baseline. New icons must match
+that baseline before they are treated as final art.
 
 Runtime icons are stored at:
 
@@ -14,7 +18,7 @@ Larger source icons are stored at:
 assets/art/fish/source/{fish_id}.png
 ```
 
-The generated source sheets are stored at:
+Historical/generated source sheets are stored at:
 
 ```text
 assets/art/source/fish_sheets/
@@ -27,6 +31,8 @@ assets/art/fish/fish_art_manifest.json
 ```
 
 ## Fish IDs
+
+Approved baseline ids:
 
 Common:
 
@@ -84,3 +90,10 @@ The older generic icons are kept in sync for current UI mockups or code that sti
 ```text
 docs/img/fish_icon_contact_sheet.png
 ```
+
+## Quality Gate
+
+Do not add future fish icons directly to the runtime path just because a PNG was
+generated. First review them against `docs/fish_icon_art_standard.md`. If they do
+not match the approved baseline (`carp`, `koi`, `bass`, `mandarin`), keep them in
+WIP and let the game use its fallback icon.
