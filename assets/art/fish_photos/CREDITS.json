@@ -1,0 +1,74 @@
+{
+  "carp": {
+    "cn": "鲤鱼",
+    "file": "Cyprinus_carpio_2008_G1_(cropped).jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "George Chernilevsky",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "Wikimedia Commons"
+  },
+  "grass": {
+    "cn": "草鱼",
+    "file": "2x_amur_bílý.jpg",
+    "license": "CC BY 3.0",
+    "author": "Dezidor",
+    "license_url": "https://creativecommons.org/licenses/by/3.0",
+    "source": "Wikimedia Commons"
+  },
+  "crucian": {
+    "cn": "鲫鱼",
+    "file": "CarassiusCarassius8.JPG",
+    "license": "CC BY-SA 3.0",
+    "author": "Viridiflavus",
+    "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+    "source": "Wikimedia Commons"
+  },
+  "blackcarp": {
+    "cn": "青鱼",
+    "file": "Mylopharyngodon_piceus.jpg",
+    "license": "Public domain",
+    "author": "Leo Nico, (United States Geological Survey)\n\n(Original uploader was Zp at cs.wikipedia)",
+    "license_url": "",
+    "source": "Wikimedia Commons"
+  },
+  "catfish": {
+    "cn": "鲇鱼",
+    "file": "Silurus.jpg",
+    "license": "CC BY 2.0",
+    "author": "rhosoi",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "source": "Wikimedia Commons"
+  },
+  "snakehead": {
+    "cn": "乌鳢",
+    "file": "Channa_argus_distribution.png",
+    "license": "Public domain",
+    "author": "（未署名）",
+    "license_url": "",
+    "source": "Wikimedia Commons"
+  },
+  "koi": {
+    "cn": "锦鲤",
+    "file": "Ojiya_Nishikigoi_no_Sato_ac_(3).jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Asturio Cantabrio",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "Wikimedia Commons"
+  },
+  "perch": {
+    "cn": "河鲈",
+    "file": "Barsche_im_See_(Jungfische).jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Dellex",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "Wikimedia Commons"
+  },
+  "tuna": {
+    "cn": "金枪鱼",
+    "file": "Yellowfin_tuna_nurp.jpg",
+    "license": "Public domain",
+    "author": "OAR/National Undersea Research Program (NURP)",
+    "license_url": "",
+    "source": "Wikimedia Commons"
+  }
+}

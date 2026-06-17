@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角落垂钓 · 社区鱼获照片墙 — 设计方案</title>
+<style>
+  :root{
+    --glass:rgba(31,33,31,.95); --glass2:#1b1e1a; --line:rgba(224,214,189,.22);
+    --paper:#e8e0c7; --ink:#423f38; --gold:#d6a85d; --gold-b:#f0c978; --bronze:#a87d40;
+    --txt:#ece8e0; --title:#ebe0c7; --muted:#b9b1a0; --faint:#857f72;
+    --ok:#59c74d; --warn:#ff8c1f; --risk:#ff6152; --info:#4d9ef2; --p:#b86bf2;
+    --font-serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Noto Sans SC","Microsoft YaHei UI",system-ui,sans-serif;color:var(--txt);line-height:1.65;
+    background:radial-gradient(900px 500px at 85% -5%,rgba(214,168,93,.10),transparent 60%),
+      radial-gradient(700px 460px at 5% 5%,rgba(71,111,120,.13),transparent 55%),linear-gradient(180deg,#14160f,#0e0f0c);
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+  .serif{font-family:var(--font-serif)}
+  header{padding:50px 0 28px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
+  h1{font-family:var(--font-serif);font-weight:700;font-size:clamp(27px,4.4vw,42px);line-height:1.12;color:var(--title)}
+  h1 small{display:block;font-family:inherit;font-weight:400;font-size:15px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .pills{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+  .pill{background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--muted)}
+  .pill b{color:var(--txt)}
+  section{padding:38px 0;border-bottom:1px solid rgba(224,214,189,.13)}
+  .tag{font-size:11.5px;letter-spacing:2px;color:var(--gold);font-weight:700;text-transform:uppercase}
+  h2{font-family:var(--font-serif);font-size:clamp(20px,3vw,27px);font-weight:700;margin:6px 0 8px;color:var(--title)}
+  h3{font-size:16px;color:var(--title);margin:16px 0 6px}
+  p{color:var(--muted);font-size:14.5px;margin-bottom:8px}
+  p b,li b{color:var(--txt)}
+  .lead{max-width:800px}
+  .card{background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:20px;margin:12px 0}
+  ul{list-style:none;margin:6px 0}
+  ul li{position:relative;padding:4px 0 4px 20px;font-size:14px;color:var(--muted)}
+  ul li::before{content:"▸";position:absolute;left:2px;color:var(--gold)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--gold);font-weight:700;font-size:12px;letter-spacing:.5px}
+  td{color:var(--muted)} td b{color:var(--txt)}
+  .rec{background:linear-gradient(90deg,rgba(89,199,77,.10),transparent);border-left:3px solid var(--ok);border-radius:0 9px 9px 0;padding:11px 15px;font-size:13.5px;color:var(--muted);margin:10px 0}
+  .rec b{color:#9fe093}
+  .warnbox{background:linear-gradient(90deg,rgba(255,97,82,.10),transparent);border:1px solid rgba(255,97,82,.3);border-left:4px solid var(--risk);border-radius:0 11px 11px 0;padding:15px 18px;margin:12px 0}
+  .warnbox h3{color:#ff9387;margin-top:0}
+  .warnbox p{font-size:13.5px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  .opt{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .opt.pick{border-color:rgba(89,199,77,.45);box-shadow:0 0 0 1px rgba(89,199,77,.2) inset}
+  .opt h3{margin-top:0;display:flex;align-items:center;gap:8px}
+  .badge{font-size:10.5px;font-weight:800;padding:2px 9px;border-radius:999px;letter-spacing:.5px}
+  .b-ok{background:rgba(89,199,77,.18);color:#9fe093} .b-warn{background:rgba(255,140,31,.18);color:#ffb56b}
+  .arch{width:100%;height:auto;display:block;background:var(--glass2);border:1px solid var(--line);border-radius:14px;margin:8px 0}
+  .flow{counter-reset:step;display:flex;flex-direction:column;gap:8px}
+  .flow .s{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start;background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:11px 14px}
+  .flow .s .n{counter-increment:step;font-family:var(--font-serif);font-weight:900;color:var(--gold);text-align:center}
+  .flow .s .n::before{content:counter(step)}
+  .flow .s .t{font-size:13.5px;color:var(--muted)} .flow .s .t b{color:var(--txt)}
+  .gantt{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .ph{display:grid;grid-template-columns:148px 1fr;gap:12px;align-items:center;background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:11px 14px}
+  .ph .lab{font-size:13px;font-weight:700;color:var(--title)} .ph .lab small{display:block;font-size:11px;color:var(--faint);font-weight:400}
+  .ph .d{font-size:12.5px;color:var(--muted)}
+  .chk{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:8px 18px}
+  .chk .row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .chk .row:last-child{border-bottom:none}
+  .chk .q{flex:none;width:140px;color:var(--gold);font-weight:700}
+  .chk .a{color:var(--muted)} .chk .a b{color:var(--txt)}
+  .kpill{display:inline-block;font-size:11px;background:rgba(77,158,242,.14);color:#9ac5f7;border-radius:6px;padding:1px 7px;margin:1px}
+  footer{padding:28px 0 56px;color:var(--faint);font-size:12px}
+  .note{font-size:12.5px;color:var(--faint);font-style:italic;margin-top:6px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="eyebrow">Design Doc · 设计方案（评估用，未承诺开发）</div>
+  <h1 class="serif">社区鱼获照片墙
+    <small>玩家上传自己钓的鱼照片 → 你后台审核 → 通过后展示在该鱼的图鉴里，可点赞评论。一个长在图鉴里的小社区。<br>本文档帮你在「建不建」之前看清：架构、技术、法律、成本、分几步走。</small>
+  </h1>
+  <div class="pills">
+    <span class="pill">性质 <b>从单机挂件 → 带后台的在线产品</b></span>
+    <span class="pill">主推路线 <b>Steam 全球 + Supabase</b></span>
+    <span class="pill">建议 <b>先 MVP 闭环，再加社交</b></span>
+  </div>
+</div></header>
+
+<div class="wrap">
+
+  <!-- 价值 -->
+  <section>
+    <div class="tag">Why · 为什么值得做</div>
+    <h2>一箭三雕的好点子</h2>
+    <div class="two">
+      <div class="card"><h3>🎯 解决版权</h3><p>照片是玩家自己钓的、自愿上传，彻底绕开网络图的版权雷区——这正是之前"真实照片"卡住的根因。</p></div>
+      <div class="card"><h3>🤝 社区感</h3><p>点赞、评论、看别人的渔获，让一个安静的单机挂件长出"人味"，玩家之间有了连接。</p></div>
+      <div class="card"><h3>🔁 强留存</h3><p>为了上图鉴、为了被点赞，玩家会一次次回来——放置游戏最稀缺的长期回访动力。</p></div>
+      <div class="card"><h3>🐟 内容自生长</h3><p>106 种鱼的照片由社区慢慢填满，你不用一张张找图，内容随用户增长自动丰富。</p></div>
+    </div>
+  </section>
+
+  <!-- 关键前置决策 -->
+  <section>
+    <div class="tag">Decision 0 · 最关键的前置判断</div>
+    <h2>面向哪个市场？——它决定一切</h2>
+    <p class="lead">UGC（用户上传内容）的技术栈和法律要求，<b>因市场天差地别</b>。这是必须先定的第一块多米诺骨牌。</p>
+    <div class="two">
+      <div class="opt pick">
+        <h3>🌍 Steam 全球 <span class="badge b-ok">主推 · 契合你的上架计划</span></h3>
+        <ul>
+          <li>后端用 <b>Supabase</b>（全球）即可，账号直接借 <b>Steam</b>，省掉自建登录与大半防滥用</li>
+          <li>法律走 <b>GDPR + Steam UGC 政策 + DMCA</b>，有成熟范本</li>
+          <li>你已交 W-8BEN、走 Steam 国际收款 → 与此路线天然一致</li>
+        </ul>
+      </div>
+      <div class="opt">
+        <h3>🇨🇳 国内市场 <span class="badge b-warn">要求重得多</span></h3>
+        <ul>
+          <li>UGC 平台需 <b>ICP 备案 + 实名制 + 内容审核资质</b>（网信办要求），个人主体很重</li>
+          <li>Supabase/Firebase 在国内访问不稳，需换 <b>腾讯云/阿里云/微信云</b> 等境内后端</li>
+          <li>法律走 <b>《网络安全法》《个人信息保护法》(PIPL)</b>，UGC 审核是硬性义务</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rec"><b>建议：</b>以 <b>Steam 全球</b> 为主路线落地（与现有上架计划一致、合规负担最轻）；国内版作为以后单独评估的分支。下文按 Steam 全球路线展开。</div>
+  </section>
+
+  <!-- 架构 -->
+  <section>
+    <div class="tag">Architecture · 架构总览</div>
+    <h2>三块拼图：客户端 ↔ 后端 ↔ 审核</h2>
+    <svg class="arch" viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#d6a85d"/></marker>
+      </defs>
+      <!-- client -->
+      <rect x="30" y="120" width="200" height="140" rx="12" fill="rgba(77,158,242,.10)" stroke="#4d9ef2"/>
+      <text x="130" y="148" fill="#9ac5f7" font-size="14" font-weight="700" text-anchor="middle">🎣 Godot 游戏客户端</text>
+      <text x="130" y="174" fill="#b9b1a0" font-size="11.5" text-anchor="middle">图鉴里「照片墙」区</text>
+      <text x="130" y="194" fill="#b9b1a0" font-size="11.5" text-anchor="middle">上传(选图+抹EXIF)</text>
+      <text x="130" y="214" fill="#b9b1a0" font-size="11.5" text-anchor="middle">看/点赞/评论/举报</text>
+      <text x="130" y="240" fill="#857f72" font-size="11" text-anchor="middle">HTTPRequest 联网</text>
+      <!-- backend -->
+      <rect x="340" y="60" width="220" height="260" rx="12" fill="rgba(214,168,93,.10)" stroke="#d6a85d"/>
+      <text x="450" y="86" fill="#f0c978" font-size="14" font-weight="700" text-anchor="middle">☁️ Supabase（BaaS）</text>
+      <rect x="360" y="100" width="180" height="44" rx="8" fill="rgba(255,255,255,.04)" stroke="#3a4566"/>
+      <text x="450" y="120" fill="#ece8e0" font-size="12" text-anchor="middle">Auth · 账号(借 Steam)</text>
+      <text x="450" y="136" fill="#857f72" font-size="10" text-anchor="middle">谁传的 / 谁点的赞</text>
+      <rect x="360" y="154" width="180" height="44" rx="8" fill="rgba(255,255,255,.04)" stroke="#3a4566"/>
+      <text x="450" y="174" fill="#ece8e0" font-size="12" text-anchor="middle">Postgres 数据库</text>
+      <text x="450" y="190" fill="#857f72" font-size="10" text-anchor="middle">照片记录/点赞/评论/状态</text>
+      <rect x="360" y="208" width="180" height="44" rx="8" fill="rgba(255,255,255,.04)" stroke="#3a4566"/>
+      <text x="450" y="228" fill="#ece8e0" font-size="12" text-anchor="middle">Storage 对象存储</text>
+      <text x="450" y="244" fill="#857f72" font-size="10" text-anchor="middle">pending/ → approved/</text>
+      <rect x="360" y="262" width="180" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="#3a4566"/>
+      <text x="450" y="286" fill="#ece8e0" font-size="12" text-anchor="middle">Edge Function · 权限/限流</text>
+      <!-- moderation -->
+      <rect x="660" y="60" width="190" height="92" rx="12" fill="rgba(255,140,31,.10)" stroke="#ff8c1f"/>
+      <text x="755" y="86" fill="#ffb56b" font-size="13.5" font-weight="700" text-anchor="middle">🛡️ 自动鉴黄 API</text>
+      <text x="755" y="110" fill="#b9b1a0" font-size="11" text-anchor="middle">先过滤 NSFW/暴力</text>
+      <text x="755" y="128" fill="#857f72" font-size="10.5" text-anchor="middle">Vision SafeSearch / Hive</text>
+      <rect x="660" y="180" width="190" height="100" rx="12" fill="rgba(184,107,242,.10)" stroke="#b86bf2"/>
+      <text x="755" y="206" fill="#c79bff" font-size="13.5" font-weight="700" text-anchor="middle">👤 你的审核后台</text>
+      <text x="755" y="230" fill="#b9b1a0" font-size="11" text-anchor="middle">待审队列 → 通过/驳回</text>
+      <text x="755" y="250" fill="#857f72" font-size="10.5" text-anchor="middle">初期可直接用 Supabase 面板</text>
+      <!-- arrows -->
+      <line x1="230" y1="180" x2="335" y2="180" stroke="#d6a85d" stroke-width="1.6" marker-end="url(#ar)"/>
+      <text x="282" y="172" fill="#857f72" font-size="10" text-anchor="middle">上传/读取</text>
+      <line x1="560" y1="120" x2="655" y2="110" stroke="#d6a85d" stroke-width="1.4" marker-end="url(#ar)"/>
+      <line x1="560" y1="230" x2="655" y2="225" stroke="#d6a85d" stroke-width="1.4" marker-end="url(#ar)"/>
+      <text x="608" y="200" fill="#857f72" font-size="10" text-anchor="middle">审核流</text>
+    </svg>
+    <p class="note">核心思想：游戏客户端只管"传 / 看 / 互动"；存储、数据库、账号、权限都交给 Supabase；审核先自动鉴黄打分，再由你人工终审。通过的才进 <code>approved/</code>、才会被游戏拉取展示。</p>
+  </section>
+
+  <!-- 技术选型 -->
+  <section>
+    <div class="tag">Tech Stack · 技术选型</div>
+    <h2>用对工具，个人开发者也扛得住</h2>
+    <table>
+      <tr><th>层</th><th>选型（推荐）</th><th>为什么</th></tr>
+      <tr><td><b>后端</b></td><td>Supabase</td><td>开源 BaaS，把"数据库+存储+账号+权限(RLS行级安全)"打包好，免费档够起步；省掉自建服务器与运维</td></tr>
+      <tr><td><b>账号身份</b></td><td>Steam 登录</td><td>上 Steam 即自带账号体系与真人保障，免自建注册/防机器人；非 Steam 渠道再退到"邮箱魔法链接"</td></tr>
+      <tr><td><b>客户端</b></td><td>Godot HTTPRequest + FileDialog</td><td>原生支持联网请求与选文件；上传前在本地<b>压缩 + 抹掉 EXIF</b>（去 GPS/设备信息）</td></tr>
+      <tr><td><b>自动审核</b></td><td>图像审核 API</td><td>Google Vision SafeSearch / 阿里云内容安全 / Hive，先机器过滤色情暴力，降低你人工量</td></tr>
+      <tr><td><b>人工审核台</b></td><td>初期 Supabase 面板 → 后期小网页</td><td>起步直接用 Supabase 自带表格界面改状态；量大了再做个简易审核网页</td></tr>
+      <tr><td><b>图片 CDN</b></td><td>Supabase Storage 自带 / 套 Cloudflare</td><td>就近分发缩略图，省带宽、加载快</td></tr>
+    </table>
+  </section>
+
+  <!-- 数据模型 -->
+  <section>
+    <div class="tag">Data Model · 数据怎么存</div>
+    <h2>几张表 + 两个存储桶</h2>
+    <table>
+      <tr><th>表 / 桶</th><th>关键字段</th><th>用途</th></tr>
+      <tr><td><b>profiles</b></td><td>user_id · 昵称 · steam_id · 状态(正常/封禁)</td><td>玩家身份</td></tr>
+      <tr><td><b>fish_photos</b></td><td>id · <b>fish_id</b> · user_id · 图片URL · <b>status</b>(待审/通过/驳回) · 点赞数 · 时间</td><td>每张上传照片一行（核心表）</td></tr>
+      <tr><td><b>photo_likes</b></td><td>photo_id · user_id（唯一约束）</td><td>一人一赞，防刷</td></tr>
+      <tr><td><b>photo_comments</b></td><td>id · photo_id · user_id · 文本 · status</td><td>评论（同样要审核）</td></tr>
+      <tr><td><b>reports</b></td><td>目标(photo/comment) · 举报人 · 理由</td><td>用户举报 → 进你的复审队列</td></tr>
+      <tr><td><b>桶 pending/</b></td><td>待审原图</td><td>仅审核可见</td></tr>
+      <tr><td><b>桶 approved/</b></td><td>通过的缩略图/展示图</td><td>游戏只读这里</td></tr>
+    </table>
+    <p class="note">用 Supabase 的<b>行级安全(RLS)</b>规则把权限钉死：玩家只能改自己的内容、只能读 status=通过 的照片；待审/驳回的别人看不到。</p>
+  </section>
+
+  <!-- 核心流程 -->
+  <section>
+    <div class="tag">Flows · 核心流程</div>
+    <h2>四条主流程</h2>
+    <div class="two">
+      <div>
+        <h3>📤 上传</h3>
+        <div class="flow">
+          <div class="s"><div class="n"></div><div class="t">图鉴某鱼详情卡点「上传我的渔获」</div></div>
+          <div class="s"><div class="n"></div><div class="t">选本地照片 → 客户端<b>压缩 + 抹 EXIF</b></div></div>
+          <div class="s"><div class="n"></div><div class="t">传到 <code>pending/</code>，写一行 status=待审</div></div>
+          <div class="s"><div class="n"></div><div class="t">自动鉴黄打分；明显违规直接拒</div></div>
+        </div>
+      </div>
+      <div>
+        <h3>🛡️ 审核</h3>
+        <div class="flow">
+          <div class="s"><div class="n"></div><div class="t">你在审核台看待审队列（图+鉴黄分）</div></div>
+          <div class="s"><div class="n"></div><div class="t">通过 → 转入 <code>approved/</code>、status=通过</div></div>
+          <div class="s"><div class="n"></div><div class="t">驳回 → 标记原因，通知上传者</div></div>
+        </div>
+        <h3 style="margin-top:14px">🖼️ 展示</h3>
+        <div class="flow">
+          <div class="s"><div class="n"></div><div class="t">详情卡拉该 fish_id 的 status=通过 照片墙</div></div>
+          <div class="s"><div class="n"></div><div class="t">缩略图网格，点开看大图 + 上传者 + 赞/评</div></div>
+        </div>
+      </div>
+    </div>
+    <h3>❤️ 点赞 / 💬 评论 / 🚩 举报</h3>
+    <ul>
+      <li><b>点赞</b>：一人一赞（唯一约束），实时累加；可做"本鱼最受欢迎"精选位</li>
+      <li><b>评论</b>：发表先入待审（或先发后审 + 关键词过滤），违规可删/封</li>
+      <li><b>举报</b>：任何人可举报不当内容 → 进你的复审队列 → 下架/封禁</li>
+    </ul>
+  </section>
+
+  <!-- 门槛与审核策略 -->
+  <section>
+    <div class="tag">Strategy · 门槛与审核策略</div>
+    <h2>🔒 三道闸：把审核压力压到最低</h2>
+    <p class="lead">你提的三个巧思非常对路——核心是「<b>认真的用户才有资格，机器先扛掉大部分，人工只看真正模糊的</b>」。下面把它们整合并各补强一点。</p>
+
+    <h3>① 上传门槛：先证明你是认真玩家</h3>
+    <ul>
+      <li><b>Steam 付费即基线</b>：游戏是买断制，每个能上传的人都已付费 + 有 Steam 实名身份——这本身就挡掉绝大多数机器人/水军（远胜免费 App）</li>
+      <li><b>叠加进度门槛</b>：再要求「钓获满 N 种 / 图鉴达成 ≥ X% / 游玩满 Y 小时」才解锁上传——既保证是真在玩的人，又让「上传资格」成为一种<b>挣来的荣誉</b></li>
+      <li><b>（可选）创作者付费/更高等级</b>：门槛高低你拍板，但<b>别卡太死</b>，否则照片墙长期空着（内容饥饿）</li>
+      <li><b>限流</b>：新用户每天少量上传，避免一次性灌水</li>
+    </ul>
+    <div class="rec"><b>补强提醒：</b>门槛挡的是「垃圾量」，挡不住「内容真假」（付费玩家也可能传网图）——那交给下面的 AI＋人工。两者分工，别混为一谈。</div>
+
+    <h3>② 上传审核：AI 先过 + 人工再过 —— 关键在「按置信度分流」</h3>
+    <ul>
+      <li><b>AI 第一道</b>不只鉴黄，还判「<b>这到底是不是鱼照片</b>」（图像识别），顺手挡掉跑题图</li>
+      <li><b>分流才是真省人工</b>：明显安全且确实是鱼 → 可<b>自动通过</b>；明显违规 → <b>自动拒</b>；只有<b>中间灰区</b>才进你的人工队列。AI 扛掉好判的 ~80%，你只看 ~20%</li>
+      <li><b>信任用户免审</b>：历史多次通过、零违规的老用户，后续可「先发后审」或免审——审核量随时间自然下降</li>
+    </ul>
+
+    <h3>③ 举报审核：达阈值才升级 —— 但有一类例外</h3>
+    <ul>
+      <li><b>加权阈值</b>，不是单纯数人头：按举报人信誉加权（老实人权重高、惯犯权重低），既挡单条恶意举报，也防<b>组团刷举报</b>恶意下架别人</li>
+      <li>达阈值 → <b>AI 复审</b> → 仍可疑才 <b>人工终审</b>，层层过滤</li>
+      <li>⚠️ <b>例外（必须留）</b>：涉黄涉暴涉违法这类<b>严重内容不能等阈值</b>——单条可信举报即<b>立即临时隐藏 + 人工优先处理</b>。纯阈值制对最坏内容有法律风险</li>
+    </ul>
+
+    <h3>🧩 串起来的发动机：信任分（声望）</h3>
+    <p>给每个用户一个<b>信任分</b>：上传被通过 +分、被举报/驳回 −分。分高 → 免审、举报权重高、解锁更多额度；分低 → 严审、限流、最终封禁。<b>这套自我调节的声望机制，才是长期把人工审核压到最低的真正发动机</b>——你的三个巧思本质上都在喂养它。</p>
+  </section>
+
+  <!-- 法律 -->
+  <section>
+    <div class="tag">Legal & Safety · 不能裸奔的部分</div>
+    <h2>⚖️ 法律 / 隐私 / 安全清单</h2>
+    <div class="warnbox">
+      <h3>托管用户照片 = 你成了"平台"，有持续法律责任</h3>
+      <p>这不是写完代码就完事，而是一份长期义务。下面每条都要落实，缺一个都可能是雷。</p>
+    </div>
+    <table>
+      <tr><th>事项</th><th>要做什么</th></tr>
+      <tr><td><b>用户协议 + 隐私政策</b></td><td>明确：用户授权你展示其照片；禁止违法/侵权/色情/人身攻击内容；说明收集哪些数据、怎么用</td></tr>
+      <tr><td><b>EXIF 抹除</b></td><td>上传前去掉照片里的 GPS 定位 / 设备信息（否则泄露用户家/钓点位置，隐私事故）</td></tr>
+      <tr><td><b>数据删除权</b></td><td>用户能删自己的照片/账号（GDPR / PIPL 都要求"被遗忘权"）</td></tr>
+      <tr><td><b>内容审核义务</b></td><td>先审后展示（已设计）；保留举报+下架通道；记录审核日志</td></tr>
+      <tr><td><b>侵权下架(DMCA)</b></td><td>提供版权方投诉与快速下架流程（用户可能传了别人的图）</td></tr>
+      <tr><td><b>未成年人保护</b></td><td>年龄声明；不收集儿童个人信息；评论防霸凌</td></tr>
+      <tr><td><b>防滥用</b></td><td>上传/点赞/评论限流；一人一赞；封禁机制；垃圾/水军治理</td></tr>
+    </table>
+    <p class="note">建议：用户协议/隐私政策用成熟模板起草（Steam 上架本就需要隐私政策），上线前最好让懂行的人过一眼。</p>
+  </section>
+
+  <!-- 成本 -->
+  <section>
+    <div class="tag">Cost · 成本</div>
+    <h2>花在哪、随什么涨</h2>
+    <table>
+      <tr><th>项目</th><th>起步</th><th>随规模</th></tr>
+      <tr><td>Supabase</td><td><b>免费档</b>(够验证)</td><td>Pro ≈ $25/月起；存储/流量超额另计</td></tr>
+      <tr><td>图片存储 + 带宽</td><td>很低</td><td>按 GB 存储 + 下行流量计费，随活跃用户涨（套 CDN 省）</td></tr>
+      <tr><td>自动鉴黄 API</td><td>免费额度</td><td>约 $1–1.5 / 千张图</td></tr>
+      <tr><td><b>你的审核时间</b></td><td>—</td><td><b>最隐形也最贵的成本</b>：UGC 越火、人工审越多，要趁早上自动过滤 + 信任用户免审</td></tr>
+    </table>
+  </section>
+
+  <!-- 路线 -->
+  <section>
+    <div class="tag">Roadmap · 分阶段</div>
+    <h2>别一口气全做，分四步走</h2>
+    <div class="gantt">
+      <div class="ph"><div class="lab">P0 · 决策与搭壳<small>1 块</small></div><div class="d">定市场/身份/区域；建 Supabase 项目、建表、配 RLS 权限、起草用户协议+隐私政策</div></div>
+      <div class="ph"><div class="lab">P1 · MVP 最小闭环<small>核心</small></div><div class="d"><b>上传 → 你审核 → 展示</b>。先不做点赞评论。游戏端加联网+上传+照片墙；验证"真有人传"</div></div>
+      <div class="ph"><div class="lab">P2 · 点赞 + 举报<small>轻社交</small></div><div class="d">一人一赞、最受欢迎精选位、用户举报通道。接自动鉴黄降人工</div></div>
+      <div class="ph"><div class="lab">P3 · 评论 + 我的渔获<small>社区感</small></div><div class="d">评论（先审/先发后审）、个人主页"我上传的"、被赞通知</div></div>
+      <div class="ph"><div class="lab">P4 · 社区运营<small>长线</small></div><div class="d">每周精选、排行榜、信任用户免审、活动；按数据决定加码</div></div>
+    </div>
+    <div class="rec"><b>关键：</b>P1 的 MVP 是分水岭——它能用最小代价回答"玩家到底会不会传图"。<b>会，再往社交加码；不会，及时止损</b>，不至于把点赞评论的复杂度白做。</div>
+  </section>
+
+  <!-- 游戏内落地 -->
+  <section>
+    <div class="tag">In-Game · 游戏里怎么接</div>
+    <h2>落在现成的详情卡上</h2>
+    <ul>
+      <li>就在<b>刚做的鱼种详情卡</b>里加一块「🐟 社区渔获墙」：缩略图网格 + 「上传我的渔获」按钮</li>
+      <li>详情卡的图片优先级可设：<b>玩家精选照片 ＞ 自己曾上传 ＞ 水彩兜底</b>（"百科↗"外链保留）</li>
+      <li>需新增一个 <b>联网模块</b>（HTTPRequest 封装 + 账号态 + 缓存），这是游戏从"纯本地"迈向"联网"的第一步</li>
+      <li>离线时优雅降级：拉不到照片墙就只显示水彩 + 百科，不影响挂机主体</li>
+    </ul>
+  </section>
+
+  <!-- 决策清单 -->
+  <section style="border-bottom:none">
+    <div class="tag">Your Call · 你需要拍板的</div>
+    <h2>决策清单</h2>
+    <div class="chk">
+      <div class="row"><div class="q">① 市场</div><div class="a">Steam 全球（推荐）/ 国内 / 都要？ —— 决定技术栈与法律</div></div>
+      <div class="row"><div class="q">② 身份</div><div class="a">借 Steam 账号（推荐）/ 自建邮箱登录 / 匿名设备号（弱）？</div></div>
+      <div class="row"><div class="q">③ 起步范围</div><div class="a">先只做 <b>P1 上传→审核→展示</b>（推荐）还是一上来就带点赞评论？</div></div>
+      <div class="row"><div class="q">④ 审核策略</div><div class="a">全人工（你审）起步，何时上自动鉴黄 / 信任用户免审？</div></div>
+      <div class="row"><div class="q">⑤ 法律</div><div class="a">用户协议/隐私政策谁来起草、是否找人把关？</div></div>
+      <div class="row"><div class="q">⑥ 商业化</div><div class="a">照片墙纯免费社区，还是和付费/会员挂钩？（影响是否做、做多深）</div></div>
+      <div class="row"><div class="q">⑦ 时机</div><div class="a">现在就启动 P0，还是先把游戏主体上 Steam、回头再做这个大版本？</div></div>
+    </div>
+    <div class="rec" style="margin-top:14px"><b>我的整体建议：</b>把它当作<b>游戏上线后的第一个大版本</b>来规划，而不是发售前的拦路虎。先用「水彩+百科」让详情卡上线，主体游戏先发 Steam；社区照片墙按 P0→P1 起步，用 MVP 验证后再决定投入多深。</div>
+  </section>
+
+</div>
+
+<footer><div class="wrap">
+  角落垂钓 · 社区鱼获照片墙设计方案 · 评估文档（未承诺开发）· 主推 Steam 全球 + Supabase 路线 · 待你就决策清单拍板后细化
+</div></footer>
+
+</body>
+</html>

@@ -14,7 +14,10 @@ static func open_panel(g: CornerFishing, kind: String) -> void:
 		g._panel_saved_pos = g._panel.position
 	close_panel(g)
 	var titles := {"catch": "垂钓手册", "rod": "鱼竿 · 升级", "set": "设置", "offline": "离线小结", "intro": "欢迎来到角落垂钓"}
-	var card := make_card(g, str(titles.get(kind, "")))
+	var title_str := str(titles.get(kind, ""))
+	if kind == "fishdetail":
+		title_str = FishData.display_name(str(g._detail_fish)) + " · 详情"
+	var card := make_card(g, title_str)
 	if kind != "offline" and kind != "intro" and g._panel_saved_pos != null:
 		card.position = clamp_panel_position(g, g._panel_saved_pos, card.custom_minimum_size)
 	var v: VBoxContainer = card.get_node("M/V")
@@ -24,6 +27,7 @@ static func open_panel(g: CornerFishing, kind: String) -> void:
 		"set": fill_settings(g, v)
 		"offline": fill_offline_report(g, v)
 		"intro": fill_intro(g, v)
+		"fishdetail": fill_fish_detail(g, v)
 	g.ui_root.add_child(card)
 	g._panel = card
 	g._panel_kind = kind
@@ -906,6 +910,170 @@ static func fish_entry(g: CornerFishing, c: Dictionary, idx: int, featured := fa
 
 # ============================ 图鉴页 ============================
 
+# ============================ 鱼种详情卡（点击图鉴的鱼弹出）============================
+
+static func fill_fish_detail(g: CornerFishing, v: VBoxContainer) -> void:
+	var id := str(g._detail_fish)
+	if not FishData.FISH.has(id):
+		return
+	var info: Dictionary = FishData.FISH[id]
+	var tier := FishData.tier_of(id)
+	var rec: Dictionary = g.dex.get(id, {})
+	var lore: Dictionary = FishLore.LORE.get(id, {})
+
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(0, 404)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 8)
+	sc.add_child(col)
+	v.add_child(sc)
+
+	# —— 照片：有真实照片则显示，否则回退水彩鱼图 ——
+	var photo_path := "res://assets/art/fish_photos/%s.jpg" % id
+	var has_photo := ResourceLoader.exists(photo_path)
+	var pcard := PanelContainer.new()
+	pcard.add_theme_stylebox_override("panel", paper_style(0.95))
+	var pm := MarginContainer.new()
+	for s in ["left", "right", "top", "bottom"]:
+		pm.add_theme_constant_override("margin_" + s, 8)
+	pcard.add_child(pm)
+	var pbox := VBoxContainer.new()
+	pbox.add_theme_constant_override("separation", 4)
+	pm.add_child(pbox)
+	var img := TextureRect.new()
+	img.custom_minimum_size = Vector2(0, 224 if has_photo else 132)
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	img.texture = (load(photo_path) as Texture2D) if has_photo else g._fish_texture(id)
+	pbox.add_child(img)
+	var cap := Label.new()
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cap.custom_minimum_size = Vector2(460, 0)
+	cap.add_theme_font_size_override("font_size", 10)
+	cap.add_theme_color_override("font_color", Color(0.46, 0.43, 0.37))
+	cap.text = _photo_credit(id) if has_photo else "（暂用示意水彩图，真实照片待补）"
+	pbox.add_child(cap)
+	col.add_child(pcard)
+
+	# —— 名 · 品阶（衬线）——
+	var nm := Label.new()
+	nm.text = "%s · %s" % [FishData.TIER_NAMES[tier], FishData.display_name(id)]
+	nm.add_theme_font_size_override("font_size", 20)
+	nm.add_theme_font_override("font", g._serif)
+	nm.add_theme_color_override("font_color", g._ui_tier_color(tier, false))
+	col.add_child(nm)
+
+	# —— 品种描述 + 冷知识 ——
+	if lore.has("desc"):
+		var d := Label.new()
+		d.text = str(lore["desc"])
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d.custom_minimum_size = Vector2(470, 0)
+		d.add_theme_font_size_override("font_size", 13)
+		d.add_theme_color_override("font_color", Color(0.86, 0.83, 0.74))
+		col.add_child(d)
+	if lore.has("fact"):
+		var fa := Label.new()
+		fa.text = "💡 " + str(lore["fact"])
+		fa.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fa.custom_minimum_size = Vector2(470, 0)
+		fa.add_theme_font_size_override("font_size", 12)
+		fa.add_theme_color_override("font_color", Color(0.82, 0.70, 0.42))
+		col.add_child(fa)
+
+	# —— 真实档案 ——
+	var tags_cn := []
+	for t in info.get("tags", []):
+		tags_cn.append(str(FishLore.TAG_CN.get(t, t)))
+	col.add_child(_kv_card([
+		["生态", "　".join(tags_cn)],
+		["体重", "%.2f – %.2f kg" % [float(info["wmin"]), float(info["wmax"])]],
+		["卖价", "%d – %d 金币" % [int(info["vmin"]), int(info["vmax"])]],
+	]))
+
+	# —— 个人纪录 ——
+	if not rec.is_empty():
+		var fd := str(rec.get("fd", ""))
+		col.add_child(_kv_card([
+			["累计钓获", "×%d" % int(rec.get("n", 1))],
+			["最大纪录", "%.2f kg" % float(rec.get("w", 0.0))],
+			["首次捕获", fd if fd != "" else "很久以前"],
+		]))
+
+	# —— 按钮：百科外链 + 返回图鉴 ——
+	var btns := HBoxContainer.new()
+	btns.add_theme_constant_override("separation", 8)
+	if lore.has("wiki"):
+		var wb := Button.new()
+		wb.text = "百科 ↗"
+		wb.custom_minimum_size = Vector2(0, 32)
+		wb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		apply_button_skin(wb, true)
+		var wurl := "https://zh.wikipedia.org/wiki/" + str(lore["wiki"])
+		wb.pressed.connect(func() -> void:
+			Audio.play_ui("ui_click")
+			OS.shell_open(wurl))
+		btns.add_child(wb)
+	var bb := Button.new()
+	bb.text = "← 返回图鉴"
+	bb.custom_minimum_size = Vector2(0, 32)
+	bb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	apply_button_skin(bb, false)
+	bb.pressed.connect(func() -> void:
+		Audio.play_ui("ui_click")
+		g._set_catch_tab(1))
+	btns.add_child(bb)
+	col.add_child(btns)
+
+
+static func _kv_card(rows: Array) -> Control:
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", paper_style(0.90))
+	var mg := MarginContainer.new()
+	for s in ["left", "right"]:
+		mg.add_theme_constant_override("margin_" + s, 10)
+	for s in ["top", "bottom"]:
+		mg.add_theme_constant_override("margin_" + s, 7)
+	card.add_child(mg)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 3)
+	mg.add_child(box)
+	for r in rows:
+		var row := HBoxContainer.new()
+		var k := Label.new()
+		k.text = str(r[0])
+		k.custom_minimum_size = Vector2(74, 0)
+		k.add_theme_font_size_override("font_size", 12)
+		k.add_theme_color_override("font_color", Color(0.50, 0.47, 0.40))
+		row.add_child(k)
+		var val := Label.new()
+		val.text = str(r[1])
+		val.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		val.add_theme_font_size_override("font_size", 13)
+		val.add_theme_color_override("font_color", Color(0.26, 0.25, 0.22))
+		row.add_child(val)
+		box.add_child(row)
+	return card
+
+
+static func _photo_credit(id: String) -> String:
+	var path := "res://assets/art/fish_photos/CREDITS.json"
+	if not FileAccess.file_exists(path):
+		return "📷 Wikimedia Commons"
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return "📷 Wikimedia Commons"
+	var data: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(data) == TYPE_DICTIONARY and data.has(id):
+		var c: Dictionary = data[id]
+		var author := str(c.get("author", "")).split("\n")[0]
+		return "📷 %s · %s · 维基共享资源" % [author, str(c.get("license", ""))]
+	return "📷 Wikimedia Commons"
+
+
 static func fill_dex_tab(g: CornerFishing, v: VBoxContainer) -> void:
 	var stat := Label.new()
 	var vc := 0  # 已收集稀有变体数（每种鱼 ×3 稀有）
@@ -973,6 +1141,13 @@ static func dex_card(g: CornerFishing, id: String) -> Control:
 		badge_legible(rec)
 		box.add_child(rec)
 		box.add_child(dex_badges(r))
+		# 点击已发现的鱼 → 打开鱼种详情卡
+		panel.mouse_filter = Control.MOUSE_FILTER_STOP
+		panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		panel.gui_input.connect(func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				Audio.play_ui("ui_click")
+				g._open_fish_detail(id))
 	return panel
 
 

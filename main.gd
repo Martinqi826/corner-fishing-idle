@@ -69,6 +69,7 @@ var _serif_num: FontVariation  # 同字体 + 等宽数字
 var _msg_id := 0
 var _panel: Control = null
 var _panel_kind := ""
+var _detail_fish := ""       # 当前「鱼种详情卡」显示的鱼 id
 var _opacity := 1.0
 var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
 var seen_intro := false          # 是否看过首次引导
@@ -956,6 +957,11 @@ func _open_panel(kind: String) -> void:
 
 func _close_panel() -> void:
 	UIPanels.close_panel(self)
+
+
+func _open_fish_detail(id: String) -> void:
+	_detail_fish = id
+	_open_panel("fishdetail")
 
 
 func _set_catch_tab(tab: int) -> void:

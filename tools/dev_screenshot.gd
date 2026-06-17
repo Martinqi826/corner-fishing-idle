@@ -44,6 +44,12 @@ func _run() -> void:
 	await _settle(2)
 	_snap("panel_dex.png")
 
+	# 2c) 鱼种详情卡（点鲤鱼，带真实照片）
+	_main._detail_fish = "carp"
+	_main._open_panel("fishdetail")
+	await _settle(2)
+	_snap("panel_fishdetail.png")
+
 	# 3) 升级面板
 	_main._open_panel("rod")
 	await _settle(2)
