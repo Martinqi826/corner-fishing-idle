@@ -71,7 +71,8 @@ var _mist_tex: Array = []         # 3 层雾气
 var _snow_tex: Array = []         # 3 层雪粒
 var _ripple_tex: Array = []       # 4 帧浮漂涟漪
 var _glow_tex: Array = []         # 4 帧灯光呼吸
-var _wild_tex: Dictionary = {}    # 小动物事件精灵
+var _wild_tex: Dictionary = {}    # 小动物事件精灵（bird=帧数组，其余=单帧）
+var _wild_alt: Dictionary = {}    # 可选副帧：bird_glide/rabbit_alert/fox_retreat/fish_jump_02（缺则忽略）
 
 var _mist_par: Array = []         # 每层 {period, amp, phase, alpha}
 var _snow_par: Array = []         # 每层 {period, dist, phase, alpha}
@@ -97,6 +98,7 @@ var _flash_t := 0.0
 
 # —— 渔夫情绪 / 桌面宠物（Task 4）：尽量零存档、瞬态，用变换驱动 ——
 var _fisher_pull: Array = []        # 收竿/上鱼姿势帧（咬钩时切换，给渔夫加动作）
+var _fisher_mood_tex: Dictionary = {}  # 可选情绪帧 idle_breath/shiver/doze/cheer（缺则回退 idle+变换）
 var fisher_mood := "idle"           # idle / cheer / yawn / shiver / doze
 var _mood_t := 0.0                  # 当前非 idle 情绪剩余时长
 var _mood_dur := 1.0
@@ -110,15 +112,21 @@ var _pet_action_dur := 1.0
 var _pet_blink_t := 3.0
 
 # —— 小馋猫正式 sprite（Codex 96x96 透明帧；缺失自动回退程序化猫）——
-const PET_SPRITE_SCALE := 0.35
+const PET_SPRITE_SCALE := 0.30   # 比渔夫(~58px)明显小，退成环境配角，不压主体/背景
+const PET_MODULATE := Color(0.95, 0.96, 1.0, 0.90)  # 冷灰已烤进贴图，这里只极轻偏冷 + 略降透明使其后退
 var _pet_tex: Dictionary = {}
+var _pet_shadow_tex: Texture2D = null   # 烘焙柔和接触阴影（缺图回退淡椭圆，杜绝悬浮感）
 var _pet_paths := {
 	"idle": "res://assets/art/pets/cat_idle.png",
 	"blink": "res://assets/art/pets/cat_blink.png",
 	"paw": "res://assets/art/pets/cat_paw.png",
 	"steal": "res://assets/art/pets/cat_steal.png",
 	"sleep": "res://assets/art/pets/cat_sleep.png",
+	"tail_01": "res://assets/art/pets/cat_tail_01.png",
+	"tail_02": "res://assets/art/pets/cat_tail_02.png",
 }
+var _pet_tail_t := 8.0       # 距下次轻摆尾（idle 低频小事件）
+var _pet_tail_active := 0.0  # 当前摆尾剩余时长
 
 
 func _ready() -> void:
@@ -138,15 +146,35 @@ func _ready() -> void:
 	_snow_tex = _frames("res://assets/art/effects/snow/snow_drift_%02d.png", 3)
 	_ripple_tex = _frames("res://assets/art/effects/ripple/bobber_ripple_%02d.png", 4)
 	_glow_tex = _frames("res://assets/art/effects/light/lantern_glow_%02d.png", 4)
-	for k in ["bird_fly_01", "rabbit_idle_01", "fox_peek_01", "fish_jump_01"]:
+	# 渔夫情绪帧（可选，缺则回退 fisher_idle + 变换驱动）
+	for k in ["idle_breath", "shiver", "doze", "cheer"]:
+		var ftx := _tex("res://assets/art/character/fisher_%s.png" % k)
+		if ftx != null:
+			_fisher_mood_tex[k] = ftx
+	# 飞鸟：优先多帧扇翅循环（bird_fly_01..03），缺则回退单帧 bird_fly_01（仍可代码扇翅）
+	var bird_frames := _frames("res://assets/art/wildlife/bird_fly_%02d.png", 3)
+	if bird_frames.is_empty():
+		var b1 := _tex("res://assets/art/wildlife/bird_fly_01.png")
+		if b1 != null:
+			bird_frames = [b1]
+	if not bird_frames.is_empty():
+		_wild_tex["bird"] = bird_frames
+	for k in ["rabbit_idle_01", "fox_peek_01", "fish_jump_01"]:
 		var tx := _tex("res://assets/art/wildlife/%s.png" % k)
 		if tx != null:
 			_wild_tex[k.get_slice("_", 0)] = tx
+	# 可选副帧（缺则该效果优雅跳过，事件仍用主帧正常播放）
+	for pair in [["bird_glide", "bird_glide_01"], ["rabbit_alert", "rabbit_alert_01"],
+			["fox_retreat", "fox_retreat_01"], ["fish_jump_02", "fish_jump_02"]]:
+		var atx := _tex("res://assets/art/wildlife/%s.png" % pair[1])
+		if atx != null:
+			_wild_alt[pair[0]] = atx
 	# 小馋猫正式 sprite（缺任一帧则该帧回退程序化猫）
 	for k in _pet_paths.keys():
 		var ptx := _tex(_pet_paths[k])
 		if ptx != null:
 			_pet_tex[k] = ptx
+	_pet_shadow_tex = _tex("res://assets/art/pets/cat_shadow_soft.png")
 	# 每层随机参数 + 随机相位（避免所有循环同步重启，plan 的 Motion Rules）
 	_shimmer_period = _prng.randf_range(4.2, 5.5)
 	_glow_period = _prng.randf_range(3.5, 5.5)
@@ -237,7 +265,7 @@ func _tick_wildlife(delta: float) -> void:
 		_wild_t += delta
 		if _wild_t >= _wild_dur:
 			_wild_kind = ""
-			_wild_timer = _prng.randf_range(45.0, 120.0)
+			_wild_timer = _prng.randf_range(75.0, 120.0)  # 首次预览后更稀疏，像环境细节而非常驻
 
 
 ## 启动一次小动物事件；kind 为空时随机挑选（dynamic_art_plan.md 的出场参数）。
@@ -251,8 +279,8 @@ func _start_wild(kind := "") -> void:
 	_wild_t = 0.0
 	match kind:
 		"bird":
-			_wild_dur = _prng.randf_range(5.0, 9.0)
-			_wild_scale = _prng.randf_range(0.22, 0.35)
+			_wild_dur = _prng.randf_range(6.0, 10.0)
+			_wild_scale = _prng.randf_range(0.16, 0.24)   # 更小，别像贴纸从画面飞过
 			var y0 := _prng.randf_range(105.0, 145.0)
 			_wild_from = Vector2(W + 30.0, y0)
 			_wild_to = Vector2(150.0, y0 - _prng.randf_range(10.0, 30.0))
@@ -385,34 +413,43 @@ func fisher_cheer() -> void:
 func _draw_fisher() -> void:
 	if _fisher == null:
 		return
+	# 选帧：咬钩收竿优先；其次有专属情绪帧就用；idle 呼吸峰值轻切 idle_breath；都缺回退 idle。
 	var tex := _fisher
 	if dip > 0.5 and not _fisher_pull.is_empty():
-		tex = _fisher_pull[int(t * 6.0) % _fisher_pull.size()]  # 咬钩收竿，帧间切换
+		tex = _fisher_pull[int(t * 6.0) % _fisher_pull.size()]  # 咬钩收竿，帧间切换（自然衔接浮漂咬钩）
+	elif fisher_mood == "cheer" and _fisher_mood_tex.has("cheer"):
+		tex = _fisher_mood_tex["cheer"]
+	elif fisher_mood == "shiver" and _fisher_mood_tex.has("shiver"):
+		tex = _fisher_mood_tex["shiver"]
+	elif fisher_mood == "doze" and _fisher_mood_tex.has("doze"):
+		tex = _fisher_mood_tex["doze"]
+	elif fisher_mood == "idle" and _fisher_mood_tex.has("idle_breath") and sin(t * 1.7) > 0.6:
+		tex = _fisher_mood_tex["idle_breath"]  # 仅在呼气峰值轻切一帧，肉眼几乎察觉不到突变
 	var sz := Vector2(tex.get_size()) * FISHER_SCALE
 	var off := Vector2.ZERO
 	var rot := 0.0
 	var sc := Vector2.ONE
-	sc.y *= 1.0 + 0.02 * sin(t * 2.0)   # 呼吸
+	sc.y *= 1.0 + 0.016 * sin(t * 1.7)  # 呼吸：~1px、慢，安静不打扰
 	var p := 0.0
 	match fisher_mood:
 		"cheer":
 			p = 1.0 - _mood_t / _mood_dur
-			off.y = -sin(p * PI) * 12.0        # 蹦一下
-			sc *= 1.0 + 0.08 * sin(p * PI)
-			rot = 0.05 * sin(p * TAU * 2.0)    # 小幅摇摆
+			off.y = -sin(p * PI) * 6.0         # 蹦一下（≤6px，不夸张）
+			sc *= 1.0 + 0.04 * sin(p * PI)     # 缩放脉冲 ≤1.04
+			rot = 0.035 * sin(p * TAU * 2.0)   # 小幅摇摆
 		"yawn":
 			p = 1.0 - _mood_t / _mood_dur
 			var yy := sin(p * PI)
-			sc.y *= 1.0 + 0.06 * yy            # 缓慢伸展
-			off.y -= 2.0 * yy
-			rot = -0.05 * yy                   # 微微后仰
+			sc.y *= 1.0 + 0.05 * yy            # 缓慢伸展
+			off.y -= 1.6 * yy
+			rot = -0.04 * yy                   # 微微后仰
 		"shiver":
-			off.x = sin(t * 34.0) * 1.4        # 快速发抖
-			off.y += 1.0                        # 缩脖
-			sc.y *= 0.98
+			off.x = sin(t * 30.0) * 0.8        # 发抖（≤0.8px，细微不剧烈）
+			off.y += 0.8                        # 缩脖
+			sc.y *= 0.985
 		"doze":
-			rot = 0.06 * sin(t * 0.8)          # 一点一点打盹
-			off.y += 1.5 * sin(t * 0.8) + 1.0
+			rot = 0.05 * sin(t * 0.8)          # 一点一点打盹
+			off.y += 1.2 * sin(t * 0.8) + 1.0
 	var flip := -1.0 if fisher_flip else 1.0
 	draw_set_transform(fisher_anchor + off, rot, Vector2(flip * sc.x, sc.y))
 	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false)
@@ -436,6 +473,15 @@ func _tick_pet(delta: float) -> void:
 	_pet_blink_t -= delta
 	if _pet_blink_t <= 0.0:
 		_pet_blink_t = _prng.randf_range(2.6, 6.0)
+	# 尾巴轻摆：仅在闲坐(无动作/非睡)时，6~12s 一次、持续 0.8~1.2s，低调有生命感
+	if _pet_tail_active > 0.0:
+		_pet_tail_active -= delta
+	else:
+		_pet_tail_t -= delta
+		if _pet_tail_t <= 0.0:
+			_pet_tail_t = _prng.randf_range(6.0, 12.0)
+			if pet_action == "" and not (ctx_night and ctx_idle):
+				_pet_tail_active = _prng.randf_range(0.8, 1.2)
 
 
 func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
@@ -447,15 +493,14 @@ func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
 ## 小馋猫入口：有正式 sprite 用 PNG 帧，缺图回退程序化占位猫。
 func _draw_pet() -> void:
 	var key := _pet_state_key()
-	if _pet_tex.has(key):
-		_draw_pet_sprite(_pet_tex[key])
-	elif _pet_tex.has("idle"):
-		_draw_pet_sprite(_pet_tex["idle"])   # 当前帧缺失但有 idle → 用 idle，仍是真图
+	if _pet_tex.has(key) or _pet_tex.has("idle"):
+		_draw_pet_shadow()                       # 接触阴影压在脚底，杜绝悬浮感
+		_draw_pet_sprite(_pet_tex.get(key, _pet_tex.get("idle")))
 	else:
 		_draw_pet_proc()
 
 
-## 按动作/情境选帧：偷鱼/挥爪优先，其次夜间久坐睡觉，再眨眼，否则 idle。
+## 按动作/情境选帧：偷鱼/挥爪优先，其次夜间久坐睡觉，再轻摆尾，再眨眼，否则 idle。
 func _pet_state_key() -> String:
 	if pet_action == "steal":
 		return "steal"
@@ -463,24 +508,43 @@ func _pet_state_key() -> String:
 		return "paw"
 	if ctx_night and ctx_idle:
 		return "sleep"
+	if _pet_tail_active > 0.0 and _pet_tex.has("tail_01"):
+		if _pet_tex.has("tail_02"):
+			return "tail_01" if int(t * 4.0) % 2 == 0 else "tail_02"
+		return "tail_01"
 	if _pet_blink_t < 0.14:
 		return "blink"
 	return "idle"
 
 
-## 绘制 sprite 帧：底部中心对齐 pet_anchor（不破现有构图），轻微呼吸 + 动作位移。
+## 接触阴影：优先烘焙 PNG（与猫帧同锚同尺寸，阴影条正落脚底）；缺图回退一枚淡椭圆。
+func _draw_pet_shadow() -> void:
+	if _pet_shadow_tex != null:
+		var sz := Vector2(_pet_shadow_tex.get_size()) * PET_SPRITE_SCALE
+		var tl := pet_anchor - Vector2(sz.x * 0.5, sz.y)
+		draw_texture_rect(_pet_shadow_tex, Rect2(tl, sz), false, Color(1, 1, 1, 0.9))
+	else:
+		_pet_ellipse(pet_anchor + Vector2(0, -1), 8.0, 2.4, Color(0.20, 0.22, 0.26, 0.16))
+
+
+## 绘制 sprite 帧：脚底中心对齐 pet_anchor（变换驱动），极轻呼吸 + 动作位移 + 无尾帧时摆尾错觉。
 func _draw_pet_sprite(tex: Texture2D) -> void:
 	var sz := Vector2(tex.get_size()) * PET_SPRITE_SCALE
-	var offset := Vector2(0, sin(t * 1.7) * 0.5 + 1.0)   # 更柔呼吸 + 下移1px，脚底不悬浮
-	if pet_action != "":
+	var off := Vector2(0, 1.0)                       # 下移1px，脚底压实不悬浮
+	var rot := 0.0
+	var breath := 1.0 + 0.012 * sin(t * 1.5)         # 呼吸 ~0.3-0.4px，比渔夫更弱
+	if pet_action == "paw":
 		var pp: float = 1.0 - _pet_action_t / maxf(_pet_action_dur, 0.001)
-		if pet_action == "paw":
-			offset.y -= sin(pp * PI) * 1.8
-		elif pet_action == "steal":
-			offset.x += sin(pp * PI) * 2.2
-	var top_left := pet_anchor + offset - Vector2(sz.x * 0.5, sz.y)
-	# PNG 已做雪景融合 + 烘焙接触阴影：只用很轻 modulate，不再叠代码阴影（避免双重阴影/压过头）
-	draw_texture_rect(tex, Rect2(top_left, sz), false, Color(0.96, 0.98, 1.0, 0.96))
+		off.y -= sin(pp * PI) * 1.8
+	elif pet_action == "steal":
+		var pp2: float = 1.0 - _pet_action_t / maxf(_pet_action_dur, 0.001)
+		off.x += sin(pp2 * PI) * 2.2
+	if _pet_tail_active > 0.0 and not _pet_tex.has("tail_01"):
+		rot = sin(t * 6.0) * 0.018                   # 无尾帧时极轻摆错觉（顶端 ~0.5px）
+	draw_set_transform(pet_anchor + off, rot, Vector2(1.0, breath))
+	# PNG 已做雪景融合；这里再叠偏冷偏灰 modulate，降橘色饱和、压亮度，融入环境
+	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false, PET_MODULATE)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## 程序化橘猫（坐姿）：正式 sprite 缺失时的回退占位（机制可用）。
@@ -646,29 +710,72 @@ func _draw_snow_layer() -> void:
 func _draw_wildlife() -> void:
 	if _wild_kind == "" or not _wild_tex.has(_wild_kind):
 		return
-	var tex: Texture2D = _wild_tex[_wild_kind]
 	var prog: float = clampf(_wild_t / _wild_dur, 0.0, 1.0)
 	var fade: float = clampf(minf(_wild_t, _wild_dur - _wild_t) / maxf(0.18 * _wild_dur, 0.15), 0.0, 1.0)
 	var pos := _wild_from.lerp(_wild_to, prog)
+	var tex: Texture2D = _wild_frame(prog)
+	if tex == null:
+		return
+	var flap := 1.0
 	match _wild_kind:
 		"bird":
-			pos.y += sin(prog * TAU * 2.0) * 4.0  # 滑翔起伏
+			pos.y += sin(prog * TAU * 2.0) * 3.0  # 滑翔起伏（更小）
+			flap = _bird_wing_squash()            # 单帧时竖向挤压模拟扇翅，非纯平移
 		"fish":
 			pos.y -= sin(PI * prog) * 24.0        # 跃出水面的弧线
 		"rabbit":
-			pos.y += sin(t * 2.2) * 1.2           # 原地轻动
+			pos.y += sin(t * 2.2) * 1.0           # 原地轻动
 	var sz := Vector2(tex.get_size()) * _wild_scale
-	# 轻微降亮+偏冷，把小动物压回水彩调（减少"贴上去"的突兀感）
+	# 降亮+偏冷，把小动物压回水彩调（减少"贴上去"的突兀感）
 	var tint := Color(0.90, 0.91, 0.93, 0.92 * fade)
-	# 鸟朝左飞（from.x > to.x）→ 水平翻转（鸟图默认朝右，否则屁股领头倒着飞）
-	if _wild_kind == "bird" and _wild_to.x < _wild_from.x:
-		draw_set_transform(pos, 0.0, Vector2(-1, 1))
+	if _wild_kind == "bird":
+		tint = Color(0.84, 0.86, 0.88, 0.72 * fade)  # 鸟再降透明，远空里若隐若现
+	if _wild_kind == "bird":
+		# 朝左飞 → 水平翻转；竖向乘 flap 做扇翅挤压（绕身体中心，含单帧也"扇"起来）
+		var fx := -1.0 if _wild_to.x < _wild_from.x else 1.0
+		draw_set_transform(pos, 0.0, Vector2(fx, flap))
 		draw_texture_rect(tex, Rect2(-sz * 0.5, sz), false, tint)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	else:
 		draw_texture_rect(tex, Rect2(pos - sz * 0.5, sz), false, tint)
 	if _wild_kind == "fish" and prog > 0.85 and _ripples.size() < 2:
 		add_ripple(Vector2(_wild_from.x, bite_point.y + 4.0), 20.0)
+
+
+## 取当前小动物帧：bird 为帧数组（多帧按 ~8fps 循环，单帧返回单图）；按情境替换可选副帧。
+func _wild_frame(prog: float) -> Texture2D:
+	var entry: Variant = _wild_tex.get(_wild_kind)
+	var tex: Texture2D = null
+	if entry is Array:
+		var frames: Array = entry
+		if frames.is_empty():
+			return null
+		tex = frames[int(_wild_t * 8.0) % frames.size()] if frames.size() > 1 else frames[0]
+	else:
+		tex = entry
+	match _wild_kind:
+		"bird":
+			if entry is Array and (entry as Array).size() <= 1 \
+					and _wild_alt.has("bird_glide") and sin(prog * TAU) < -0.4:
+				tex = _wild_alt["bird_glide"]    # 单帧鸟：滑翔段偶尔切滑翔姿
+		"rabbit":
+			if _wild_alt.has("rabbit_alert") and prog > 0.40 and prog < 0.62:
+				tex = _wild_alt["rabbit_alert"]  # 中段竖耳警觉
+		"fox":
+			if _wild_alt.has("fox_retreat") and prog > 0.70:
+				tex = _wild_alt["fox_retreat"]   # 末段缩回草丛
+		"fish":
+			if _wild_alt.has("fish_jump_02") and prog > 0.50:
+				tex = _wild_alt["fish_jump_02"]  # 下落段换姿
+	return tex
+
+
+## 飞鸟扇翅：有多帧时帧本身已表达翅膀（不挤压）；单帧时用竖向轻挤压模拟扇动。
+func _bird_wing_squash() -> float:
+	var entry: Variant = _wild_tex.get("bird")
+	if entry is Array and (entry as Array).size() > 1:
+		return 1.0
+	return 1.0 - 0.16 * (0.5 + 0.5 * sin(_wild_t * 18.0))
 
 
 ## 涟漪：有 Codex 帧动画时按扩散进度播 4 帧；否则回退程序化圆弧。
