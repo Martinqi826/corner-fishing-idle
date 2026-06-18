@@ -1,0 +1,101 @@
+/* ============================================================
+   角落垂钓 · Color tokens
+   A restrained cold-winter palette with one warm lantern accent.
+   Two surfaces coexist: DARK GLASS (the floating panel chrome) and
+   WARM PAPER (parchment cards inside it). Values are lifted 1:1 from
+   the Godot source (main.gd / ui_panels.gd / fish_data.gd).
+   ============================================================ */
+
+:root {
+  /* ---- Base scene palette (the painterly winter world) ---- */
+  --snow-haze:        #EEE8DC;   /* brightest snow mist          */
+  --snow-2:           #D8D2C4;   /* page / wallpaper fade         */
+  --snow-3:           #C9C2B5;   /* cooler snow shadow            */
+  --mountain:         #9AA8AE;   /* distant blue-gray ridge       */
+  --mountain-light:   #B7C1C5;
+  --pine:             #3F4D45;   /* dark pine silhouette          */
+  --pine-light:       #58675E;
+  --water:            #476F78;   /* muted teal river              */
+  --water-mid:        #6E9298;
+  --water-light:      #A7B8B7;
+  --rock:             #6E7068;
+  --rock-light:       #969486;
+  --coat-olive:       #5F6652;   /* the fisher's coat             */
+  --coat-khaki:       #777B62;
+
+  /* ---- Warm accents (lantern glow / gold UI) ---- */
+  --gold:             #D6A85D;   /* primary warm accent           */
+  --gold-bright:      #F0C978;   /* lantern highlight             */
+  --bronze:           #A87D40;   /* gold button face (0.66,.49,.25) */
+  --bronze-hover:     #C7964F;
+  --bronze-press:     #805C2E;
+  --rust:             #AD5F4D;   /* rare red accent / warnings    */
+
+  /* ---- Dark glass panel chrome ---- */
+  --glass:            rgba(31, 33, 31, 0.94);   /* panel bg        */
+  --glass-solid:      #1F211F;
+  --glass-border:     rgba(224, 214, 189, 0.72);
+  --glass-row:        rgba(51, 54, 48, 0.52);   /* dark inset row  */
+  --glass-row-border: rgba(219, 209, 178, 0.16);
+  --glass-row-hover:  rgba(64, 67, 58, 0.62);
+
+  /* ---- Warm paper card ---- */
+  --paper:            rgba(232, 224, 199, 0.88);
+  --paper-solid:      #E8E0C7;
+  --paper-2:          #F7F3EB;
+  --paper-border:     rgba(255, 245, 214, 0.46);
+  --paper-line:       #C9C2B5;
+
+  /* ---- Text on dark glass ---- */
+  --text-title:       #EBE0C7;   /* panel titles (0.92,.88,.78)   */
+  --text-on-glass:    #ECE8E0;
+  --text-muted-glass: #C7BDA8;   /* subtle labels (0.78,.74,.66)  */
+  --text-faint-glass: #807D72;   /* disabled / locked             */
+
+  /* ---- Text on paper ---- */
+  --ink:              #423F38;   /* primary ink (0.26,.25,.22)    */
+  --ink-soft:         #756E5E;   /* secondary (0.46,.43,.37)      */
+  --ink-on-gold:      #2E261A;   /* text atop bronze buttons      */
+
+  /* ---- Rarity tiers (fish grade — the core game signal) ---- */
+  --tier-0:           #C7C7CC;   /* 普通 Common   — gray          */
+  --tier-1:           #59C74D;   /* 优良 Fine     — green         */
+  --tier-2:           #4D9EF2;   /* 稀有 Rare     — blue          */
+  --tier-3:           #B86BF2;   /* 史诗 Epic     — purple        */
+  --tier-4:           #FF8C1F;   /* 传说 Legend   — orange        */
+  --tier-5:           #FF6152;   /* 神话 Mythic   — red           */
+  /* On warm paper the green/blue lose contrast; these are darkened
+     variants used with a dark text-outline in the codex grid. */
+  --tier-1-ink:       #2E7D32;
+  --tier-2-ink:       #2A6FB5;
+
+  /* ---- Rare variants (orthogonal to tier) ---- */
+  --variant-1:        #8CD9F2;   /* 斑斓 Dappled  — cyan          */
+  --variant-2:        #FFD659;   /* 鎏金 Gilded   — gold          */
+  --variant-3:        #F28CF2;   /* 七彩 Prismatic— violet        */
+
+  /* ---- Status ---- */
+  --positive:         #74B866;   /* completed / unlocked          */
+  --merchant:         #FAD166;   /* roaming merchant ×1.5         */
+  --bag-full:         #FFC773;   /* basket-full warning           */
+
+  /* ============================================================
+     Semantic aliases — reach for these in components.
+     ============================================================ */
+  --surface-panel:      var(--glass);
+  --surface-panel-edge: var(--glass-border);
+  --surface-row:        var(--glass-row);
+  --surface-card:       var(--paper);
+  --surface-card-edge:  var(--paper-border);
+
+  --accent:             var(--gold);
+  --accent-strong:      var(--bronze);
+
+  --btn-primary-bg:        var(--bronze);
+  --btn-primary-bg-hover:  var(--bronze-hover);
+  --btn-primary-bg-press:  var(--bronze-press);
+  --btn-primary-fg:        var(--ink-on-gold);
+  --btn-secondary-bg:      rgba(92, 92, 82, 0.84);
+  --btn-secondary-bg-hover:rgba(117, 117, 102, 0.92);
+  --btn-secondary-fg:      #F5E8CC;
+}

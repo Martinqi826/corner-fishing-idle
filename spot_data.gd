@@ -21,6 +21,12 @@ const SPOTS := {
 		"wait_mult": 1.0,
 		"value_mult": 1.0,
 		"luck_bonus": 0,
+		# 招牌景观：命中时段时 HUD 显示景观名（asset_phase 对应 spot_<key>_<phase>.png 时段图）
+		"best_view": {
+			"phase": "dawn",
+			"name": "晨雾日出",
+			"asset_phase": "dawn",
+		},
 	},
 	"still_lake": {
 		"name": "静水湖泊",
@@ -133,3 +139,16 @@ static func luck_bonus(id: String) -> int:
 
 static func event_pool(id: String) -> Array:
 	return get_spot(id).get("event_pool", [])
+
+
+## 钓点招牌景观（无则空字典）。
+static func best_view(id: String) -> Dictionary:
+	return get_spot(id).get("best_view", {})
+
+
+## 当前时段命中钓点招牌景观时返回景观名，否则空串（HUD 用）。
+static func scenic_name(id: String, phase: String) -> String:
+	var bv := best_view(id)
+	if not bv.is_empty() and str(bv.get("phase", "")) == phase:
+		return str(bv.get("name", ""))
+	return ""

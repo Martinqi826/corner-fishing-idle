@@ -1,0 +1,21 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Elevation & Glass" subtitle="Soft shadows + hairline warm borders · backdrop blur" -->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+ body{margin:0;padding:22px;font-family:var(--font-sans);color:#ece8e0;
+   background:url("../assets/scenes/spot_still_lake.png") right bottom / cover no-repeat, #2a2c24;
+   display:flex;gap:18px;align-items:center;}
+ .c{display:flex;flex-direction:column;gap:8px;align-items:center;}
+ .panel{width:150px;height:88px;background:var(--glass);border:var(--border-glass);
+   border-radius:16px;box-shadow:var(--shadow-panel);backdrop-filter:blur(2px);
+   display:grid;place-items:center;font-size:12px;}
+ .card{width:150px;height:60px;background:var(--paper-solid);border:1px solid var(--paper-border);
+   border-radius:12px;box-shadow:var(--shadow-card);display:grid;place-items:center;
+   color:var(--ink);font-size:12px;}
+ .v{font-size:11px;color:#d8d2c4;font-family:var(--font-mono);text-shadow:0 1px 2px #000;}
+</style></head>
+<body>
+ <div class="c"><div class="panel">floating glass panel</div><span class="v">shadow-panel · blur 2px</span></div>
+ <div class="c"><div class="card">parchment card</div><span class="v">shadow-card</span></div>
+</body></html>

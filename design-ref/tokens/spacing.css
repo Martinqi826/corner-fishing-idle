@@ -1,0 +1,40 @@
+/* ============================================================
+   角落垂钓 · Spacing, radii & sizing tokens
+   Tight, widget-scale spacing. The in-engine panel uses 18/16px
+   outer margins, 10px row gaps, 6–8px chip gaps — captured here.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (4px base) ---- */
+  --sp-1:  4px;
+  --sp-2:  6px;
+  --sp-3:  8px;
+  --sp-4:  10px;
+  --sp-5:  12px;
+  --sp-6:  16px;
+  --sp-7:  18px;
+  --sp-8:  24px;
+  --sp-9:  32px;
+
+  /* ---- Panel chrome metrics ---- */
+  --panel-pad-x: 18px;
+  --panel-pad-y: 16px;
+  --row-gap:     10px;
+  --chip-gap:    6px;
+
+  /* ---- Corner radii ---- */
+  --r-panel:  16px;   /* the floating glass card            */
+  --r-card:   12px;   /* parchment cards                    */
+  --r-row:    9px;    /* dark inset rows                    */
+  --r-btn:    8px;    /* buttons                            */
+  --r-chip:   999px;  /* pills / HUD chips                  */
+
+  /* ---- Component sizing ---- */
+  --hit:        44px;  /* min touch/click target            */
+  --tab-h:      28px;
+  --btn-h:      32px;
+  --fish-icon:  34px;  /* icon in a bag row                 */
+  --fish-icon-lg: 64px;/* order / featured icon             */
+  --round-btn:  40px;  /* corner HUD widget button          */
+  --panel-w:    520px; /* canonical floating panel width    */
+}

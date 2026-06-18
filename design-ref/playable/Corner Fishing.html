@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>角落垂钓 · 可玩模拟</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --stageW: min(94vw, 720px, (96vh - 150px) * 1.3); }
+  html, body {
+    height: 100%;
+    font-family: "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+    color: var(--text-on-glass);
+    background:
+      radial-gradient(120% 90% at 50% -10%, #2b2e2b 0%, #1b1d1b 55%, #141513 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100%; padding: 24px 16px; gap: 14px;
+  }
+  .title-row {
+    flex-shrink: 0;
+    display: flex; align-items: baseline; gap: 12px; color: var(--text-muted-glass);
+    letter-spacing: 0.16em; font-size: 13px; user-select: none;
+  }
+  .title-row b { color: var(--text-title); font-weight: 600; letter-spacing: 0.22em; font-size: 15px; }
+
+  /* ---- the framed ornament ---- */
+  .frame {
+    flex-shrink: 0;
+    width: var(--stageW);
+    border-radius: 20px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+  .stage {
+    position: relative;
+    width: 100%; aspect-ratio: 520 / 400;
+    background: var(--snow-haze);
+    overflow: hidden;
+  }
+  #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .sky-tint { position: absolute; inset: 0; pointer-events: none; transition: background 2s linear; }
+
+  /* HUD chips */
+  .hud { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 5; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 11px;
+    background: rgba(20,22,20,0.7); backdrop-filter: blur(6px);
+    border: 1px solid var(--glass-row-border); border-radius: 999px;
+    font-size: 13px; font-weight: 600; color: var(--text-on-glass);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .chip img { width: 17px; height: 17px; object-fit: contain; }
+  .chip.coin { color: var(--gold-bright); }
+  .chip.warn { color: var(--bag-full); border-color: rgba(255,199,115,0.4); }
+
+  .topright { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; z-index: 5; }
+  .spot-name { font-size: 13px; font-weight: 600; color: var(--text-title); background: rgba(20,22,20,0.6); border-radius: 999px; padding: 5px 12px; backdrop-filter: blur(6px); }
+  .phase { font-size: 11px; color: var(--text-muted-glass); }
+  .flag {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+    padding: 4px 9px; border-radius: 999px; backdrop-filter: blur(6px);
+  }
+  .flag.merchant { color: var(--ink-on-gold); background: var(--merchant); }
+  .flag.event { color: #0e1822; background: var(--variant-1); }
+  .flag img { width: 14px; height: 14px; }
+
+  /* primary action */
+  .action-wrap { position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%); z-index: 6; }
+  .action {
+    border: none; cursor: pointer; font-family: inherit;
+    height: 46px; padding: 0 26px; border-radius: 999px;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
+    background: var(--bronze); color: var(--ink-on-gold);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform 0.08s, background 0.15s, box-shadow 0.2s;
+  }
+  .action:hover { background: var(--bronze-hover); }
+  .action:active { transform: scale(0.96); }
+  .action.bite {
+    background: var(--rust); color: #fff7ef;
+    animation: bitePulse 0.55s ease-in-out infinite;
+  }
+  .action.wait { background: rgba(60,64,56,0.82); color: var(--text-muted-glass); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .action.full { background: var(--bag-full); color: var(--ink-on-gold); }
+  @keyframes bitePulse { 0%,100% { transform: scale(1); box-shadow: 0 6px 18px rgba(173,95,77,0.4); } 50% { transform: scale(1.07); box-shadow: 0 8px 26px rgba(173,95,77,0.7); } }
+
+  /* catch popup */
+  .catch-pop {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%) scale(0.6);
+    z-index: 8; pointer-events: none; opacity: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: opacity 0.3s, transform 0.45s cubic-bezier(0.2,1.4,0.5,1);
+  }
+  .catch-pop.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  .catch-card {
+    background: var(--paper-2); border-radius: 14px; padding: 12px 18px 14px;
+    border: 2px solid; box-shadow: 0 14px 36px rgba(0,0,0,0.45);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 150px;
+  }
+  .catch-card img { width: 92px; height: 72px; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0,0,0,0.25)); }
+  .catch-name { font-size: 15px; font-weight: 800; color: var(--ink); text-align: center; }
+  .catch-meta { font-size: 12px; color: var(--ink-soft); }
+  .catch-val { font-size: 13px; font-weight: 800; color: var(--bronze-press); }
+
+  /* toast */
+  .toasts { position: absolute; bottom: 118px; left: 50%; transform: translateX(-50%); z-index: 9; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: 92%; }
+  .toast {
+    background: rgba(18,20,18,0.92); color: var(--text-on-glass);
+    font-size: 13px; font-weight: 600; padding: 7px 15px; border-radius: 999px;
+    border: 1px solid var(--glass-row-border); box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    animation: toastIn 0.3s ease both; max-width: 100%; text-align: center;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* nav floats IN the scene — no slab; a soft bottom vignette seats it, like the HUD chips up top */
+  .console {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: flex; align-items: center; gap: 8px; padding: 12px 14px 11px;
+    background: linear-gradient(180deg, rgba(16,18,15,0) 0%, rgba(16,18,15,0.22) 42%, rgba(13,15,12,0.6) 100%);
+    -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px);
+  }
+  .nav { display: flex; gap: 2px; flex: 1; }
+  .nav button {
+    flex: 1; cursor: pointer; font-family: inherit; border: none; background: transparent;
+    color: rgba(238,233,224,0.86); text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 5px 2px; border-radius: 10px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+    transition: color 0.18s, transform 0.12s; position: relative;
+  }
+  .nav button:hover { color: #fff; }
+  .nav button:active { transform: scale(0.94); }
+  .nav button.active { color: var(--gold-bright); font-weight: 600; }
+  .nav button .ico { width: 21px; height: 21px; display: flex; align-items: center; justify-content: center; }
+  .nav button .ico svg { width: 21px; height: 21px; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  .nav button .badge {
+    position: absolute; top: 2px; right: 14px; min-width: 16px; height: 16px; padding: 0 4px;
+    background: var(--rust); color: #fff; font-size: 10px; font-weight: 700;
+    border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  }
+  .auto-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+    font-size: 11.5px; color: rgba(238,233,224,0.86); text-shadow: 0 1px 3px rgba(0,0,0,0.55); padding-left: 10px;
+  }
+  .switch { width: 34px; height: 19px; border-radius: 999px; background: rgba(120,120,108,0.5); position: relative; transition: background 0.2s; }
+  .switch.on { background: var(--positive); }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; transition: left 0.2s; }
+  .switch.on::after { left: 17px; }
+
+  /* sliding sheet for panels */
+  .sheet {
+    position: absolute; inset: 0; z-index: 20;
+    background: var(--glass); backdrop-filter: blur(3px);
+    transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.3,0.9,0.3,1);
+    display: flex; flex-direction: column;
+  }
+  .sheet.open { transform: none; }
+  .sheet-head {
+    display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--glass-row-border); flex-shrink: 0;
+  }
+  .sheet-title { font-size: 16px; font-weight: 700; color: var(--text-title); flex: 1; }
+  .sheet-sub { font-size: 12px; color: var(--text-muted-glass); font-weight: 500; }
+  .sheet-close {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--glass-row-border);
+    background: var(--glass-row); color: var(--text-on-glass); cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .sheet-close:hover { background: var(--glass-row-hover); }
+  .sheet-body { flex: 1; overflow-y: auto; padding: 14px 16px 62px; }
+  .sheet-body::-webkit-scrollbar { width: 8px; }
+  .sheet-body::-webkit-scrollbar-thumb { background: var(--glass-row-hover); border-radius: 8px; }
+
+  /* generic row / card bits used by panels */
+  .row {
+    display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 11px;
+    background: var(--glass-row); border: 1px solid var(--glass-row-border); margin-bottom: 7px;
+  }
+  .row .thumb { width: 44px; height: 36px; object-fit: contain; flex-shrink: 0; }
+  .row .grow { flex: 1; min-width: 0; }
+  .row .nm { font-size: 13.5px; font-weight: 700; }
+  .row .sub { font-size: 11.5px; color: var(--text-muted-glass); margin-top: 1px; }
+  .btn {
+    border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 12.5px;
+    padding: 7px 13px; border-radius: 9px; background: var(--bronze); color: var(--ink-on-gold);
+    transition: background 0.15s, transform 0.08s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--bronze-hover); }
+  .btn:active { transform: scale(0.95); }
+  .btn.sec { background: var(--btn-secondary-bg); color: var(--btn-secondary-fg); }
+  .btn.sec:hover { background: var(--btn-secondary-bg-hover); }
+  .btn:disabled { background: rgba(80,80,72,0.5); color: var(--text-faint-glass); cursor: default; transform: none; }
+  .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+
+  .empty { text-align: center; color: var(--text-faint-glass); padding: 40px 10px; font-size: 13px; line-height: 1.8; }
+
+  /* basket grid */
+  .seg { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .seg .tab { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; cursor: pointer; background: var(--glass-row); color: var(--text-muted-glass); border: 1px solid transparent; }
+  .seg .tab.on { background: var(--bronze); color: var(--ink-on-gold); }
+  .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px,1fr)); gap: 8px; }
+  .fishcell {
+    background: var(--glass-row); border: 1.5px solid var(--glass-row-border); border-radius: 11px;
+    padding: 8px 6px 7px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    cursor: pointer; position: relative; transition: transform 0.1s, border-color 0.15s;
+  }
+  .fishcell:hover { transform: translateY(-2px); }
+  .fishcell img { width: 56px; height: 42px; object-fit: contain; }
+  .fishcell .fn { font-size: 10.5px; font-weight: 700; text-align: center; line-height: 1.15; }
+  .fishcell .fv { font-size: 10.5px; font-weight: 800; color: var(--gold-bright); }
+  .fishcell .lock { position: absolute; top: 4px; right: 5px; font-size: 11px; }
+
+  /* dex grid */
+  .dexgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap: 7px; }
+  .dexcell {
+    background: var(--glass-row); border: 1px solid var(--glass-row-border); border-radius: 9px;
+    padding: 7px 4px 5px; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative;
+  }
+  .dexcell img { width: 48px; height: 36px; object-fit: contain; }
+  .dexcell.locked img { filter: brightness(0) opacity(0.32); }
+  .dexcell.locked { opacity: 0.85; }
+  .dexcell .dn { font-size: 10px; font-weight: 600; text-align: center; line-height: 1.1; }
+  .dexcell .vdots { display: flex; gap: 2px; margin-top: 1px; height: 6px; }
+  .vdot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat { background: var(--glass-row); border: 1px solid var(--glass-row-border); border-radius: 11px; padding: 11px 13px; }
+  .stat .v { font-size: 20px; font-weight: 800; color: var(--text-title); }
+  .stat .k { font-size: 11.5px; color: var(--text-muted-glass); margin-top: 2px; }
+
+  .progress { height: 7px; border-radius: 999px; background: var(--glass-row); overflow: hidden; margin-top: 7px; }
+  .progress > i { display: block; height: 100%; background: var(--gold); border-radius: 999px; }
+
+  .ach { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 10px; background: var(--glass-row); margin-bottom: 6px; border: 1px solid var(--glass-row-border); }
+  .ach.got { border-color: rgba(214,168,93,0.5); }
+  .ach .medal { font-size: 20px; filter: grayscale(1) opacity(0.4); }
+  .ach.got .medal { filter: none; }
+
+  .spotcard {
+    border-radius: 14px; overflow: hidden; margin-bottom: 10px; position: relative;
+    border: 2px solid var(--glass-row-border); cursor: pointer;
+  }
+  .spotcard.active { border-color: var(--gold); }
+  .spotcard.locked { cursor: default; }
+  .spotcard .sc-img { width: 100%; height: 110px; object-fit: cover; display: block; background: var(--snow-2); }
+  .spotcard .sc-body { padding: 9px 12px 11px; background: var(--glass-row); }
+  .spotcard .sc-name { font-size: 14px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
+  .spotcard .sc-desc { font-size: 11.5px; color: var(--text-muted-glass); margin-top: 3px; line-height: 1.5; }
+  .spotcard.locked .sc-img { filter: grayscale(0.8) brightness(0.7); }
+  .lockbadge { position: absolute; top: 8px; right: 8px; background: rgba(18,20,18,0.85); color: var(--bag-full); font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px; }
+
+  .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--snow-haze); color: var(--ink-soft); font-size: 13px; z-index: 50; }
+
+  @media (max-width: 520px) {
+    .nav button .ico, .nav button .ico svg { width: 19px; height: 19px; }
+    .nav button { font-size: 10px; }
+    .auto-toggle { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+  <div class="title-row"><b>角落垂钓</b><span>Corner Fishing · 可玩模拟</span></div>
+
+  <div class="frame">
+    <div class="stage">
+      <canvas id="scene"></canvas>
+      <div class="sky-tint" id="skyTint"></div>
+      <div class="hud" id="hud"></div>
+      <div class="topright" id="topright"></div>
+      <div class="action-wrap"><button class="action" id="action">起竿</button></div>
+      <div class="catch-pop" id="catchPop"></div>
+      <div class="toasts" id="toasts"></div>
+      <div class="sheet" id="sheet">
+        <div class="sheet-head">
+          <div class="sheet-title" id="sheetTitle">鱼篓</div>
+          <div class="sheet-sub" id="sheetSub"></div>
+          <button class="sheet-close" id="sheetClose">×</button>
+        </div>
+        <div class="sheet-body" id="sheetBody"></div>
+      </div>
+      <div class="loading" id="loading">正在准备渔具…</div>
+    </div>
+
+    <div class="console">
+      <div class="nav" id="nav"></div>
+      <div class="auto-toggle" id="autoToggle">
+        <span>自动</span><div class="switch" id="autoSwitch"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="scene.js"></script>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

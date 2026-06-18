@@ -1,0 +1,89 @@
+<!-- @dsCard group="Components" viewport="700x560" name="Game — FishIcon · FishRow · DexCard · SpotCard · HUD" subtitle="The fishing-specific building blocks" -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body{margin:0;padding:22px;background:
+    radial-gradient(120% 120% at 90% 100%, #34372f 0%, #232520 60%, #1b1c18 100%);
+    font-family:var(--font-sans);color:var(--text-on-glass);}
+  .wrap{display:flex;flex-direction:column;gap:16px;}
+  .lbl{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted-glass);}
+  .grp{display:flex;flex-direction:column;gap:8px;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { FishIcon, FishRow, DexCard, SpotCard, HudChip, HudLedger, SummaryStrip } = window.CornerFishingDesignSystem_301be0;
+const F = "../../assets/fish/";
+const COIN = "../../assets/ui/icon_coin.png";
+function Demo(){
+  return (
+    <div className="wrap">
+      <div className="grp">
+        <span className="lbl">FishIcon — framed tier ladder · 鎏金 variant</span>
+        <div className="row">
+          <FishIcon src={F+"gudgeon.png"} tier={0} size={44} frame />
+          <FishIcon src={F+"carp.png"} tier={1} size={44} frame />
+          <FishIcon src={F+"bass.png"} tier={2} size={44} frame />
+          <FishIcon src={F+"trout.png"} tier={3} size={44} frame />
+          <FishIcon src={F+"koi.png"} tier={4} size={44} frame />
+          <FishIcon src={F+"chinese_sturgeon.png"} tier={5} size={44} frame />
+          <FishIcon src={F+"koi.png"} tier={4} variant={2} size={44} frame />
+        </div>
+      </div>
+      <div className="grp">
+        <span className="lbl">FishRow — rich basket entries (single column)</span>
+        <div style={{display:'flex',flexDirection:'column',gap:6,maxWidth:480}}>
+          <FishRow src={F+"koi.png"} name="锦鲤" tier={4} variant={2} quality={2} weight={3.1} value={1820} coinIcon={COIN} locked />
+          <FishRow src={F+"trout.png"} name="虹鳟" tier={3} quality={1} weight={1.28} value={504} coinIcon={COIN} />
+          <FishRow src={F+"grass.png"} name="草鱼" tier={1} sizeTag="大" weight={9.95} value={39} coinIcon={COIN} />
+        </div>
+      </div>
+      <div className="row" style={{alignItems:'flex-start',gap:24}}>
+        <div className="grp" style={{flex:1,minWidth:240}}>
+          <span className="lbl">SummaryStrip</span>
+          <SummaryStrip used={8} capacity={20} value={885} coinIcon={COIN} />
+        </div>
+        <div className="grp">
+          <span className="lbl">HudLedger</span>
+          <div style={{background:'#3b4148',padding:10,borderRadius:10}}>
+            <HudLedger coins={5384} used={8} capacity={20} coinIcon={COIN} />
+          </div>
+        </div>
+      </div>
+      <div className="row" style={{alignItems:'flex-start',gap:24}}>
+        <div className="grp">
+          <span className="lbl">DexCard</span>
+          <div className="row">
+            <DexCard src={F+"gudgeon.png"} name="棒花鱼" tier={0} known count={1} maxWeight={0.04} />
+            <DexCard src={F+"koi.png"} name="锦鲤" tier={4} known count={12} maxWeight={6.1} collected giant variants={[2]} />
+            <DexCard src={F+"oarfish.png"} name="皇带鱼" tier={5} known={false} />
+          </div>
+        </div>
+      </div>
+      <div className="grp">
+        <span className="lbl">HudChip — floats on the scene</span>
+        <div className="row" style={{background:'#3b4148',padding:'8px 12px',borderRadius:8}}>
+          <HudChip size={16} icon="../../assets/ui/icon_coin.png">金币 5384　鱼篓 10/20</HudChip>
+          <HudChip tone="gold" onClick={()=>{}}>订单 ≥3.0kg 2/2</HudChip>
+        </div>
+      </div>
+      <div className="grp">
+        <span className="lbl">SpotCard</span>
+        <SpotCard name="新手河湾" desc="最初的那方静水，缓流绕过雪岸。从白条到国宝鲟，什么都可能上钩。" got={6} total={44} unlocked current event="风平浪静" />
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body>
+</html>

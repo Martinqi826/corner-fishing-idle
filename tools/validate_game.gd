@@ -163,6 +163,10 @@ func _check_spot_event_data() -> void:
 		_assert(exclusive >= 2, "钓点 %s 应至少有 2 个专属事件，实际 %d" % [sid, exclusive])
 	# river_bend 鱼池非空（扩 tags 前靠无 tags→river 回退也应有鱼）
 	_assert(SpotData.pool_for("river_bend").size() > 0, "新手河湾鱼池不应为空")
+	# 招牌景观：黎明命中显示「晨雾日出」，其余时段空串
+	_assert(SpotData.scenic_name("river_bend", "dawn") == "晨雾日出", "河湾黎明应显示招牌景观「晨雾日出」")
+	_assert(SpotData.scenic_name("river_bend", "day") == "", "河湾非黎明时段不应显示招牌景观")
+	_assert(SpotData.scenic_name("still_lake", "dawn") == "", "无招牌景观的钓点应返回空串")
 	print("  钓点 %d 个：%s" % [SpotData.SPOTS.size(), str(SpotData.SPOT_ORDER)])
 
 	# —— 事件 ——
@@ -562,10 +566,12 @@ func _check_focus_reward() -> void:
 	await process_frame
 
 
-## 主界面入口收敛：金币栏可点、主界面无独立按钮、点金币开关背包页。
+## 主界面入口收敛（沉浸模式 HUD）：金币栏可点、主界面无独立按钮、点金币开关背包页。
+## 注：默认已切带框 App 模式，此项专测沉浸模式 HUD，故 _ready 前先置 immersive。
 func _check_hud_entry() -> void:
 	var g: Node = load("res://main.tscn").instantiate()
 	g.save_enabled = false
+	g.display_mode = "immersive"
 	root.add_child(g)
 	await process_frame
 	_assert(g.coins_label.mouse_filter == Control.MOUSE_FILTER_STOP, "金币栏应可点(mouse_filter=STOP)")
@@ -641,6 +647,7 @@ func _check_save_v11() -> void:
 	g1.focus_reward_date = g1._today_key()
 	g1.focus_pending = 1
 	g1.pet_steals = 4
+	g1.max_fps = 90
 	g1._save()
 	g1.queue_free()
 	await process_frame
@@ -654,6 +661,7 @@ func _check_save_v11() -> void:
 	_assert(absf(g2.focus_minutes_total - 137.5) < 0.01, "v11 应恢复累计专注分钟")
 	_assert(g2.focus_reward_today == 2 and g2.focus_pending == 1, "v11 应恢复专注奖励计数/挂起")
 	_assert(g2.pet_steals == 4, "v11 应恢复宠物偷鱼计数")
+	_assert(g2.max_fps == 90 and Engine.max_fps == 90, "应恢复帧率设置并应用到引擎")
 	g2.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
@@ -678,6 +686,7 @@ func _check_save_v11() -> void:
 	_assert(int(g3.dex["kaluga"].get("vmask", 0)) == (1 << 3), "v10→v11 应保留 dex 变体掩码")
 	_assert(g3.focus_minutes_total == 0.0 and g3.pet_steals == 0 and g3.focus_pending == 0,
 		"v10→v11 专注/宠物计数应默认零")
+	_assert(g3.max_fps == 30, "旧档无帧率字段 → 应默认 30")
 	print("  存档 v11：dex首捕/专注/宠物 往返 + v10→v11 无损迁移 通过")
 	g3.queue_free()
 	await process_frame
@@ -1481,6 +1490,24 @@ func _check_effects() -> void:
 	for bg in ["river_bend", "still_lake", "coast_pier"]:
 		p.set_spot(bg)
 		_assert(p.uses_clean_bg(), "钓场底图 spot_%s.png 应存在且为干净底图" % bg)
+	# 昼夜底图：river_bend 四时段应各加载对应时段图（运行时四张图齐全）
+	p.set_spot("river_bend")
+	for ph in ["dawn", "day", "dusk", "night"]:
+		p.set_phase_tint(Weather.tint(ph), ph)   # 第二参传时段，触发底图慢淡入
+		_assert(p._spot_base != null
+			and p._spot_base.resource_path.ends_with("spot_river_bend_%s.png" % ph),
+			"river_bend %s 应加载时段底图，实际 %s" % [ph, str(p._spot_base)])
+	# 时段图缺失时回退 spot_<key>.png（still_lake 无时段图），不崩不黑屏
+	p.set_spot("still_lake")
+	p.set_phase_tint(Weather.tint("dawn"), "dawn")
+	_assert(p._spot_base != null and p._spot_base.resource_path.ends_with("spot_still_lake.png"),
+		"无时段图的钓点应回退 spot_<key>.png，实际 %s" % str(p._spot_base))
+	# 未知时段同样回退现有底图（set_phase_tint 旧/新签名都不应报错）
+	p.set_spot("river_bend")
+	p.set_phase_tint(Weather.tint("day"))             # 旧签名（无 phase）：只改染色
+	p.set_phase_tint(Weather.tint("day"), "nope")     # 未知时段：回退 spot_river_bend.png
+	_assert(p.uses_clean_bg(), "未知时段应回退现有底图、不黑屏")
+	print("  昼夜底图：四时段切图 + 缺图/未知时段回退 通过")
 	# 小动物事件生命周期：fish 时长 0.7~1.1s，推进 2s 应结束并重排下次计时
 	p._start_wild("fish")
 	_assert(p._wild_kind == "fish", "应启动 fish 事件")

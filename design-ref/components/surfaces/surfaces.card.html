@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Surfaces — Panel · Card · Tabs" subtitle="The floating glass dialog, parchment & dark-row cards, pill tabs" -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body{margin:0;padding:22px;background:
+    radial-gradient(120% 120% at 90% 100%, #3a3d33 0%, #25271f 60%, #1a1b16 100%);
+    font-family:var(--font-sans);}
+  .stage{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { Panel, Card, TabBar } = window.CornerFishingDesignSystem_301be0;
+function Demo(){
+  const [tab,setTab] = React.useState(0);
+  return (
+    <div className="stage">
+      <Panel title="鱼篓" subtitle="2026-06-14" onClose={()=>{}} width={340}>
+        <TabBar variant="underline" tabs={["背包","图鉴","订单","钓点"]} active={tab} onChange={setTab} overflow="更多 ▾" />
+        <div style={{height:1,background:'var(--glass-row-border)'}}></div>
+        <Card surface="paper">
+          <div style={{fontWeight:700,marginBottom:4}}>收 3 条 优良及以上</div>
+          <div style={{fontSize:12,color:'var(--ink-soft)'}}>指定品阶订单 · 交付未上锁的符合渔获，按鱼价 ×2.5 结算</div>
+        </Card>
+        <Card surface="row">
+          <div style={{fontSize:13}}>背包里的一条鱼 · 可悬停高亮</div>
+        </Card>
+        <Card surface="row" locked>
+          <div style={{fontSize:13}}>未解锁 — 变暗去色</div>
+        </Card>
+      </Panel>
+      <div style={{display:'flex',flexDirection:'column',gap:10,maxWidth:280}}>
+        <Card surface="glass"><div style={{fontSize:12,color:'var(--text-muted-glass)'}}>glass — 半透明分区块</div></Card>
+        <Card surface="paper"><div style={{fontSize:13}}>paper — 米黄羊皮卡片，墨色正文</div></Card>
+        <Card surface="row"><div style={{fontSize:13,color:'var(--text-on-glass)'}}>row — 深色内嵌行</div></Card>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body>
+</html>

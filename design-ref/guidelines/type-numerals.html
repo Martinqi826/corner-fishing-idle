@@ -1,0 +1,30 @@
+<!-- @dsCard group="Type" viewport="700x150" name="Numerals & Rarity Names" subtitle="Tabular serif numerals · tier-coloured fish names" -->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+ body{margin:0;padding:18px;background:#23241e;font-family:var(--font-sans);color:#ece8e0;
+   display:flex;gap:28px;align-items:center;}
+ .num{font-family:var(--font-display);font-weight:900;font-variant-numeric:tabular-nums;
+   letter-spacing:-.01em;}
+ .coin{font-size:38px;color:var(--gold);}
+ .lab{font-size:11px;color:#8d897d;margin-top:4px;}
+ .names{display:flex;flex-direction:column;gap:3px;font-size:15px;font-weight:500;}
+</style></head>
+<body>
+ <div>
+   <div class="num coin">5,384</div>
+   <div class="lab">金币 · tabular serif numerals</div>
+ </div>
+ <div style="border-left:1px solid #3a3b34;padding-left:24px;">
+   <div class="names">
+     <span style="color:var(--tier-0)">白条</span>
+     <span style="color:var(--tier-1)">草鱼</span>
+     <span style="color:var(--tier-2)">鲈鱼</span>
+     <span style="color:var(--tier-3)">虹鳟</span>
+     <span style="color:var(--tier-4)">锦鲤</span>
+     <span style="color:var(--tier-5)">中华鲟</span>
+   </div>
+   <div class="lab">rarity is read from the name colour, not a label</div>
+ </div>
+</body></html>

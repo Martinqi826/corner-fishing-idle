@@ -24,6 +24,14 @@ const FEATHER_CENTER := Vector2(478, 388)   # art 空间，绘制时 + SCENE_OFF
 const FEATHER_RADII := Vector2(560, 460)
 const FEATHER_CORE := 0.20
 
+# —— 显示模式 ——
+# framed = 带框普通窗口（默认，CD playable 式：场景填窗 + 底部导航 + 胶囊HUD）。
+# immersive = 透明羽化角落挂件（原版，降级为后续完善的「沉浸模式」，代码 gate 保留不删）。
+var display_mode := "framed"
+const FRAMED_SCENE_SCALE := 2.0                 # 带框模式：场景放大填满窗口宽
+const FRAMED_CONSOLE_H := 64.0                  # 底部导航 console 高
+const FRAMED_BG := Color(0.105, 0.115, 0.105)   # 带框窗口实底背景（场景外的边）
+
 # —— UI 布局契约 ——
 # 主图烤入按钮/落水点的坐标随 Codex 美术版本漂移。优先从 ui_layout.json 读取
 # （Codex 更新美术时同步改 json 即可，不用动代码）；无 json 时用下面实测的回退值。
@@ -66,11 +74,14 @@ var rng := RandomNumberGenerator.new()
 var _font: SystemFont
 var _serif: Font               # Noto Serif SC —— 标题/钓点名/英雄数字的衬线展示声音
 var _serif_num: FontVariation  # 同字体 + 等宽数字
+var _font_bold: FontVariation  # 系统字体假粗体（embolden）：HUD 胶囊/导航等 weight 600 处用
 var _msg_id := 0
 var _panel: Control = null
 var _panel_kind := ""
 var _detail_fish := ""       # 当前「鱼种详情卡」显示的鱼 id
 var _opacity := 1.0
+const FPS_OPTIONS := [30, 60, 90, 120]   # 设置里可选的帧率上限
+var max_fps := 30                # 帧率上限：默认 30 挂件省电，可在设置调到 60/90/120
 var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
 var seen_intro := false          # 是否看过首次引导
 var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
@@ -147,31 +158,15 @@ const TANK_TAB := 6                    # 鱼篓面板「鱼缸」页签下标（
 
 func _ready() -> void:
 	rng.randomize()
-	Engine.max_fps = 30  # 挂件省电
+	Engine.max_fps = max_fps  # 默认 30 挂件省电；存档载入后按玩家设置覆盖
 	get_tree().set_auto_accept_quit(false)  # 退出前存档
 	_setup_theme()
-	painter.position = SCENE_OFF
-	if painter.material is ShaderMaterial:
-		var fmat := painter.material as ShaderMaterial
-		fmat.set_shader_parameter("center", FEATHER_CENTER + SCENE_OFF)
-		# 深色桌面上明亮内容（如湖泊晨雾）在羽化边界会显出"硬切"。
-		# 用很长的渐变（core 低、半径大）让所有底图都柔和淡入桌面，跨钓点观感一致。
-		fmat.set_shader_parameter("radii", FEATHER_RADII)
-		fmat.set_shader_parameter("core", FEATHER_CORE)
-	# HUD 贴住可见场景的左上角（窗口放大后，美术左侧被羽化淡掉，故 x 偏移到可见区起点）
-	coins_label.position = SCENE_OFF + Vector2(196, 150)
-	# 点金币栏 = 打开多功能面板(默认背包页)。主界面不再放独立按钮，入口全收进 HUD
-	# （金币栏 / 钓点签 / 订单签）。金币栏落在羽化椭圆穿透区内，故可点且不穿透到桌面（见 _update_passthrough）。
-	coins_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	coins_label.gui_input.connect(func(e: InputEvent) -> void:
-		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-			_catch_tab = 0
-			_toggle_panel("catch"))
-	# 钓点签 126 / 金币 150 / 订单 174 三行栈占到 ~192；toast 落到 204 清开订单行
-	toast_label.position = SCENE_OFF + Vector2(198, 204)
+	_apply_display_mode()   # 按 framed / immersive 布置场景 + 羽化
 	toast_label.size = Vector2(440, 28)
-	_build_spot_chip()
-	_build_order_chip()
+	if display_mode == "immersive":
+		_setup_immersive_hud()
+	else:
+		_build_framed_chrome()
 	_apply_hud_legibility()
 	_setup_window()
 	_load_ui_layout()
@@ -180,10 +175,11 @@ func _ready() -> void:
 	_ensure_daily_order()
 	_ensure_weekly()
 	_build_buttons()
-	_apply_spot_visuals()
+	# 先确定昼夜时段并喂给 painter（决定时段底图），再切钓点底图，避免开局触发 90s 慢淡入
 	day_phase = Weather.current_phase()
 	if painter.has_method("set_phase_tint"):
-		painter.set_phase_tint(Weather.tint(day_phase))
+		painter.set_phase_tint(Weather.tint(day_phase), day_phase)
+	_apply_spot_visuals()
 	_merchant_t = rng.randf_range(MERCHANT_FIRST.x, MERCHANT_FIRST.y)
 	if active_event == "":  # 存档可能恢复了在场事件，则不重排首个事件
 		_event_next_t = rng.randf_range(EVENT_FIRST.x, EVENT_FIRST.y)
@@ -206,18 +202,447 @@ func _ready() -> void:
 func _setup_window() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
-	RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
 	var w := get_window()
-	w.transparent_bg = true
-	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_TRANSPARENT, true)
-	w.borderless = true
-	w.always_on_top = true
-	await get_tree().process_frame
-	if _saved_win_pos != null and _pos_on_screen(_saved_win_pos):
-		DisplayServer.window_set_position(_clamp_win_to_screen(_saved_win_pos))
+	if display_mode == "immersive":
+		RenderingServer.set_default_clear_color(Color(0, 0, 0, 0))
+		w.transparent_bg = true
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_TRANSPARENT, true)
+		w.borderless = true
+		w.always_on_top = true
+		await get_tree().process_frame
+		if _saved_win_pos != null and _pos_on_screen(_saved_win_pos):
+			DisplayServer.window_set_position(_clamp_win_to_screen(_saved_win_pos))
+		else:
+			_place_corner()  # 无存档位置 / 离屏 → 回右下角
+		_update_passthrough()
 	else:
-		_place_corner()  # 无存档位置 / 存档位置离屏(换了显示器等) → 回到右下角
-	_update_passthrough()
+		# 带框普通窗口：不透明、带边框标题栏、不置顶、不穿透、居中
+		RenderingServer.set_default_clear_color(FRAMED_BG)
+		w.transparent_bg = false
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_TRANSPARENT, false)
+		w.borderless = false
+		w.always_on_top = false
+		UIPanels.set_interactive_full(self, true)  # 整窗矩形穿透：复位窗口区域、永不裁椭圆
+		await get_tree().process_frame
+		var scr := DisplayServer.screen_get_usable_rect()
+		var ws := DisplayServer.window_get_size()
+		DisplayServer.window_set_position(scr.position + (Vector2i(scr.size) - ws) / 2)
+
+
+# —— 显示模式布置 ——
+var auto_cast := true            # 自动垂钓开关（默认开=原自动行为；关=手动起竿/起钩）
+var _action_btn: Button = null   # 带框模式底部「起竿/起钩」按钮
+# 带框 HUD 引用（胶囊 + 状态标签）
+var _chip_coin: Label = null
+var _chip_bag: Label = null
+var _chip_dex: Label = null
+var _flag_box: VBoxContainer = null
+var _nav_badges := {}   # 导航徽章 {tab: PanelContainer}（鱼篓满/任务可交付）
+var _nav_bar: PanelContainer = null   # 底栏容器（背景随面板开关切透明/暗，避免与 sheet 断裂）
+
+func _apply_display_mode() -> void:
+	if display_mode == "immersive":
+		painter.scale = Vector2.ONE
+		painter.position = SCENE_OFF
+		if painter.material is ShaderMaterial:
+			var fmat := painter.material as ShaderMaterial
+			fmat.set_shader_parameter("center", FEATHER_CENTER + SCENE_OFF)
+			fmat.set_shader_parameter("radii", FEATHER_RADII)
+			fmat.set_shader_parameter("core", FEATHER_CORE)
+	else:
+		painter.material = null   # 关羽化，场景实心填窗
+		painter.scale = Vector2(FRAMED_SCENE_SCALE, FRAMED_SCENE_SCALE)
+		# 场景底对齐窗口底（不是导航条上沿）→ 场景铺到导航后面，底栏浮在场景上、无深色板。
+		# 渔夫在画面中部，导航只压住前景的桥/水面，不挡渔夫。
+		painter.position = Vector2(
+			(float(WIN.x) - ART.x * FRAMED_SCENE_SCALE) * 0.5,
+			float(WIN.y) - ART.y * FRAMED_SCENE_SCALE)
+
+
+## 场景内 art 坐标 → 屏幕坐标（含带框缩放/偏移），飘字/落水定位用。
+func _scene_pt(art: Vector2) -> Vector2:
+	return painter.position + art * painter.scale
+
+
+func _setup_immersive_hud() -> void:
+	coins_label.position = SCENE_OFF + Vector2(196, 150)
+	coins_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	coins_label.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			_catch_tab = 0
+			_toggle_panel("catch"))
+	toast_label.position = SCENE_OFF + Vector2(198, 204)
+	_build_spot_chip()
+	_build_order_chip()
+
+
+# —— 带框 App 外壳：底部导航 console + 起竿按钮 + 顶部 HUD ——
+func _build_framed_chrome() -> void:
+	coins_label.visible = false   # 带框用图标胶囊替代纯文字 HUD
+	toast_label.position = Vector2((float(WIN.x) - 440) * 0.5, float(WIN.y) - FRAMED_CONSOLE_H - 120)
+	_build_hud_chips()
+	_build_status_flags()
+	_build_bottom_nav()
+	_build_action_button()
+
+
+## 图标胶囊：[圆角底 + 图标 + 数值]，返回 [PanelContainer, 数值Label]
+func _make_hud_chip(icon_path: String) -> Array:
+	# 照抄 CD .chip：height 30 / padding 0 11 / bg rgba(20,22,20,.7) / border glass-row-border
+	#   / font 13 weight600 / img 17 / shadow 0 2px 8px / color text-on-glass
+	var pc := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.0784, 0.0863, 0.0784, 0.70)   # rgba(20,22,20,.7)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 11
+	sb.content_margin_right = 11
+	sb.content_margin_top = 6
+	sb.content_margin_bottom = 6
+	sb.set_border_width_all(1)
+	sb.border_color = DT.GLASS_ROW_BORDER
+	sb.shadow_color = Color(0, 0, 0, 0.30)
+	sb.shadow_size = 8
+	sb.shadow_offset = Vector2(0, 2)
+	pc.add_theme_stylebox_override("panel", sb)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 6)     # CD gap 6
+	pc.add_child(hb)
+	if ResourceLoader.exists(icon_path):
+		var ic := TextureRect.new()
+		ic.texture = load(icon_path)
+		ic.custom_minimum_size = Vector2(17, 17)         # CD img 17
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hb.add_child(ic)
+	var lbl := Label.new()
+	lbl.add_theme_font_override("font", _font_bold)       # weight 600 → embolden（落地变通）
+	lbl.add_theme_font_size_override("font_size", 13)     # CD 13
+	lbl.add_theme_color_override("font_color", DT.TEXT_ON_GLASS)  # #ECE8E0
+	lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(lbl)
+	return [pc, lbl]
+
+
+func _build_hud_chips() -> void:
+	var box := HBoxContainer.new()
+	box.position = Vector2(16, 12)
+	box.add_theme_constant_override("separation", 8)
+	ui_root.add_child(box)
+	var coin := _make_hud_chip("res://assets/art/ui/icon_coin.png")
+	box.add_child(coin[0])
+	_chip_coin = coin[1]
+	_chip_coin.add_theme_color_override("font_color", Color(0.941, 0.788, 0.471))  # gold-bright
+	var bag := _make_hud_chip("res://assets/art/equipment/fish_basket.png")
+	box.add_child(bag[0])
+	_chip_bag = bag[1]
+	var dexc := _make_hud_chip("res://assets/art/ui/icon_dex.png")
+	box.add_child(dexc[0])
+	_chip_dex = dexc[1]
+
+
+## 照抄 CD coinStr：≥10万 "Nk"(整) / ≥1万 "N.Nk"(一位) / 否则千分位逗号(toLocaleString)
+func _coin_str(n: int) -> String:
+	if n >= 100000:
+		return "%dk" % int(n / 1000.0)
+	if n >= 10000:
+		return "%.1fk" % (n / 1000.0)
+	return _commas(n)
+
+
+## 千分位逗号（复刻 JS toLocaleString 的 en-US 行为）
+func _commas(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	var c := 0
+	for i in range(s.length() - 1, -1, -1):
+		out = s[i] + out
+		c += 1
+		if c % 3 == 0 and i > 0:
+			out = "," + out
+	return ("-" + out) if n < 0 else out
+
+
+## 右上状态标签胶囊（钓点/时段/事件/鱼贩）；纯展示、不挡点击。
+func _make_flag_pill(text: String, bg: Color, fg: Color, fs := 12, hpad := 11) -> Control:
+	var pc := PanelContainer.new()
+	pc.size_flags_horizontal = Control.SIZE_SHRINK_END
+	pc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = hpad
+	sb.content_margin_right = hpad
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	pc.add_theme_stylebox_override("panel", sb)
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_override("font", _font_bold)        # CD 这些都是 weight 600
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", fg)
+	# 时段无底色时叠场景上需描边
+	if bg.a < 0.05:
+		l.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.04, 0.85))
+		l.add_theme_constant_override("outline_size", 3)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.add_child(l)
+	return pc
+
+
+func _build_status_flags() -> void:
+	var box := VBoxContainer.new()
+	box.name = "FlagBox"
+	box.add_theme_constant_override("separation", 5)
+	box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	box.offset_left = 0
+	box.offset_right = -16
+	box.offset_top = 12
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_root.add_child(box)
+	_flag_box = box
+	_update_status_flags()
+
+
+func _update_status_flags() -> void:
+	if not is_instance_valid(_flag_box):
+		return
+	for c in _flag_box.get_children():
+		c.free()
+	# 钓点名：.spot-name font13 weight600 text-title bg rgba(20,22,20,.6) padding 5/12
+	_flag_box.add_child(_make_flag_pill(SpotData.display_name(current_spot),
+		Color(0.0784, 0.0863, 0.0784, 0.6), DT.TEXT_TITLE, 13, 12))
+	# 时段：.phase font11 muted 无底
+	_flag_box.add_child(_make_flag_pill(Weather.display_name(day_phase),
+		Color(0, 0, 0, 0), DT.TEXT_MUTED_GLASS, 11, 4))
+	# 事件：.flag.event font11.5 weight600 bg variant-1 color #0e1822 padding 4/9
+	if active_event != "" and EventData.hud_text(active_event) != "":
+		_flag_box.add_child(_make_flag_pill(EventData.display_name(active_event),
+			DT.VARIANT[1], Color(0.055, 0.094, 0.133), 12, 9))
+	# 鱼贩：.flag.merchant bg merchant color ink-on-gold
+	if _merchant_active:
+		_flag_box.add_child(_make_flag_pill("🐟 鱼贩 ×1.5",
+			DT.MERCHANT, DT.INK_ON_GOLD, 12, 9))
+
+
+func _update_framed_hud() -> void:
+	if is_instance_valid(_chip_coin):
+		_chip_coin.text = _coin_str(coins)
+	if is_instance_valid(_chip_bag):
+		_chip_bag.text = "%d/%d" % [inventory.size(), _bag_capacity()]
+		_chip_bag.add_theme_color_override("font_color",
+			Color(1.0, 0.780, 0.451) if _bag_full() else Color(0.925, 0.910, 0.878))
+	if is_instance_valid(_chip_dex):
+		_chip_dex.text = "%d/%d" % [dex.size(), FishData.FISH.size()]
+	# 导航徽章：鱼篓满「满」 / 任务可交付「!」
+	if _nav_badges.has(0) and is_instance_valid(_nav_badges[0]):
+		var b0: PanelContainer = _nav_badges[0]
+		b0.visible = _bag_full()
+		b0.get_node("L").text = "满"
+	if _nav_badges.has(2) and is_instance_valid(_nav_badges[2]):
+		var b2: PanelContainer = _nav_badges[2]
+		var need := int(daily_order.get("need", 1))
+		b2.visible = not bool(daily_order.get("done", false)) and _daily_order_indices().size() >= need
+		b2.get_node("L").text = "!"
+	_update_status_flags()
+	_update_action_button()
+
+
+func _build_bottom_nav() -> void:
+	var bar := PanelContainer.new()
+	bar.name = "BottomNav"
+	bar.position = Vector2(0, float(WIN.y) - FRAMED_CONSOLE_H)
+	bar.custom_minimum_size = Vector2(float(WIN.x), FRAMED_CONSOLE_H)
+	bar.size = Vector2(float(WIN.x), FRAMED_CONSOLE_H)
+	bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 闲置透明；开面板时由 _set_nav_solid 变暗
+	ui_root.add_child(bar)
+	_nav_bar = bar
+	var mg := MarginContainer.new()
+	mg.add_theme_constant_override("margin_left", 14)
+	mg.add_theme_constant_override("margin_right", 14)
+	mg.add_theme_constant_override("margin_top", 6)
+	mg.add_theme_constant_override("margin_bottom", 6)
+	bar.add_child(mg)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	mg.add_child(row)
+	# 5 个导航项：图标在上、文字在下（CD 布局）。[label, catch_tab, icon]
+	var navs := [
+		["鱼篓", 0, "res://assets/art/equipment/fish_basket.png"],
+		["装备", 7, "res://assets/art/equipment/rod_carbon.png"],
+		["图鉴", 1, "res://assets/art/ui/icon_dex.png"],
+		["任务", 2, "res://assets/art/ui/event_crate.png"],
+		["钓点", 5, "res://assets/art/ui/event_tide.png"],
+		["鱼缸", 6, "res://assets/art/ui/event_fish_run.png"],
+		["设置", 8, "res://assets/art/equipment/tackle_box.png"],
+	]
+	for n in navs:
+		var tab: int = n[1]
+		var item := VBoxContainer.new()
+		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item.alignment = BoxContainer.ALIGNMENT_CENTER
+		item.add_theme_constant_override("separation", 2)
+		item.mouse_filter = Control.MOUSE_FILTER_STOP
+		item.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		# 图标容器（含右上徽章位）
+		var holder := Control.new()
+		holder.custom_minimum_size = Vector2(34, 26)
+		holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if ResourceLoader.exists(n[2]):
+			var ic := TextureRect.new()
+			ic.texture = load(n[2])
+			ic.size = Vector2(24, 24)
+			ic.position = Vector2(5, 1)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			holder.add_child(ic)
+		if tab == 0 or tab == 2:   # 鱼篓满 / 任务可交付 → 红角标
+			var badge := _make_nav_badge()
+			badge.position = Vector2(19, -4)
+			holder.add_child(badge)
+			_nav_badges[tab] = badge
+		item.add_child(holder)
+		var lbl := Label.new()
+		lbl.text = n[0]
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.add_theme_font_override("font", _font_bold)
+		lbl.add_theme_font_size_override("font_size", 11)   # CD .nav button 11
+		lbl.add_theme_color_override("font_color", DT.TEXT_MUTED_GLASS)
+		lbl.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.04, 0.92))
+		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item.add_child(lbl)
+		item.gui_input.connect(func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				Audio.play_ui("ui_click")
+				if _panel_kind == "catch" and _catch_tab == tab:
+					_close_panel()
+				else:
+					_catch_tab = tab
+					_open_panel("catch"))
+		item.mouse_entered.connect(func() -> void: item.modulate = Color(1.18, 1.18, 1.18))
+		item.mouse_exited.connect(func() -> void: item.modulate = Color(1, 1, 1))
+		row.add_child(item)
+	# 自动开关
+	var auto_lbl := Label.new()
+	auto_lbl.text = "自动"
+	auto_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	auto_lbl.add_theme_font_size_override("font_size", DT.FS_SM)
+	auto_lbl.add_theme_color_override("font_color", DT.TEXT_ON_GLASS)
+	auto_lbl.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.04, 0.9))
+	auto_lbl.add_theme_constant_override("outline_size", 4)
+	row.add_child(auto_lbl)
+	var auto_btn := CheckButton.new()
+	auto_btn.button_pressed = auto_cast
+	auto_btn.focus_mode = Control.FOCUS_NONE
+	auto_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	auto_btn.toggled.connect(func(on: bool) -> void:
+		auto_cast = on
+		_update_action_button())
+	row.add_child(auto_btn)
+
+
+## 底栏背景上下文切换：开面板=暗(与 sheet 连成一片,无断裂)；关=透明(浮场景)。
+func _set_nav_solid(solid: bool) -> void:
+	if not is_instance_valid(_nav_bar):
+		return
+	if solid:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = DT.GLASS                 # 与 sheet 同色，连续
+		sb.border_width_top = 1
+		sb.border_color = DT.GLASS_ROW_BORDER  # CD .console border-top
+		_nav_bar.add_theme_stylebox_override("panel", sb)
+	else:
+		_nav_bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+
+
+func _make_nav_badge() -> PanelContainer:
+	var pc := PanelContainer.new()
+	pc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.visible = false
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = DT.RUST
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 5
+	sb.content_margin_right = 5
+	sb.content_margin_bottom = 1
+	pc.add_theme_stylebox_override("panel", sb)
+	var l := Label.new()
+	l.name = "L"
+	l.add_theme_font_override("font", _font_bold)
+	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_color_override("font_color", Color(1, 1, 1))
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pc.add_child(l)
+	return pc
+
+
+func _build_action_button() -> void:
+	var b := Button.new()
+	b.name = "ActionBtn"
+	b.custom_minimum_size = Vector2(220, 48)
+	b.size = Vector2(220, 48)
+	b.position = Vector2((float(WIN.x) - 220) * 0.5, float(WIN.y) - FRAMED_CONSOLE_H - 66)
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_override("font", _font_bold)       # weight 700 → embolden（落地变通）
+	b.add_theme_font_size_override("font_size", 15)     # CD .action 15
+	b.pressed.connect(_on_action_pressed)
+	ui_root.add_child(b)
+	_action_btn = b
+	_update_action_button()
+
+
+func _action_style(bg: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = bg
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 22
+	sb.content_margin_right = 22
+	sb.content_margin_top = 11
+	sb.content_margin_bottom = 11
+	sb.shadow_color = Color(0, 0, 0, 0.38)
+	sb.shadow_size = 10
+	sb.shadow_offset = Vector2(0, 4)
+	return sb
+
+
+func _on_action_pressed() -> void:
+	if _bag_full():
+		_catch_tab = 0
+		_open_panel("catch")   # 满篓 → 直接开鱼篓去兑换
+		return
+	# 手动钓鱼（自动关时的起竿/起钩）task 11 接入；自动模式下点它无操作。
+
+
+func _update_action_button() -> void:
+	if not is_instance_valid(_action_btn):
+		return
+	# 照抄 CD .action 各态：normal=bronze / full=bag-full / bite=rust / wait(自动)=灰
+	_action_btn.visible = true
+	var txt := "起竿"
+	var bg := DT.BRONZE
+	var fg := DT.INK_ON_GOLD
+	if _bag_full():
+		txt = "鱼篓满了 · 去兑换"
+		bg = DT.BAG_FULL
+	elif auto_cast:
+		txt = "· 自动垂钓中 ·"
+		bg = Color(0.235, 0.251, 0.220, 0.82)   # .action.wait rgba(60,64,56,.82)
+		fg = DT.TEXT_MUTED_GLASS
+	elif _state == ST_BITE:
+		txt = "起钩！"
+		bg = DT.RUST
+		fg = Color(1.0, 0.969, 0.937)            # #fff7ef
+	else:
+		txt = "起竿"
+		bg = DT.BRONZE
+	_action_btn.text = txt
+	_action_btn.add_theme_color_override("font_color", fg)
+	_action_btn.add_theme_stylebox_override("normal", _action_style(bg))
+	_action_btn.add_theme_stylebox_override("hover", _action_style(bg.lightened(0.10)))
+	_action_btn.add_theme_stylebox_override("pressed", _action_style(bg.darkened(0.10)))
 
 
 # 探针取可见场景内一点（窗口右下角附近），判断挂件是否落在某块屏幕可见区内。
@@ -281,6 +706,7 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
+	# 两种模式都允许「按住场景空白处拖动窗口」（带框也常没标题栏可拖；面板/导航会先消费点击）。
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_dragging = true
@@ -328,6 +754,7 @@ func _begin_wait() -> void:
 	_state_t = w
 	Audio.play_sfx("cast")
 	get_tree().create_timer(0.45).timeout.connect(func() -> void: Audio.play_sfx("bobber_splash"))
+	_update_action_button()
 
 
 ## 昼夜时段：每帧轻量比对真实时钟，跨段才刷新（一天仅 4 次，开销可忽略）。
@@ -341,7 +768,7 @@ func _tick_phase() -> void:
 ## 应用当前时段：场景染色 + HUD + 按新节奏重排（不打断已在咬钩）。
 func _apply_phase() -> void:
 	if painter.has_method("set_phase_tint"):
-		painter.set_phase_tint(Weather.tint(day_phase))
+		painter.set_phase_tint(Weather.tint(day_phase), day_phase)
 	_update_hud()
 
 
@@ -350,6 +777,7 @@ func _begin_bite() -> void:
 	_state_t = 0.9
 	painter.add_ripple(painter.bobber_pos(), 22.0)
 	Audio.play_sfx("bite")
+	_update_action_button()
 
 
 ## 更新图鉴纪录（捕获数 +1、最大体重取大、巨物/完美徽章）。返回是否打破"既有"纪录：
@@ -425,7 +853,7 @@ func _do_catch() -> void:
 	var broke_record := _dex_record(c["id"], float(c["w"]), is_big, q >= 3, vr)
 	var col: Color = FishData.TIER_COLORS[tier]
 	Audio.play_sfx("catch_rare" if (tier >= 2 or q >= 2 or vr >= 1) else "catch_common")
-	_popup("%s %.2fkg" % [fname, c["w"]], painter.position + painter.bobber_pos() + Vector2(-22, -8),
+	_popup("%s %.2fkg" % [fname, c["w"]], _scene_pt(painter.bobber_pos()) + Vector2(-22, -8),
 		FishData.variant_color(vr) if vr >= 1 else col)
 	painter.add_ripple(painter.bobber_pos(), 34.0)
 	if vr >= 1:
@@ -443,7 +871,7 @@ func _do_catch() -> void:
 		var have := mini(_daily_order_indices().size(), need)
 		_toast("订单进度：%s %d/%d" % [_order_short(), have, need],
 			2.0, Color(0.96, 0.78, 0.38))
-	if tier >= 4 or q >= 3 or vr >= 2:
+	if tier >= 5 or vr >= 3:   # 仅真·稀有（神话 / 七彩）才庆祝闪光，避免高级竿后几乎每次都闪
 		_flash()
 	# 渔夫性格：钓到高星/七彩，举手欢呼一下（Task 4）
 	if (q >= 2 or vr >= 3) and painter.has_method("fisher_cheer"):
@@ -461,7 +889,7 @@ func _do_catch() -> void:
 			caught_giant = true
 		_dex_record(c2["id"], float(c2["w"]), ib2, int(c2.get("q", 0)) >= 3, int(c2.get("var", 0)))
 		_popup("双钩 +%s" % FishData.display_name(c2["id"]),
-			painter.position + painter.bobber_pos() + Vector2(24, -22), Color(0.62, 0.86, 0.74))
+			_scene_pt(painter.bobber_pos()) + Vector2(24, -22), Color(0.62, 0.86, 0.74))
 		Audio.play_sfx("catch_common")
 	if _bag_full():
 		_toast("鱼篓满了，先去卖鱼或扩容～", 3.0, Color(1.0, 0.75, 0.4))
@@ -519,7 +947,7 @@ func _overflow_catch() -> void:
 	coins += gain
 	lifetime_coins += gain
 	painter.add_ripple(painter.bobber_pos(), 28.0)
-	_popup("满篓兑 +%d" % gain, painter.position + painter.bobber_pos() + Vector2(-22, -8),
+	_popup("满篓兑 +%d" % gain, _scene_pt(painter.bobber_pos()) + Vector2(-22, -8),
 		Color(0.85, 0.72, 0.42))
 	_check_achievements()
 	_update_hud()
@@ -539,6 +967,11 @@ func _setup_theme() -> void:
 	_serif_num = FontVariation.new()
 	_serif_num.base_font = _serif
 	_serif_num.opentype_features = {"tnum": 1, "lnum": 1}  # 等宽数字（字体支持时）
+	# 系统字体假粗体：无专用无衬线粗体时，用 embolden 加粗笔画，复刻 CD 的 weight 600
+	_font_bold = FontVariation.new()
+	_font_bold.base_font = _font
+	_font_bold.variation_embolden = 0.6
+	UIPanels.font_bold = _font_bold   # 供 ui_panels 的按钮/页签复用（CD weight 600-700）
 	var th := Theme.new()
 	th.default_font = _font
 	th.default_font_size = 15
@@ -566,6 +999,8 @@ func _update_hud() -> void:
 	_refresh_unlocks()
 	_update_spot_chip()
 	_update_order_chip()
+	if display_mode != "immersive":
+		_update_framed_hud()   # 带框：刷新图标胶囊 + 状态标签 + 动作按钮
 
 
 ## HUD 当前钓点·事件小字（金币行上方，点开钓点页）。
@@ -590,6 +1025,9 @@ func _update_spot_chip() -> void:
 	if spot_chip == null:
 		return
 	var txt := SpotData.display_name(current_spot) + " · " + Weather.display_name(day_phase)
+	var scenic := SpotData.scenic_name(current_spot, day_phase)
+	if scenic != "":
+		txt += " · " + scenic   # 命中招牌景观（如 河湾黎明 → 晨雾日出）
 	var col := Color(0.86, 0.86, 0.82)
 	if active_event != "" and EventData.hud_text(active_event) != "":
 		txt += " · " + EventData.display_name(active_event)
@@ -703,16 +1141,10 @@ func _toast(text: String, duration: float, color := Color.WHITE) -> void:
 
 
 func _flash() -> void:
-	var fr := ColorRect.new()
-	fr.color = Color(1.0, 0.85, 0.3, 0.0)
-	fr.anchor_right = 1.0
-	fr.anchor_bottom = 1.0
-	fr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ui_root.add_child(fr)
-	var tw := create_tween()
-	tw.tween_property(fr, "color:a", 0.32, 0.12)
-	tw.tween_property(fr, "color:a", 0.0, 0.8)
-	tw.tween_callback(fr.queue_free)
+	# 上鱼庆祝光：交给场景画师做「限场景内、随羽化淡出」的柔和暖色脉冲，
+	# 不再用铺满整窗的 ColorRect（那会连桌面壁纸区一起染黄、整窗大闪）。
+	if painter.has_method("catch_flash"):
+		painter.catch_flash()
 
 
 # ============================ 按钮 / 面板 ============================
@@ -1371,6 +1803,12 @@ func _set_opacity(val: float) -> void:
 	_opacity = val
 	painter.modulate.a = val
 	coins_label.modulate.a = val
+
+
+## 帧率上限：非法值回落到 30；纯设值 + 应用，存档/刷新由调用方负责（同 _set_opacity）。
+func _set_max_fps(val: int) -> void:
+	max_fps = val if val in FPS_OPTIONS else 30
+	Engine.max_fps = max_fps
 
 
 ## 专注/安静模式：停小动物事件 + 抑制飘字（_popup 已守卫）+ 场景轻微变暗。

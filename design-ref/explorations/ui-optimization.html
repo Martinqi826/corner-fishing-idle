@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>角落垂钓 · UI 优化方向（并排对比）</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;padding:56px 64px 96px;font-family:var(--font-sans);
+    background:#b9b6ae;color:#2c2e2a;
+    background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,.05) 1px, transparent 0);
+    background-size:22px 22px;}
+
+  /* ---- canvas headers ---- */
+  .doc-head{max-width:1180px;margin:0 0 44px;}
+  .doc-eyebrow{font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:#6a5a3a;margin:0 0 10px;}
+  .doc-title{font-family:var(--font-display);font-weight:900;font-size:40px;line-height:1.05;
+    margin:0 0 12px;color:#262722;letter-spacing:-.01em;}
+  .doc-lead{font-size:15px;line-height:1.7;color:#4a4c46;max-width:760px;margin:0;}
+  .doc-lead b{color:#262722;}
+
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin:0 0 22px;}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:22px;color:#a87d40;}
+  .sec-title{font-family:var(--font-display);font-weight:700;font-size:24px;margin:0;color:#262722;}
+  .sec-sub{font-size:13px;color:#5a5c55;}
+  section{margin:0 0 72px;}
+
+  /* ---- comparison layout ---- */
+  .pair{display:flex;gap:64px;align-items:flex-start;flex-wrap:wrap;}
+  .frame{display:flex;flex-direction:column;gap:14px;}
+  .flabel{display:flex;align-items:center;gap:10px;}
+  .ftag{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;}
+  .ftag--now{background:#9b9890;color:#fff;}
+  .ftag--opt{background:#a87d40;color:#2e261a;}
+  .fname{font-size:14px;color:#3a3c36;font-weight:500;}
+
+  /* ---- shared panel chrome (matches the DS) ---- */
+  .panel{width:520px;background:var(--glass);border:1px solid var(--glass-border);
+    border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.34);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    padding:16px 18px;color:var(--text-on-glass);display:flex;flex-direction:column;gap:10px;}
+  .ptop{display:flex;align-items:center;gap:8px;height:26px;}
+  .ptitle{font-family:var(--font-display);font-weight:700;font-size:20px;color:var(--text-title);}
+  .pclose{margin-left:auto;width:28px;height:26px;display:grid;place-items:center;
+    color:var(--text-muted-glass);font-size:18px;border-radius:6px;}
+
+  /* ===== CURRENT bag ===== */
+  .cur-tabs{display:flex;flex-wrap:wrap;gap:6px;}
+  .cur-tab{height:28px;padding:0 11px;border-radius:8px;font-size:13px;display:grid;place-items:center;
+    background:rgba(92,92,82,.84);color:#f5e8cc;border:1px solid rgba(214,205,174,.22);}
+  .cur-tab.on{background:#a87d40;color:#2e261a;font-weight:700;}
+  .cur-head{display:flex;align-items:center;gap:6px;}
+  .cur-cap{min-width:46px;font-size:13px;color:var(--text-muted-glass);}
+  .cur-btn{height:28px;padding:0 12px;border-radius:8px;font-size:13px;display:grid;place-items:center;
+    background:rgba(92,92,82,.84);color:#f5e8cc;border:1px solid rgba(214,205,174,.22);}
+  .cur-btn.pri{background:#a87d40;color:#2e261a;font-weight:700;}
+  .cur-sort{display:flex;gap:4px;align-items:center;}
+  .cur-sort .lab{font-size:12px;color:var(--ink-soft);}
+  .cur-sb{height:24px;padding:0 9px;border-radius:8px;font-size:12px;display:grid;place-items:center;
+    background:rgba(92,92,82,.84);color:#f5e8cc;}
+  .cur-sb.on{background:#a87d40;color:#2e261a;font-weight:700;}
+  .cur-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px;}
+  .cur-row{display:flex;align-items:center;gap:5px;background:var(--glass-row);
+    border:1px solid var(--glass-row-border);border-radius:9px;padding:4px 6px 4px 8px;}
+  .cur-row img{width:34px;height:34px;object-fit:contain;}
+  .cur-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .cur-nm{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cur-meta{font-size:11px;color:#a39c8c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cur-lock{width:22px;height:40px;display:grid;place-items:center;font-size:12px;color:#807d72;}
+  .cur-sell{min-width:54px;height:38px;border-radius:8px;display:grid;place-items:center;
+    background:#a87d40;color:#2e261a;font-weight:700;font-size:13px;}
+  .cur-sell.locked{background:rgba(92,92,82,.84);color:#cfc8b8;}
+
+  /* ===== OPTIMIZED bag ===== */
+  .opt-panel{position:relative;}
+  .opt-nav{display:flex;gap:6px;align-items:center;}
+  .opt-tab{height:30px;padding:0 14px;border-radius:999px;font-size:13px;display:grid;place-items:center;
+    color:var(--text-muted-glass);position:relative;cursor:default;}
+  .opt-tab.on{color:#f3ecdc;font-weight:700;}
+  .opt-tab.on::after{content:"";position:absolute;left:14px;right:14px;bottom:-3px;height:2px;
+    border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--bronze));}
+  .opt-tab.more{margin-left:auto;color:var(--text-faint-glass);
+    border:1px solid var(--glass-row-border);border-radius:999px;}
+  .opt-divider{height:1px;background:var(--glass-row-border);margin:2px 0;}
+
+  /* summary strip */
+  .opt-summary{display:flex;align-items:center;gap:14px;
+    background:rgba(0,0,0,.22);border:1px solid var(--glass-row-border);
+    border-radius:12px;padding:11px 14px;}
+  .opt-cap{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .opt-cap .top{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted-glass);}
+  .opt-cap .top b{color:#ece8e0;font-weight:600;}
+  .opt-bar{height:6px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
+  .opt-bar i{display:block;height:100%;width:40%;border-radius:999px;
+    background:linear-gradient(90deg,var(--bronze),var(--gold));}
+  .opt-value{display:flex;align-items:center;gap:8px;padding-left:14px;border-left:1px solid var(--glass-row-border);}
+  .opt-value img{width:22px;height:22px;}
+  .opt-value .v{font-family:var(--font-display);font-weight:900;font-size:26px;color:var(--gold-bright);
+    font-variant-numeric:tabular-nums;line-height:1;}
+  .opt-value .cap{font-size:10px;color:var(--text-muted-glass);letter-spacing:.04em;}
+
+  .opt-sortrow{display:flex;align-items:center;gap:8px;}
+  .opt-seg{display:inline-flex;background:rgba(0,0,0,.24);border-radius:999px;padding:3px;gap:2px;}
+  .opt-seg button{height:24px;padding:0 12px;border-radius:999px;font-size:12px;border:none;
+    background:transparent;color:var(--text-muted-glass);font-family:var(--font-sans);cursor:default;}
+  .opt-seg button.on{background:var(--bronze);color:#2e261a;font-weight:700;}
+  .opt-filter{margin-left:auto;font-size:12px;color:var(--text-muted-glass);
+    border:1px solid var(--glass-row-border);border-radius:999px;padding:4px 11px;}
+
+  .opt-list{display:flex;flex-direction:column;gap:6px;}
+  .opt-row{display:flex;align-items:center;gap:11px;border-radius:11px;padding:8px 12px 8px 8px;
+    background:var(--glass-row);border:1px solid var(--glass-row-border);position:relative;overflow:hidden;}
+  .opt-row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail);}
+  .opt-row.hi{background:linear-gradient(90deg,var(--railsoft),rgba(51,54,48,.52) 42%);}
+  .opt-ic{width:46px;height:46px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto;
+    background:rgba(0,0,0,.18);border:1px solid var(--rail);}
+  .opt-ic img{width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));}
+  .opt-ic.glow img{filter:drop-shadow(0 0 8px rgba(255,214,89,.9));}
+  .opt-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .opt-nm{font-size:15px;font-weight:600;line-height:1.1;display:flex;align-items:center;gap:6px;}
+  .opt-nm .gem{font-size:12px;}
+  .opt-tagrow{display:flex;align-items:center;gap:6px;}
+  .opt-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;line-height:1.3;}
+  .opt-q{color:var(--variant-2);}
+  .opt-wt{font-size:12px;color:#9a9384;font-variant-numeric:tabular-nums;}
+  .opt-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .opt-coin{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:9px;
+    background:#a87d40;color:#2e261a;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;}
+  .opt-coin img{width:15px;height:15px;}
+  .opt-coin.locked{background:rgba(60,62,55,.7);color:#bfb8a8;}
+  .opt-favbtn{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;
+    color:var(--text-faint-glass);}
+  .opt-favbtn.on{color:var(--bag-full);}
+  .opt-foot{display:flex;gap:8px;align-items:center;padding-top:4px;margin-top:2px;
+    border-top:1px solid var(--glass-row-border);}
+  .opt-foot .grow{flex:1;}
+  .opt-fbtn{height:34px;padding:0 16px;border-radius:9px;font-size:13px;display:grid;place-items:center;}
+  .opt-fbtn.pri{background:#a87d40;color:#2e261a;font-weight:700;}
+  .opt-fbtn.sec{background:rgba(92,92,82,.84);color:#f5e8cc;border:1px solid rgba(214,205,174,.2);}
+
+  /* annotation markers */
+  .mk{position:absolute;width:24px;height:24px;border-radius:50%;background:#c0392b;color:#fff;
+    font-size:13px;font-weight:700;display:grid;place-items:center;z-index:5;
+    box-shadow:0 2px 6px rgba(0,0,0,.4);font-family:var(--font-sans);}
+
+  /* notes legend */
+  .notes{margin-top:26px;max-width:520px;display:flex;flex-direction:column;gap:12px;}
+  .note{display:flex;gap:12px;align-items:flex-start;}
+  .note .n{width:24px;height:24px;border-radius:50%;background:#c0392b;color:#fff;font-size:13px;
+    font-weight:700;display:grid;place-items:center;flex:0 0 auto;margin-top:1px;}
+  .note .tx{font-size:13.5px;line-height:1.55;color:#3a3c36;}
+  .note .tx b{color:#1f211d;}
+
+  /* ===== HUD compare ===== */
+  .scene{position:relative;width:420px;height:330px;border-radius:14px;overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.3);background:#cdc7b9;}
+  .scene img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:right bottom;}
+  .scene img.fisher{position:absolute;right:42px;bottom:54px;width:80px;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.3));}
+
+  .hudA{position:absolute;right:14px;bottom:120px;display:flex;flex-direction:column;
+    align-items:flex-end;gap:3px;text-align:right;}
+  .hudA .l{font-size:13px;color:#e9e6df;text-shadow:0 1px 3px rgba(0,0,0,.8);}
+  .hudA .coin{font-size:15px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.85);}
+  .hudA .ord{font-size:13px;color:#fad166;text-shadow:0 1px 3px rgba(0,0,0,.85);}
+  .roundrow{position:absolute;right:14px;bottom:14px;display:flex;gap:8px;}
+  .roundrow img{width:40px;height:40px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.4));}
+
+  .hudB{position:absolute;right:14px;bottom:118px;display:flex;flex-direction:column;
+    align-items:flex-end;gap:7px;}
+  .ledger{display:inline-flex;align-items:center;gap:10px;padding:7px 12px;border-radius:12px;
+    background:rgba(26,27,23,.62);border:1px solid rgba(224,214,189,.28);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.3);}
+  .ledger .coin{display:flex;align-items:center;gap:6px;}
+  .ledger .coin img{width:18px;height:18px;}
+  .ledger .coin .v{font-family:var(--font-display);font-weight:900;font-size:18px;color:#f7e9c8;
+    font-variant-numeric:tabular-nums;line-height:1;}
+  .ledger .sep{width:1px;height:22px;background:rgba(224,214,189,.3);}
+  .ledger .bag{display:flex;flex-direction:column;gap:3px;}
+  .ledger .bag .t{font-size:11px;color:#d8d2c4;line-height:1;font-variant-numeric:tabular-nums;}
+  .ledger .bag .b{width:54px;height:4px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;}
+  .ledger .bag .b i{display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--bronze),var(--gold));}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+    font-size:12px;background:rgba(26,27,23,.5);border:1px solid rgba(224,214,189,.2);
+    color:#e4e0d6;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
+  .chip.ord{color:#fad166;}
+  .chip .dot{width:5px;height:5px;border-radius:50%;background:var(--positive);}
+  .chip .mini{font-variant-numeric:tabular-nums;font-weight:700;}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 0;font-size:12px;color:#4a4c46;}
+  .legend .k{display:flex;align-items:center;gap:6px;}
+  .legend .sw{width:14px;height:14px;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <p class="doc-eyebrow">角落垂钓 · UI Optimization Proposal</p>
+  <h1 class="doc-title">更高质量的优化方向 · 并排对比</h1>
+  <p class="doc-lead">在<b>保留品牌语言</b>（深色玻璃面板 + 米黄羊皮卡 + 单一暖金强调 + 写实水彩图标）的前提下，针对两个最高频界面——<b>鱼篓面板</b>与<b>角落 HUD</b>——提出结构与品质上的优化。左为<b>现状</b>（忠实还原），右为<b>优化方向</b>。红色标号对应下方说明。</p>
+</div>
+
+<!-- ============ SECTION 1 — BAG PANEL ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2 class="sec-title">鱼篓面板 · 背包页</h2>
+    <span class="sec-sub">最高频界面：卖鱼、整理、决策都在这里发生</span>
+  </div>
+
+  <div class="pair">
+    <!-- CURRENT -->
+    <div class="frame">
+      <div class="flabel"><span class="ftag ftag--now">现状 Current</span><span class="fname">9 个平铺标签 · 双列密排</span></div>
+      <div class="panel">
+        <div class="ptop"><span class="ptitle">鱼篓</span><span class="pclose">×</span></div>
+        <div class="cur-tabs">
+          <div class="cur-tab on">背包</div><div class="cur-tab">图鉴</div><div class="cur-tab">订单</div>
+          <div class="cur-tab">成就</div><div class="cur-tab">统计</div><div class="cur-tab">钓点</div>
+          <div class="cur-tab">鱼缸</div><div class="cur-tab">装备</div><div class="cur-tab">设置</div>
+        </div>
+        <div class="cur-head">
+          <span class="cur-cap">8/20</span><span style="flex:1"></span>
+          <div class="cur-btn">卖杂鱼</div><div class="cur-btn pri">全部卖出</div><div class="cur-btn">扩容</div>
+        </div>
+        <div class="cur-sort">
+          <span class="lab">排序</span>
+          <div class="cur-sb on">最新</div><div class="cur-sb">价值</div><div class="cur-sb">品阶</div><div class="cur-sb">重量</div>
+          <span style="flex:1"></span><div class="cur-sb">订单鱼</div>
+        </div>
+        <div class="cur-grid">
+          <div class="cur-row"><img src="../assets/fish/trout.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-3)">虹鳟</span><span class="cur-meta">★ · 1.28kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 504</span></div>
+          <div class="cur-row"><img src="../assets/fish/koi.png"><div class="cur-info"><span class="cur-nm" style="color:var(--variant-2)">◆锦鲤</span><span class="cur-meta">★★ · 3.10kg</span></div><span class="cur-lock" style="color:var(--bag-full)">锁</span><span class="cur-sell locked">锁定</span></div>
+          <div class="cur-row"><img src="../assets/fish/fangbream.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-2)">翘嘴鲌</span><span class="cur-meta">2.21kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 114</span></div>
+          <div class="cur-row"><img src="../assets/fish/mandarin.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-3)">鳜鱼</span><span class="cur-meta">0.79kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 110</span></div>
+          <div class="cur-row"><img src="../assets/fish/bass.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-2)">鲈鱼</span><span class="cur-meta">1.84kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 88</span></div>
+          <div class="cur-row"><img src="../assets/fish/grass.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-1)">草鱼</span><span class="cur-meta">大 · 9.95kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 39</span></div>
+          <div class="cur-row"><img src="../assets/fish/redeye.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-1)">赤眼鳟</span><span class="cur-meta">1.12kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 26</span></div>
+          <div class="cur-row"><img src="../assets/fish/gudgeon.png"><div class="cur-info"><span class="cur-nm" style="color:var(--tier-0)">棒花鱼</span><span class="cur-meta">★ · 0.04kg</span></div><span class="cur-lock">锁</span><span class="cur-sell">卖 4</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTIMIZED -->
+    <div class="frame">
+      <div class="flabel"><span class="ftag ftag--opt">优化 Optimized</span><span class="fname">5 主标签+更多 · 概览条 · 单列富信息行</span></div>
+      <div class="panel opt-panel">
+        <span class="mk" style="left:-12px;top:54px;">1</span>
+        <span class="mk" style="left:-12px;top:104px;">2</span>
+        <span class="mk" style="left:-12px;top:232px;">3</span>
+        <span class="mk" style="right:-12px;top:268px;">4</span>
+        <span class="mk" style="left:-12px;bottom:14px;">5</span>
+
+        <div class="ptop"><span class="ptitle">鱼篓</span><span class="pclose">×</span></div>
+
+        <div class="opt-nav">
+          <div class="opt-tab on">背包</div><div class="opt-tab">图鉴</div>
+          <div class="opt-tab">订单</div><div class="opt-tab">钓点</div>
+          <div class="opt-tab more">更多 ▾</div>
+        </div>
+        <div class="opt-divider"></div>
+
+        <div class="opt-summary">
+          <div class="opt-cap">
+            <div class="top"><span>鱼篓容量</span><span><b>8</b> / 20</span></div>
+            <div class="opt-bar"><i></i></div>
+          </div>
+          <div class="opt-value">
+            <img src="../assets/ui/icon_coin.png" alt="">
+            <div><div class="v">885</div><div class="cap">可卖（未锁）</div></div>
+          </div>
+        </div>
+
+        <div class="opt-sortrow">
+          <div class="opt-seg">
+            <button class="on">最新</button><button>价值</button><button>品阶</button><button>重量</button>
+          </div>
+          <span class="opt-filter">订单鱼</span>
+        </div>
+
+        <div class="opt-list">
+          <!-- legendary, high emphasis + variant glow -->
+          <div class="opt-row hi" style="--rail:var(--variant-2);--railsoft:rgba(255,214,89,.16)">
+            <div class="opt-ic glow" style="--rail:var(--variant-2)"><img src="../assets/fish/koi.png"></div>
+            <div class="opt-main">
+              <span class="opt-nm" style="color:var(--variant-2)"><span class="gem">◆</span>锦鲤</span>
+              <span class="opt-tagrow"><span class="opt-pill" style="background:rgba(255,214,89,.18);color:var(--variant-2)">鎏金 ×5</span><span class="opt-q">★★</span><span class="opt-wt">3.10kg</span></span>
+            </div>
+            <div class="opt-right">
+              <span class="opt-favbtn on" title="已收藏"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span class="opt-coin locked">锁定</span>
+            </div>
+          </div>
+          <div class="opt-row" style="--rail:var(--tier-3)">
+            <div class="opt-ic" style="--rail:var(--tier-3)"><img src="../assets/fish/trout.png"></div>
+            <div class="opt-main">
+              <span class="opt-nm" style="color:var(--tier-3)">虹鳟</span>
+              <span class="opt-tagrow"><span class="opt-q">★</span><span class="opt-wt">1.28kg</span></span>
+            </div>
+            <div class="opt-right">
+              <span class="opt-favbtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span class="opt-coin"><img src="../assets/ui/icon_coin.png">504</span>
+            </div>
+          </div>
+          <div class="opt-row" style="--rail:var(--tier-2)">
+            <div class="opt-ic" style="--rail:var(--tier-2)"><img src="../assets/fish/fangbream.png"></div>
+            <div class="opt-main">
+              <span class="opt-nm" style="color:var(--tier-2)">翘嘴鲌</span>
+              <span class="opt-tagrow"><span class="opt-wt">2.21kg</span></span>
+            </div>
+            <div class="opt-right">
+              <span class="opt-favbtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span class="opt-coin"><img src="../assets/ui/icon_coin.png">114</span>
+            </div>
+          </div>
+          <div class="opt-row" style="--rail:var(--tier-1)">
+            <div class="opt-ic" style="--rail:var(--tier-1)"><img src="../assets/fish/grass.png"></div>
+            <div class="opt-main">
+              <span class="opt-nm" style="color:var(--tier-1)">草鱼</span>
+              <span class="opt-tagrow"><span class="opt-pill" style="background:rgba(255,140,31,.16);color:var(--tier-4)">大物</span><span class="opt-wt">9.95kg</span></span>
+            </div>
+            <div class="opt-right">
+              <span class="opt-favbtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span class="opt-coin"><img src="../assets/ui/icon_coin.png">39</span>
+            </div>
+          </div>
+          <div class="opt-row" style="--rail:var(--tier-0)">
+            <div class="opt-ic" style="--rail:var(--tier-0)"><img src="../assets/fish/gudgeon.png"></div>
+            <div class="opt-main">
+              <span class="opt-nm" style="color:var(--tier-0)">棒花鱼</span>
+              <span class="opt-tagrow"><span class="opt-q">★</span><span class="opt-wt">0.04kg</span></span>
+            </div>
+            <div class="opt-right">
+              <span class="opt-favbtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+              <span class="opt-coin"><img src="../assets/ui/icon_coin.png">4</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="opt-foot">
+          <span class="opt-fbtn sec">卖杂鱼</span>
+          <span class="grow"></span>
+          <span class="opt-fbtn sec">扩容</span>
+          <span class="opt-fbtn pri">全部卖出 · +885</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><span class="n">1</span><span class="tx"><b>9 标签 → 5 主标签 + 「更多」。</b>背包 / 图鉴 / 订单 / 钓点 为高频入口常驻一行不换行；成就 / 统计 / 鱼缸 / 装备 / 设置收进「更多」。活动态用细金线下划，比整块填色更轻、更耐看。</span></div>
+    <div class="note"><span class="n">2</span><span class="tx"><b>概览条取代拥挤的操作行。</b>左侧容量进度条一眼看出满没满；右侧用衬线大字直接给出「可卖总额」——卖鱼决策的关键数字，不再藏在按钮 tooltip 里。</span></div>
+    <div class="note"><span class="n">3</span><span class="tx"><b>双列密排 → 单列富信息行。</b>给每条鱼喘息空间：左侧<b>品阶描边图框</b>+ 色条复述稀有度（颜色之外多一重编码，弱色觉也可读），重量/品质/大物标签分层清晰。</span></div>
+    <div class="note"><span class="n">4</span><span class="tx"><b>售价 = 金币药丸。</b>价格配金币图标做成主操作键，价值即操作；收藏改为<b>挂锁图标</b>（点亮金色），比「锁」字更直观，也不与品质 ★ 抢符号。高价值/稀有行染极淡品阶色 + 图标辉光，让好鱼自己跳出来。</span></div>
+    <div class="note"><span class="n">5</span><span class="tx"><b>底部常驻操作栏。</b>主操作「全部卖出」带上即时收益预览（+885），永远停在拇指可达处，列表再长也不丢。</span></div>
+  </div>
+</section>
+
+<!-- ============ SECTION 2 — HUD ============ -->
+<section>
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2 class="sec-title">角落 HUD · 挂在场景上</h2>
+    <span class="sec-sub">玩家 90% 时间只看到它 —— 必须一眼可读、又不抢戏</span>
+  </div>
+
+  <div class="pair">
+    <div class="frame">
+      <div class="flabel"><span class="ftag ftag--now">现状 Current</span><span class="fname">三行裸文字 · 仅靠投影压底</span></div>
+      <div class="scene">
+        <img class="bg" src="../assets/scenes/spot_river_bend.png" alt="">
+        <img class="fisher" src="../assets/character/fisher_idle.png" alt="">
+        <div class="hudA">
+          <div class="l">新手河湾 · 黄昏</div>
+          <div class="coin">金币 5384　鱼篓 8/20</div>
+          <div class="ord">订单 ≥3.0kg 2/2</div>
+        </div>
+        <div class="roundrow">
+          <img src="../assets/ui/ui_button_rod.png"><img src="../assets/ui/ui_button_fish.png"><img src="../assets/ui/ui_button_coin.png">
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="flabel"><span class="ftag ftag--opt">优化 Optimized</span><span class="fname">金币账条 + 轻胶囊 chip · 容量微条</span></div>
+      <div class="scene">
+        <img class="bg" src="../assets/scenes/spot_river_bend.png" alt="">
+        <img class="fisher" src="../assets/character/fisher_idle.png" alt="">
+        <div class="hudB">
+          <div class="ledger">
+            <div class="coin"><img src="../assets/ui/icon_coin.png"><span class="v">5,384</span></div>
+            <div class="sep"></div>
+            <div class="bag"><span class="t">鱼篓 8/20</span><span class="b"><i></i></span></div>
+          </div>
+          <div class="chip">新手河湾 · 黄昏</div>
+          <div class="chip ord"><span class="mini">订单 2/2</span><span class="dot"></span>可交付</div>
+        </div>
+        <div class="roundrow">
+          <img src="../assets/ui/ui_button_rod.png"><img src="../assets/ui/ui_button_fish.png"><img src="../assets/ui/ui_button_coin.png">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes" style="max-width:760px;">
+    <div class="note"><span class="n">A</span><span class="tx"><b>金币账条。</b>把最重要的金币 + 鱼篓状态收进一枚<b>半透磨砂胶囊</b>：金币用衬线大字 + 图标，鱼篓配一条容量微条——满篓风险一眼可见。比裸文字更清晰，仍透出壁纸、不堵场景。</span></div>
+    <div class="note"><span class="n">B</span><span class="tx"><b>状态拆成轻胶囊。</b>钓点·时段、订单各成一枚低调 chip；订单 chip 带状态点（金=可交付）。信息分层，而非挤成一坨同号文字。</span></div>
+    <div class="note"><span class="n">C</span><span class="tx"><b>克制不变。</b>仍是右下角三枚水彩圆钮 + 边缘羽化融入桌面；优化只加了<b>恰到好处的玻璃质感</b>，没有引入新色或抢眼动效——符合「安静陪伴」的定位。</span></div>
+  </div>
+
+  <div class="legend">
+    <span class="k"><span class="sw" style="background:var(--tier-0)"></span>普通</span>
+    <span class="k"><span class="sw" style="background:var(--tier-1)"></span>优良</span>
+    <span class="k"><span class="sw" style="background:var(--tier-2)"></span>稀有</span>
+    <span class="k"><span class="sw" style="background:var(--tier-3)"></span>史诗</span>
+    <span class="k"><span class="sw" style="background:var(--tier-4)"></span>传说</span>
+    <span class="k"><span class="sw" style="background:var(--tier-5)"></span>神话</span>
+    <span class="k"><span class="sw" style="background:var(--variant-2)"></span>鎏金变体</span>
+    <span class="k" style="margin-left:8px;color:#6a5a3a;">⚠ 优化稿中的「挂锁」「更多 ▾」为新增 UI 线性图标——属提案新元素，待确认后再纳入图标规范。</span>
+  </div>
+</section>
+
+</body>
+</html>

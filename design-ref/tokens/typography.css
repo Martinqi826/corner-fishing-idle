@@ -1,0 +1,60 @@
+/* ============================================================
+   角落垂钓 · Typography tokens
+   The widget is small (1040×720 logical, scene ~260px wide), so the
+   type scale is compact and dense. Sans for everything functional;
+   a serif display voice for panel titles & hero numbers to echo the
+   painterly scroll mood. Numerals are tabular for ledger alignment.
+   ============================================================ */
+
+:root {
+  /* ---- Families ---- */
+  --font-sans: "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
+               "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, "Consolas", monospace;
+
+  /* ---- Weights ---- */
+  --w-regular: 400; /* @kind font */
+  --w-medium:  500; /* @kind font */
+  --w-bold:    700; /* @kind font */
+  --w-black:   900; /* @kind font */
+
+  /* ---- Size scale (px, matches in-engine font sizes) ---- */
+  --fs-title:   20px;  /* panel header (鱼篓 / 设置)        */
+  --fs-head:    17px;  /* section / spot name               */
+  --fs-body:    15px;  /* default body & buttons            */
+  --fs-label:   14px;  /* HUD chips                         */
+  --fs-sm:      13px;  /* tabs, fish names, dense rows      */
+  --fs-xs:      12px;  /* meta, descriptions                */
+  --fs-2xs:     11px;  /* sub-meta (weight·tags)            */
+  --fs-micro:   10px;  /* dex badges                        */
+
+  /* Hero numerals (coin counts, big stats in specimen cards) */
+  --fs-numeral: 34px;
+
+  /* ---- Line heights ---- */
+  --lh-tight: 1.15; /* @kind font */
+  --lh-snug:  1.35; /* @kind font */
+  --lh-body:  1.6;  /* @kind font */
+  --lh-loose: 1.76; /* @kind font */
+
+  /* ---- Tracking ---- */
+  --track-eyebrow: 0.04em;  /* @kind font */
+  --track-tight:   -0.01em; /* @kind font */
+}
+
+/* ---- Helper classes (used by specimen cards & kits) ---- */
+.cf-title   { font-family: var(--font-display); font-weight: var(--w-bold);
+              font-size: var(--fs-title); letter-spacing: var(--track-tight); }
+.cf-head    { font-family: var(--font-sans); font-weight: var(--w-medium);
+              font-size: var(--fs-head); }
+.cf-body    { font-family: var(--font-sans); font-weight: var(--w-regular);
+              font-size: var(--fs-body); line-height: var(--lh-body); }
+.cf-meta    { font-family: var(--font-sans); font-weight: var(--w-regular);
+              font-size: var(--fs-xs); }
+.cf-numeral { font-family: var(--font-display); font-weight: var(--w-black);
+              font-size: var(--fs-numeral); font-variant-numeric: tabular-nums;
+              letter-spacing: var(--track-tight); }
+.cf-eyebrow { font-family: var(--font-sans); font-weight: var(--w-bold);
+              font-size: var(--fs-xs); letter-spacing: var(--track-eyebrow);
+              text-transform: uppercase; }

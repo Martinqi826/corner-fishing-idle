@@ -1,0 +1,37 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Surfaces & Text" subtitle="Dark glass vs warm paper — the two coexisting surfaces" -->
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+ body{margin:0;padding:18px;background:
+   radial-gradient(120% 120% at 90% 100%,#3a3d33,#23241e 70%);font-family:var(--font-sans);}
+ .row{display:flex;gap:14px;}
+ .glass{flex:1;background:var(--glass);border:var(--border-glass);border-radius:14px;
+   box-shadow:var(--shadow-panel);padding:14px;display:flex;flex-direction:column;gap:8px;}
+ .t-title{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--text-title);}
+ .t-on{font-size:13px;color:var(--text-on-glass);}
+ .t-muted{font-size:13px;color:var(--text-muted-glass);}
+ .t-faint{font-size:13px;color:var(--text-faint-glass);}
+ .paper{background:var(--paper-solid);border:1px solid var(--paper-border);border-radius:10px;
+   padding:10px 12px;display:flex;flex-direction:column;gap:4px;}
+ .p-ink{font-size:13px;color:var(--ink);font-weight:500;}
+ .p-soft{font-size:12px;color:var(--ink-soft);}
+ .rowin{background:var(--glass-row);border:var(--border-row);border-radius:8px;padding:8px 10px;
+   font-size:12px;color:var(--text-on-glass);}
+</style></head>
+<body><div class="row">
+ <div class="glass">
+   <span class="t-title">深色玻璃面板</span>
+   <span class="t-on">text-on-glass · #ECE8E0</span>
+   <span class="t-muted">text-muted-glass · #C7BDA8</span>
+   <span class="t-faint">text-faint-glass · #807D72</span>
+   <div class="rowin">dark inset row — glass-row</div>
+ </div>
+ <div class="glass" style="justify-content:center;gap:10px;">
+   <div class="paper">
+     <span class="p-ink">米黄羊皮卡片 · ink #423F38</span>
+     <span class="p-soft">ink-soft · #756E5E（次要墨色）</span>
+   </div>
+   <span class="t-muted" style="font-size:11px;">paper #E8E0C7 浮在玻璃之上承载图鉴/订单/统计</span>
+ </div>
+</div></body></html>

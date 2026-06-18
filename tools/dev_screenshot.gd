@@ -55,6 +55,13 @@ func _run() -> void:
 	await _settle(2)
 	_snap("panel_rod.png")
 
+	# 3a) 设置页（含帧率 30/60/90/120 选择器）
+	_main.max_fps = 60
+	_main._catch_tab = 8
+	_main._open_panel("catch")
+	await _settle(2)
+	_snap("panel_settings.png")
+
 	# 3b) 多钓点：解锁全部 → 钓点页签 + 切到静水湖泊看 HUD 钓点角标
 	_main.lifetime_catches = 400
 	_main._refresh_unlocks()
@@ -89,14 +96,16 @@ func _run() -> void:
 	_snap("scene_coast.png")
 	_main.active_event = ""
 	_main._switch_spot("river_bend")
-	# 昼夜：强制黄昏，验证场景染色 + HUD「· 黄昏」
+	# 昼夜：强制黄昏，验证时段底图 + 场景染色 + HUD「· 黄昏」
 	_main.day_phase = "dusk"
 	_main._apply_phase()
+	_finish_spot_fade()   # 截图工具：跳过 90s 慢淡入，直接呈现目标时段底图
 	_main._update_hud()
 	await _settle(2)
 	_snap("scene_dusk.png")
 	_main.day_phase = Weather.current_phase()
 	_main._apply_phase()
+	_finish_spot_fade()
 	_main._update_hud()
 
 	# 4) 动态层：强制小动物事件（中段全亮）+ 涟漪帧动画
@@ -140,6 +149,15 @@ func _run() -> void:
 func _settle(frames: int) -> void:
 	for i in frames:
 		await process_frame
+
+
+## 立即结束昼夜底图 crossfade（截图工具需要静帧呈现目标时段，不等 90s 慢淡入）。
+func _finish_spot_fade() -> void:
+	var p: Node2D = _main.painter
+	if "_spot_fade" in p:
+		p._spot_fade = 1.0
+		p._spot_prev = null
+		p.queue_redraw()
 
 
 func _snap(filename: String) -> void:

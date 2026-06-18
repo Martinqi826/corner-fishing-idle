@@ -1,0 +1,11 @@
+/* ============================================================
+   角落垂钓 · Webfonts
+   The game ships with Microsoft YaHei UI / SimHei (Windows system
+   fonts). For the web we substitute the open-source Noto family,
+   which matches the metrics and CJK coverage closely.
+   ⚠ SUBSTITUTION: Noto Sans SC ≈ Microsoft YaHei UI (game default).
+     Noto Serif SC adds a painterly/scroll display voice that suits
+     the watercolour scene — used for panel titles & hero numerals.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@500;600;700;900&display=swap");

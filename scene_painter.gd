@@ -35,11 +35,18 @@ const C_DARK := Color(0.28, 0.28, 0.26)
 const C_SKIN := Color(0.80, 0.72, 0.62)
 const C_LANTERN := Color(1.0, 0.84, 0.48)
 
+# 昼夜底图慢交叉淡入秒数（背景按时段切换时不硬切，缓慢 crossfade）。
+const SPOT_FADE_DUR := 90.0
+
 var t := 0.0
 var dip := 0.0
 var use_composite := false
 var _base: Texture2D
 var _spot_base: Texture2D = null   # 当前钓点底图（缺图回退到 _base，不崩）
+var _spot_prev: Texture2D = null   # crossfade 中正在淡出的上一张底图
+var _spot_fade := 1.0              # crossfade 进度 0→1（1=完成，无活动淡入）
+var _spot_key := ""                # 当前钓点 bg_key（决定底图族）
+var _spot_phase := ""              # 当前昼夜阶段 dawn/day/dusk/night（决定时段图）
 var _fisher: Texture2D             # 独立渔夫精灵（含鱼竿），叠加到所有干净底图上
 var _lantern_tex: Texture2D        # 独立灯笼精灵，叠加到所有干净底图上
 
@@ -84,6 +91,10 @@ var _wild_timer := 60.0
 var _lantern := LANTERN_POS
 var _prng := RandomNumberGenerator.new()
 
+# —— 上鱼庆祝闪光：仅稀有时触发，柔和暖色脉冲，走场景羽化层（不铺满整窗、不染桌面）——
+const FLASH_DUR := 0.6
+var _flash_t := 0.0
+
 # —— 渔夫情绪 / 桌面宠物（Task 4）：尽量零存档、瞬态，用变换驱动 ——
 var _fisher_pull: Array = []        # 收竿/上鱼姿势帧（咬钩时切换，给渔夫加动作）
 var fisher_mood := "idle"           # idle / cheer / yawn / shiver / doze
@@ -97,6 +108,17 @@ var pet_action := ""                # "" idle / paw / steal
 var _pet_action_t := 0.0
 var _pet_action_dur := 1.0
 var _pet_blink_t := 3.0
+
+# —— 小馋猫正式 sprite（Codex 96x96 透明帧；缺失自动回退程序化猫）——
+const PET_SPRITE_SCALE := 0.35
+var _pet_tex: Dictionary = {}
+var _pet_paths := {
+	"idle": "res://assets/art/pets/cat_idle.png",
+	"blink": "res://assets/art/pets/cat_blink.png",
+	"paw": "res://assets/art/pets/cat_paw.png",
+	"steal": "res://assets/art/pets/cat_steal.png",
+	"sleep": "res://assets/art/pets/cat_sleep.png",
+}
 
 
 func _ready() -> void:
@@ -120,6 +142,11 @@ func _ready() -> void:
 		var tx := _tex("res://assets/art/wildlife/%s.png" % k)
 		if tx != null:
 			_wild_tex[k.get_slice("_", 0)] = tx
+	# 小馋猫正式 sprite（缺任一帧则该帧回退程序化猫）
+	for k in _pet_paths.keys():
+		var ptx := _tex(_pet_paths[k])
+		if ptx != null:
+			_pet_tex[k] = ptx
 	# 每层随机参数 + 随机相位（避免所有循环同步重启，plan 的 Motion Rules）
 	_shimmer_period = _prng.randf_range(4.2, 5.5)
 	_glow_period = _prng.randf_range(3.5, 5.5)
@@ -159,8 +186,19 @@ func _frames(pattern: String, count: int) -> Array:
 	return out
 
 
+## 上鱼庆祝：稀有时由 main 触发一次柔和暖色脉冲（限场景内、随羽化淡出）。
+func catch_flash() -> void:
+	_flash_t = FLASH_DUR
+
+
 func _process(delta: float) -> void:
 	t += delta
+	if _flash_t > 0.0:
+		_flash_t -= delta
+	if _spot_fade < 1.0:
+		_spot_fade = minf(1.0, _spot_fade + delta / SPOT_FADE_DUR)
+		if _spot_fade >= 1.0:
+			_spot_prev = null   # 淡入完成，释放上一张底图引用
 	for r in _ripples:
 		r["r"] += delta * 40.0
 		r["life"] -= delta * 1.1
@@ -260,13 +298,37 @@ func _a(c: Color, a: float) -> Color:
 	return Color(c.r, c.g, c.b, a)
 
 
-## 切换钓点底图：加载 assets/art/background/spot_<bg_key>.png；缺图回退现有主图（不崩）。
-func set_spot(bg_key: String) -> void:
+## 解析钓点底图：优先时段图 spot_<key>_<phase>.png，回退 spot_<key>.png；
+## 二者都缺（或 bg_key 为空）返回 null，由绘制层回退到 _base（spot_river_bend.png）。
+func _resolve_spot_tex(bg_key: String, phase: String) -> Texture2D:
 	if bg_key == "":
-		_spot_base = null
+		return null
+	if phase != "":
+		var tx := _tex("res://assets/art/background/spot_%s_%s.png" % [bg_key, phase])
+		if tx != null:
+			return tx
+	return _tex("res://assets/art/background/spot_%s.png" % bg_key)
+
+
+## 应用底图。animate=true 时与当前底图做慢 crossfade（昼夜切换）；false 直接换（切钓点地点跳转）。
+func _apply_background(target: Texture2D, animate: bool) -> void:
+	var old_drawn := _spot_base if _spot_base != null else _base
+	var new_drawn := target if target != null else _base
+	_spot_base = target
+	if animate and old_drawn != null and new_drawn != null and old_drawn != new_drawn:
+		_spot_prev = old_drawn
+		_spot_fade = 0.0
 	else:
-		_spot_base = _tex("res://assets/art/background/spot_%s.png" % bg_key)
+		_spot_prev = null
+		_spot_fade = 1.0
 	queue_redraw()
+
+
+## 切换钓点底图：按 bg_key + 当前时段解析；缺时段图回退 spot_<key>.png，再缺回退现有主图（不崩）。
+## 切钓点是地点跳转，直接换（不 crossfade）；昼夜切换的慢淡入走 set_phase_tint。
+func set_spot(bg_key: String) -> void:
+	_spot_key = bg_key
+	_apply_background(_resolve_spot_tex(bg_key, _spot_phase), false)
 
 
 ## 当前是否用干净 spot 底图（渔夫/按钮需由代码补上）；river 回退 _base 时为 false。
@@ -382,9 +444,47 @@ func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## 程序化橘猫（坐姿，面朝渔夫/水面）：尾巴轻摆、偶尔眨眼、上鱼/偷鱼时抬爪。
-## 美术补图前的占位实现（机制可用）；需要的反应帧见结尾清单。
+## 小馋猫入口：有正式 sprite 用 PNG 帧，缺图回退程序化占位猫。
 func _draw_pet() -> void:
+	var key := _pet_state_key()
+	if _pet_tex.has(key):
+		_draw_pet_sprite(_pet_tex[key])
+	elif _pet_tex.has("idle"):
+		_draw_pet_sprite(_pet_tex["idle"])   # 当前帧缺失但有 idle → 用 idle，仍是真图
+	else:
+		_draw_pet_proc()
+
+
+## 按动作/情境选帧：偷鱼/挥爪优先，其次夜间久坐睡觉，再眨眼，否则 idle。
+func _pet_state_key() -> String:
+	if pet_action == "steal":
+		return "steal"
+	if pet_action == "paw":
+		return "paw"
+	if ctx_night and ctx_idle:
+		return "sleep"
+	if _pet_blink_t < 0.14:
+		return "blink"
+	return "idle"
+
+
+## 绘制 sprite 帧：底部中心对齐 pet_anchor（不破现有构图），轻微呼吸 + 动作位移。
+func _draw_pet_sprite(tex: Texture2D) -> void:
+	var sz := Vector2(tex.get_size()) * PET_SPRITE_SCALE
+	var offset := Vector2(0, sin(t * 1.7) * 0.5 + 1.0)   # 更柔呼吸 + 下移1px，脚底不悬浮
+	if pet_action != "":
+		var pp: float = 1.0 - _pet_action_t / maxf(_pet_action_dur, 0.001)
+		if pet_action == "paw":
+			offset.y -= sin(pp * PI) * 1.8
+		elif pet_action == "steal":
+			offset.x += sin(pp * PI) * 2.2
+	var top_left := pet_anchor + offset - Vector2(sz.x * 0.5, sz.y)
+	# PNG 已做雪景融合 + 烘焙接触阴影：只用很轻 modulate，不再叠代码阴影（避免双重阴影/压过头）
+	draw_texture_rect(tex, Rect2(top_left, sz), false, Color(0.96, 0.98, 1.0, 0.96))
+
+
+## 程序化橘猫（坐姿）：正式 sprite 缺失时的回退占位（机制可用）。
+func _draw_pet_proc() -> void:
 	var B := pet_anchor
 	var body := Color(0.86, 0.55, 0.28)
 	var dark := Color(0.66, 0.40, 0.18)
@@ -455,9 +555,13 @@ func _draw_fishing_line() -> void:
 	draw_line(tip, bobber_pos(), Color(0.95, 0.96, 0.97, 0.55), 1.2, true)
 
 
-## 昼夜时段染色（main 在跨段时调用；A=0 即白昼不染色）。
-func set_phase_tint(c: Color) -> void:
+## 昼夜时段染色 + 底图切换（main 在跨段时调用；A=0 即白昼不染色）。
+## phase_id 为空保持旧签名兼容（只改染色不切底图）；非空且与当前时段不同则慢 crossfade 换时段图。
+func set_phase_tint(c: Color, phase_id := "") -> void:
 	phase_tint = c
+	if phase_id != "" and phase_id != _spot_phase:
+		_spot_phase = phase_id
+		_apply_background(_resolve_spot_tex(_spot_key, _spot_phase), true)
 	queue_redraw()
 
 
@@ -469,7 +573,14 @@ func _draw_phase_tint() -> void:
 
 # —— 干净底图 + 统一叠加层（所有钓场同一路径；底图均为纯风景，渔夫/灯笼/钓线/浮漂全代码叠加）——
 func _draw_composite() -> void:
-	draw_texture(_spot_base if _spot_base != null else _base, Vector2.ZERO)
+	# 底图：昼夜切换时上一张底图淡出、当前底图按 _spot_fade 淡入（缺时段图已在解析层回退，不黑屏）。
+	var bg := _spot_base if _spot_base != null else _base
+	if _spot_prev != null and _spot_fade < 1.0:
+		draw_texture(_spot_prev, Vector2.ZERO)
+		if bg != null:
+			draw_texture(bg, Vector2.ZERO, Color(1, 1, 1, _spot_fade))
+	elif bg != null:
+		draw_texture(bg, Vector2.ZERO)
 	_draw_fisher()          # 渔夫（含鱼竿）坐右岸
 	_draw_pet()             # 渔夫旁的小馋猫
 	_draw_lantern()         # 渔夫旁的油灯
@@ -482,6 +593,15 @@ func _draw_composite() -> void:
 	_draw_ripples()
 	_draw_bobber_sprite()
 	_draw_glow_layer()      # 灯光呼吸光晕（锚在灯笼火焰处）
+	_draw_catch_flash()     # 稀有上鱼柔和暖光脉冲（受羽化遮罩约束）
+
+
+func _draw_catch_flash() -> void:
+	if _flash_t <= 0.0:
+		return
+	var p: float = _flash_t / FLASH_DUR          # 1 → 0
+	var a := sin(p * PI) * 0.16                   # 0 → 峰值0.16 → 0 的柔和脉冲
+	draw_rect(Rect2(0.0, 0.0, W, H), Color(1.0, 0.86, 0.45, a))
 
 
 ## 雾气微风：每层异周期正弦漂移（约 ±20~40px），透明度做明显的浓淡呼吸。
@@ -538,7 +658,15 @@ func _draw_wildlife() -> void:
 		"rabbit":
 			pos.y += sin(t * 2.2) * 1.2           # 原地轻动
 	var sz := Vector2(tex.get_size()) * _wild_scale
-	draw_texture_rect(tex, Rect2(pos - sz * 0.5, sz), false, Color(1, 1, 1, 0.95 * fade))
+	# 轻微降亮+偏冷，把小动物压回水彩调（减少"贴上去"的突兀感）
+	var tint := Color(0.90, 0.91, 0.93, 0.92 * fade)
+	# 鸟朝左飞（from.x > to.x）→ 水平翻转（鸟图默认朝右，否则屁股领头倒着飞）
+	if _wild_kind == "bird" and _wild_to.x < _wild_from.x:
+		draw_set_transform(pos, 0.0, Vector2(-1, 1))
+		draw_texture_rect(tex, Rect2(-sz * 0.5, sz), false, tint)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	else:
+		draw_texture_rect(tex, Rect2(pos - sz * 0.5, sz), false, tint)
 	if _wild_kind == "fish" and prog > 0.85 and _ripples.size() < 2:
 		add_ripple(Vector2(_wild_from.x, bite_point.y + 4.0), 20.0)
 
