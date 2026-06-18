@@ -29,7 +29,7 @@ const FEATHER_CORE := 0.20
 # immersive = 透明羽化角落挂件（原版，降级为后续完善的「沉浸模式」，代码 gate 保留不删）。
 var display_mode := "framed"
 const FRAMED_SCENE_SCALE := 2.0                 # 带框模式：场景放大填满窗口宽
-const FRAMED_CONSOLE_H := 64.0                  # 底部导航 console 高
+const FRAMED_CONSOLE_H := 80.0                  # 底部导航 console 高（加高以完整容纳 32px 图标 + 文字，不被窗口底切）
 const FRAMED_BG := Color(0.105, 0.115, 0.105)   # 带框窗口实底背景（场景外的边）
 
 # —— UI 布局契约 ——
@@ -454,7 +454,7 @@ func _build_bottom_nav() -> void:
 	bar.position = Vector2(0, float(WIN.y) - FRAMED_CONSOLE_H)
 	bar.custom_minimum_size = Vector2(float(WIN.x), FRAMED_CONSOLE_H)
 	bar.size = Vector2(float(WIN.x), FRAMED_CONSOLE_H)
-	bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # 闲置透明；开面板时由 _set_nav_solid 变暗
+	bar.add_theme_stylebox_override("panel", _nav_idle_sb())  # 闲置半透明暗底，图标不再糊进浅色场景
 	ui_root.add_child(bar)
 	_nav_bar = bar
 	var mg := MarginContainer.new()
@@ -468,13 +468,13 @@ func _build_bottom_nav() -> void:
 	mg.add_child(row)
 	# 5 个导航项：图标在上、文字在下（CD 布局）。[label, catch_tab, icon]
 	var navs := [
-		["鱼篓", 0, "res://assets/art/equipment/fish_basket.png"],
-		["装备", 7, "res://assets/art/equipment/rod_carbon.png"],
-		["图鉴", 1, "res://assets/art/ui/icon_dex.png"],
-		["任务", 2, "res://assets/art/ui/event_crate.png"],
-		["钓点", 5, "res://assets/art/ui/event_tide.png"],
-		["鱼缸", 6, "res://assets/art/ui/event_fish_run.png"],
-		["设置", 8, "res://assets/art/equipment/tackle_box.png"],
+		["鱼篓", 0, "res://assets/art/ui/nav_basket.png"],
+		["装备", 7, "res://assets/art/ui/nav_equip.png"],
+		["图鉴", 1, "res://assets/art/ui/nav_dex.png"],
+		["任务", 2, "res://assets/art/ui/nav_orders.png"],     # 一套水彩导航图标（已就位）；文件缺失时自动只显文字、不显乱占位
+		["钓点", 5, "res://assets/art/ui/nav_spots.png"],
+		["鱼缸", 6, "res://assets/art/ui/nav_fishtank.png"],
+		["设置", 8, "res://assets/art/ui/nav_settings.png"],
 	]
 	for n in navs:
 		var tab: int = n[1]
@@ -484,29 +484,28 @@ func _build_bottom_nav() -> void:
 		item.add_theme_constant_override("separation", 2)
 		item.mouse_filter = Control.MOUSE_FILTER_STOP
 		item.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		# 图标容器（含右上徽章位）
-		var holder := Control.new()
-		holder.custom_minimum_size = Vector2(34, 26)
-		holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 图标：用 CenterContainer 保证水平居中；TextureRect 固定尺寸 + 等比不变形（不再用绝对定位）
+		var icon_box := CenterContainer.new()
+		icon_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		icon_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if ResourceLoader.exists(n[2]):
 			var ic := TextureRect.new()
 			ic.texture = load(n[2])
-			ic.size = Vector2(24, 24)
-			ic.position = Vector2(5, 1)
+			ic.custom_minimum_size = Vector2(34, 34)   # 容器据此给尺寸，等比居中绘制
 			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			holder.add_child(ic)
-		if tab == 0 or tab == 2:   # 鱼篓满 / 任务可交付 → 红角标
-			var badge := _make_nav_badge()
-			badge.position = Vector2(19, -4)
-			holder.add_child(badge)
-			_nav_badges[tab] = badge
-		item.add_child(holder)
+			icon_box.add_child(ic)
+			if tab == 0 or tab == 2:   # 鱼篓满 / 任务可交付 → 红角标，叠图标右上
+				var badge := _make_nav_badge()
+				badge.position = Vector2(25, -3)
+				ic.add_child(badge)
+				_nav_badges[tab] = badge
+		item.add_child(icon_box)
 		var lbl := Label.new()
 		lbl.text = n[0]
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # 满宽 → 文字真正居中在该 tab 下方
 		lbl.add_theme_font_override("font", _font_bold)
 		lbl.add_theme_font_size_override("font_size", 11)   # CD .nav button 11
 		lbl.add_theme_color_override("font_color", DT.TEXT_MUTED_GLASS)
@@ -555,7 +554,16 @@ func _set_nav_solid(solid: bool) -> void:
 		sb.border_color = DT.GLASS_ROW_BORDER  # CD .console border-top
 		_nav_bar.add_theme_stylebox_override("panel", sb)
 	else:
-		_nav_bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		_nav_bar.add_theme_stylebox_override("panel", _nav_idle_sb())
+
+
+## 闲置态底栏背景：半透明暗底 + 顶部细线，让图标在浅色水彩场景上有对比、不发灰。
+func _nav_idle_sb() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.10, 0.11, 0.10, 0.60)
+	sb.border_width_top = 1
+	sb.border_color = DT.GLASS_ROW_BORDER
+	return sb
 
 
 func _make_nav_badge() -> PanelContainer:
