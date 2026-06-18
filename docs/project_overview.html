@@ -300,13 +300,17 @@
       <p class="lead">贴在桌面右下角的透明挂机钓鱼小场景。它不是传统全屏游戏，而是一个低打扰桌面伴侣：自动钓鱼、收集图鉴、升级鱼竿与鱼饵，在冬日河岸插画里用轻量动效和柔和音频制造持续陪伴感。</p>
       <div class="chips">
         <span class="chip">Godot 4.6</span>
-        <span class="chip">2D 插画风</span>
-        <span class="chip">透明窗口</span>
+        <span class="chip">2D 水彩插画</span>
+        <span class="chip">逐像素透明窗口</span>
         <span class="chip">挂机放置</span>
         <span class="chip">多钓点生态</span>
         <span class="chip">随机事件</span>
         <span class="chip">昼夜时段</span>
-        <span class="chip">鱼类收集</span>
+        <span class="chip">106 鱼收集</span>
+        <span class="chip">桌面宠物🐱</span>
+        <span class="chip">活水族箱🐠</span>
+        <span class="chip">专注奖励</span>
+        <span class="chip">衬线展示 UI</span>
         <span class="chip">低干扰音频</span>
       </div>
     </div>
@@ -330,10 +334,10 @@
     <section id="overview">
       <h2>项目总览</h2>
       <div class="stats">
-        <div class="stat"><strong>60</strong><span>正式鱼种 × 4 稀有变体 = 180 格变体收集；6 品阶、8 类生态标签。</span></div>
-        <div class="stat"><strong>3</strong><span>可玩钓点（河湾 / 静水湖泊 / 海岸码头），按渔获解锁。</span></div>
+        <div class="stat"><strong>106</strong><span>正式鱼种，每种 3 档稀有变体 → 106×3 = 318 格变体收集轴；6 品阶、8 类生态标签。</span></div>
+        <div class="stat"><strong>3</strong><span>可玩钓点（河湾 / 静水湖泊 / 海岸码头），按累计渔获解锁。</span></div>
         <div class="stat"><strong>7</strong><span>随机事件，数据驱动、低干扰、按钓点触发。</span></div>
-        <div class="stat"><strong>27</strong><span>成就目标，覆盖捕获、财富、图鉴、品相、装备、陈列与变体。</span></div>
+        <div class="stat"><strong>29</strong><span>成就目标，覆盖捕获、财富、图鉴、品相、装备、陈列、变体与猫税。</span></div>
       </div>
       <div class="two" style="margin-top:14px">
         <div class="card">
@@ -364,7 +368,7 @@
         </div>
         <div class="card">
           <h3>图鉴</h3>
-          <p>按稀有度展示 60 种鱼。已发现鱼记录捕获次数、最大体重，并解锁长期徽章：集齐 10 条、巨物、完美★★★。<b>稀有变体</b>（斑斓/鎏金/七彩，6%/1.2%/0.2%，价值 ×2/5/12）按种记录，60×3=180 格收集轴。未发现鱼保持隐藏剪影；缺图标回退按品阶通用鱼图标。</p>
+          <p>按稀有度展示 106 种鱼。已发现鱼记录捕获次数、最大体重、首捕日期，并解锁长期徽章：集齐 10 条、巨物、完美★★★。<b>稀有变体</b>（斑斓/鎏金/七彩，6%/1.2%/0.2%，价值 ×2/5/12）按种记录，<b>106×3=318 格</b>收集轴。未发现鱼保持隐藏剪影；缺图标回退按品阶通用鱼图标。</p>
         </div>
         <div class="card">
           <h3>每日订单</h3>
@@ -375,8 +379,16 @@
           <p>排序（最新 / 价值 / 品阶 / 重量）与「订单鱼」筛选；收藏锁保留心爱渔获不被批量卖出或订单交付。</p>
         </div>
         <div class="card">
-          <h3>陈列 / 装饰</h3>
-          <p>把心爱渔获摆上「陈列架」（5 槽，可取下），离开鱼篓永久展示；每件 +1% 全局卖价、封顶 +5%。最契合桌面摆件的健康非数值长线 + 收集深度，也是未来外观变现的落点。</p>
+          <h3>活水族箱 🐠</h3>
+          <p>「鱼缸」页签——把心爱渔获放进缸里（最多 8 条），缸内鱼沿正弦路径游动、按方向翻转，点鱼弹出纪录卡（最大体重 / 累计 / 首捕日 / 变体），可捞回鱼篓；鎏金 / 七彩变体带脉动光晕。每条 +观赏卖价加成、封顶 +5%。最契合桌面摆件的健康非数值长线 + 收集深度（取代早期「陈列架」）。</p>
+        </div>
+        <div class="card">
+          <h3>桌面宠物 🐱</h3>
+          <p>渔夫旁的小馋猫，上鱼时偶尔扒拉；2% 概率叼走鱼篓里<b>最廉价的一条杂鱼</b>（卖价 ≤30，珍藏 / 订单 / 锁定绝不动）当趣味事件，计入「猫税」统计与成就。冷调缩小、退作环境配角，不压主体。</p>
+        </div>
+        <div class="card">
+          <h3>专注奖励</h3>
+          <p>窗口失焦且无操作时累计连续「专注」，满 25 / 50 分钟下一竿强制升级渔获（保底极品★★，再保底鎏金变体），切回或操作即清零，每日封顶 4 次——离开越久回来越有惊喜。与手动「专注 / 安静模式」开关是两回事。</p>
         </div>
         <div class="card">
           <h3>昼夜时段</h3>
@@ -384,19 +396,19 @@
         </div>
       </div>
       <div class="wide-asset" style="margin-top:14px">
-        <div class="preview scene"><img src="img/panel_decor.png" alt="陈列页签"></div>
+        <div class="preview scene"><img src="img/panel_decor.png" alt="鱼缸 / 陈列页签"></div>
         <code>docs/img/panel_decor.png</code>
-        <p>鱼篓 → 陈列页签：陈列架槽位（取下）+ 从鱼篓上架列表，7 页签布局。</p>
+        <p>「垂钓手册」9 个功能页（鱼篓 · 图鉴 · 订单 · 成就 · 统计 · 钓点 · 鱼缸 · 装备 · 设置）：点 HUD 金币栏开面板，底部水彩导航切区。（截图取自早期构建，鱼缸活水族箱以当前实机为准。）</p>
       </div>
     </section>
 
     <section id="spots">
       <h2>多钓点生态</h2>
-      <p class="lead" style="margin-bottom:14px">从“单钓点挂机”升级为“多钓点生态挂机”。每个钓点用生态标签圈定鱼池，带专属随机事件、解锁条件与常驻手感系数。骨架数据化（<code>spot_data.gd</code> / <code>event_data.gd</code>），新增钓点只需加数据 + 一张背景图。</p>
+      <p class="lead" style="margin-bottom:14px">从“单钓点挂机”升级为“多钓点生态挂机”。每个钓点用生态标签（river/lake/stream/coast/deep/cold/night/protected）圈定鱼池，带专属随机事件、解锁条件与常驻手感系数；各钓点池约 43~48 种鱼（按 tags∩habitat_tags 求交）。骨架数据化（<code>spot_data.gd</code> / <code>event_data.gd</code>），新增钓点只需加数据 + 一张背景图。</p>
       <div class="three">
         <div class="card">
           <h3>新手河湾 · river_bend</h3>
-          <p>默认解锁。保留原版体验——原 28 种鱼全数仍在此出没。事件：鱼汛 / 顺水鱼群 / 晨雾 / 漂流木箱。</p>
+          <p>默认解锁，最大鱼池——河 / 湖系杂鱼与经济鱼悉数在此出没。事件：鱼汛 / 顺水鱼群 / 晨雾 / 漂流木箱。</p>
         </div>
         <div class="card">
           <h3>静水湖泊 · still_lake</h3>
@@ -442,7 +454,7 @@
         <div class="wide-asset">
           <div class="preview scene"><img src="img/scene_lake.png" alt="静水湖泊 HUD"></div>
           <code>docs/img/scene_lake.png</code>
-          <p>切到静水湖泊：HUD 角标“静水湖泊 · 晨雾”。（钓点背景图为 Codex 待产资源，缺图回退现有主图。）</p>
+          <p>切到静水湖泊：HUD 角标“静水湖泊 · 晨雾”。三钓点专属背景（河湾 / 湖泊 / 海岸）均已接入。</p>
         </div>
         <div class="wide-asset">
           <div class="preview scene"><img src="img/scene_coast.png" alt="海岸码头 HUD"></div>
@@ -462,8 +474,9 @@
             <tbody>
               <tr><td><span class="pill">鱼竿</span></td><td>费用 `200 * 2.0^(等级-1)`（陡曲线，成为长期金币去向）；缩短等待，提高高阶鱼权重，鱼价每级 +8%。</td></tr>
               <tr><td><span class="pill">鱼饵</span></td><td>4 档永久升级：蚯蚓、红虫、活虾、秘制饵。提高上品、极品、完美星级通过率。</td></tr>
-              <tr><td><span class="pill">鱼篓</span></td><td>容量从 20 到 55，升级费用为 100、250、600、1500、4000、10000、25000。</td></tr>
-              <tr><td><span class="pill">离线收益</span></td><td>最多结算 8 小时，效率 50%，受鱼篓剩余空间限制。</td></tr>
+              <tr><td><span class="pill">鱼钩</span></td><td>双钩升级：一定几率一次再上一条，单竿收益翻倍。</td></tr>
+              <tr><td><span class="pill">鱼篓</span></td><td>容量从 20 到 55（8 级），升级费用为 100、250、600、1500、4000、10000、25000；满篓兜底自动折价兑现，留贵兑贱、珍藏不动。</td></tr>
+              <tr><td><span class="pill">离线收益</span></td><td>最多结算 8 小时，效率 50%，受鱼篓剩余空间限制；回屏弹「离线小结」面板。</td></tr>
             </tbody>
           </table>
         </div>
@@ -472,13 +485,14 @@
           <table>
             <thead><tr><th>档位</th><th>数量</th><th>基础权重</th><th>价值跨度</th></tr></thead>
             <tbody>
-              <tr><td>普通</td><td>12</td><td>58.0</td><td>1 - 18 金币</td></tr>
-              <tr><td>优良</td><td>13</td><td>25.0</td><td>14 - 55 金币</td></tr>
-              <tr><td>稀有</td><td>12</td><td>11.0</td><td>55 - 190 金币</td></tr>
-              <tr><td>史诗</td><td>13</td><td>4.5</td><td>200 - 580 金币</td></tr>
-              <tr><td>传说</td><td>7</td><td>1.3</td><td>750 - 2200 金币</td></tr>
-              <tr><td>神话</td><td>3</td><td>0.2</td><td>4500 - 11000 金币</td></tr>
+              <tr><td>普通</td><td>21</td><td>58.0</td><td>1 - 18 金币</td></tr>
+              <tr><td>优良</td><td>22</td><td>25.0</td><td>14 - 55 金币</td></tr>
+              <tr><td>稀有</td><td>21</td><td>11.0</td><td>55 - 190 金币</td></tr>
+              <tr><td>史诗</td><td>21</td><td>4.5</td><td>200 - 580 金币</td></tr>
+              <tr><td>传说</td><td>14</td><td>1.3</td><td>750 - 2200 金币</td></tr>
+              <tr><td>神话</td><td>7</td><td>0.2</td><td>4500 - 13000 金币</td></tr>
             </tbody>
+            <tfoot><tr><th>合计</th><th>106</th><th colspan="2">权重为品阶基线，鱼竿等级随级抬高高阶占比</th></tr></tfoot>
           </table>
         </div>
       </div>
@@ -505,11 +519,11 @@
         <div class="card">
           <h3>运行时资源规模</h3>
           <ul>
-            <li>背景：主场景 520 x 400 alpha PNG；钓点底图（湖泊/海岸）为 Codex 待产，缺图回退主图。</li>
-            <li>鱼类运行时图标 28 张（原版），32 个新鱼缺图时回退按品阶通用鱼图标（程序化，不崩）。</li>
-            <li>事件图标 5 个（鱼汛/雾/涨潮/木箱/放流）为 Codex 待产（见 art_requests P0）。</li>
-            <li>角色 3 帧，道具 4 张，装备 8 张。</li>
-            <li>水光 6 帧、雾 3 帧、雪 3 帧、涟漪 4 帧、灯光 4 帧。</li>
+            <li>背景：1040×720 透明画布，主场景 alpha PNG；三钓点专属背景（河湾 / 湖泊 / 海岸）已接入，河湾另有 黎明 / 白昼 / 黄昏 / 夜晚 四套时段图。</li>
+            <li>鱼类运行时图标 99 张，覆盖 106 种鱼绝大多数；缺图回退按品阶通用鱼图标（程序化，不崩）。</li>
+            <li>事件图标 5 个（鱼汛 / 雾 / 涨潮 / 木箱 / 放流）已接入；导航栏 7 张水彩图标（鱼篓 / 装备 / 图鉴 / 任务 / 钓点 / 鱼缸 / 设置）。</li>
+            <li>角色：渔夫待机 + 收线帧 + 情绪（cheer / yawn / shiver / doze，缺帧回退 idle + 变换）；桌面宠物猫正式 sprite（idle / blink / paw，冷调缩小，缺图回退程序化猫）。</li>
+            <li>偶发小动物：飞鸟多帧扇翅、跳鱼、探头狐、兔；水光 6 帧、雾 3 帧、雪 3 帧、涟漪 4 帧、灯光 4 帧。</li>
           </ul>
         </div>
       </div>
@@ -534,7 +548,7 @@
         <div class="wide-asset">
           <div class="preview"><img src="img/fish_icon_contact_sheet.png" alt="鱼类图标"></div>
           <code>docs/img/fish_icon_contact_sheet.png</code>
-          <p>与当前美术 manifest 对齐的 74 个鱼类图标总览。</p>
+          <p>鱼类图标总览，与 <code>fish_art_manifest.json</code> 对齐（现 99 张专属图标，覆盖 106 种鱼绝大多数）。</p>
         </div>
       </div>
 
@@ -611,19 +625,19 @@
       <div class="grid">
         <div class="card">
           <h3>窗口与交互</h3>
-          <p>窗口目标尺寸 760 x 560，主美术区域 520 x 400 偏移到右下。透明区域鼠标穿透，仅可见场景和按钮参与交互。</p>
+          <p>1040×720 透明画布，主美术偏移到右下角。GL Compatibility 渲染器 + 逐像素透明（无灰底），边缘羽化 shader 融进壁纸。空白透明区鼠标穿透到桌面，仅可见场景 / 按钮参与交互；按住场景空白可拖动，位置存档。</p>
         </div>
         <div class="card">
           <h3>场景渲染</h3>
-          <p>`main.tscn` 使用 `Node2D` + `ScenePainter` + `CanvasLayer`。`scene_painter.gd` 负责背景、雾雪、水光、浮漂、涟漪、灯光和偶发 wildlife 绘制。</p>
+          <p>`main.tscn` 使用 `Node2D` + `ScenePainter` + `CanvasLayer`。`scene_painter.gd` 负责背景、雾雪、水光、浮漂、涟漪、灯光、偶发 wildlife、渔夫情绪与桌面宠物猫绘制；活水族箱由 `aquarium.gd` 独立自管动画合成。</p>
         </div>
         <div class="card">
           <h3>数据</h3>
-          <p>`fish_data.gd`（60 鱼/生态标签/变体/按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`weather.gd`（昼夜时段）、`decor.gd`（陈列）、`achievements.gd`（成就）均为 `class_name` 模块，逻辑与数据解耦，便于并行扩展。</p>
+          <p>`fish_data.gd`（106 鱼 / 生态标签 / 变体 / 按钓点鱼池抽取）、`spot_data.gd`（钓点）、`event_data.gd`（随机事件）、`weather.gd`（昼夜时段）、`aquarium.gd`（活水族箱）、`decor.gd`（陈列收藏）、`orders.gd`（每日订单）、`achievements.gd`（成就）均为 `class_name` 模块，逻辑与数据解耦，便于并行扩展。</p>
         </div>
         <div class="card">
-          <h3>存档（v10）</h3>
-          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置；v8 多钓点、v9 陈列架、v10 稀有变体（inv/dex var/vmask + best_var）。旧档逐版兼容迁移，默认落点 river_bend、陈列空、变体普通。</p>
+          <h3>存档（v11）</h3>
+          <p>路径 `user://corner_fishing_save.json`，原子写 + .bak 回退。保存金币、装备、库存、图鉴、累计、订单、窗口位置；v8 多钓点、v9 陈列架、v10 稀有变体（var/vmask + best_var）、v11 陪伴向（图鉴首捕日期 fd + 专注奖励 focus_min/rt/rd/pend）。旧档逐版兼容迁移，缺字段无损归零，默认落点 river_bend。</p>
         </div>
         <div class="card">
           <h3>验证工具</h3>
@@ -640,11 +654,11 @@
       <h2>测试 · 数据来源 · 回退</h2>
       <div class="two">
         <div class="card">
-          <h3>测试结果（多钓点扩展后）</h3>
+          <h3>回归测试与验证工具</h3>
           <ul>
-            <li><code>godot --headless -s tools/validate_game.gd</code> → <strong>0 失败</strong>（含：钓点/事件数据、三钓点鱼池隔离、随机事件、多钓点切换、陈列/装饰、存档 v2/v8/v9 往返与旧档迁移、鱼图标回退，及原有全部回归段）。</li>
-            <li><code>godot --headless -s tools/balance_probe.gd</code> → 经济健康：鱼竿回本 0.3→7.1 分递增、鱼饵 4~17 分、鱼钩 5~46 分，全裸→全满约 ×20。扩鱼后各档期望仅微动。</li>
-            <li><code>godot --path . -s tools/dev_screenshot.gd</code> → 截图含 panel_spot / scene_lake / scene_coast，UI 无溢出。</li>
+            <li><code>godot --headless -s tools/validate_game.gd</code> 为逻辑改动的门槛（须全过），覆盖：106 鱼数据 / 钓点·事件 / 三钓点鱼池隔离 / 分布 / 体重价格 / 背包卖鱼 / 排序 / 鱼竿·鱼饵·鱼钩 / 成就 / 鱼贩 / 随机事件 / 每日订单 / 多钓点切换 / 满篓兜底 / 活水族箱 / 专注奖励 / 存档 v2~v11 往返与旧档迁移 / 离线 / 动态层。</li>
+            <li><code>godot --headless -s tools/balance_probe.gd</code> → 经济健康探针：鱼竿 / 鱼饵 / 鱼钩回本节奏，全裸→全满约 ×20；106 鱼扩充后各档期望仅微动。</li>
+            <li><code>godot --path . -s tools/dev_screenshot.gd</code> → 引擎内截图与透明窗口把关（含 panel_spot / scene_lake / scene_coast，UI 无溢出）。</li>
           </ul>
         </div>
         <div class="card">
@@ -652,8 +666,9 @@
           <ul>
             <li>钓点背景缺图 → 回退现有主场景图（<code>scene_painter.set_spot</code>）。</li>
             <li>鱼专属图标缺图 → 回退按品阶通用鱼图标（程序化小鱼剪影）。</li>
-            <li>事件图标缺图 → 不显示图标，文案/HUD 角标正常。</li>
-            <li>旧存档无多钓点字段 → 默认 river_bend，仅解锁默认钓点。</li>
+            <li>宠物猫 sprite 缺图 → 回退程序化猫；渔夫情绪缺帧 → 回退 idle + 变换驱动。</li>
+            <li>事件图标缺图 → 不显示图标，文案 / HUD 角标正常。</li>
+            <li>旧存档无新字段（多钓点 / 变体 / 陪伴向）→ 无损归零迁移，默认 river_bend。</li>
           </ul>
         </div>
       </div>
@@ -671,8 +686,8 @@
         </p>
       </div>
       <div class="card" style="margin-top:14px">
-        <h3>回退到多钓点基线</h3>
-        <p>本轮扩展前已打 tag。如需回退：<code>git reset --hard 多钓点基线-20260614</code>。存档向后兼容，回退代码不动存档。</p>
+        <h3>存档兼容与回退</h3>
+        <p>存档逐版兼容：v2 → v8（多钓点）→ v9（陈列）→ v10（变体）→ v11（陪伴向）一路无损迁移，旧档缺字段归零、默认落点 river_bend。代码层回退不动存档；如需回到历史版本请用对应 git tag，<b>注意早期「多钓点基线-20260614」tag 早于 106 鱼 / 宠物 / 鱼缸 / 专注，勿误回退</b>。</p>
       </div>
     </section>
 
@@ -683,11 +698,12 @@
           <thead><tr><th>模块</th><th>当前状态</th><th>下一步建议</th></tr></thead>
           <tbody>
             <tr><td>核心挂机循环</td><td><span class="pill">已实现</span></td><td>继续调等待节奏、咬钩反馈和鱼篓满时提示。</td></tr>
-            <tr><td>鱼类与经济</td><td><span class="pill">已实现</span></td><td>60 鱼/生态标签已上线；用长时模拟检查各钓点高阶鱼、订单和收鱼郎对通胀的影响。</td></tr>
+            <tr><td>鱼类与经济</td><td><span class="pill">已实现</span></td><td>106 鱼 / 生态标签 / 双钩已上线；用长时模拟检查各钓点高阶鱼、订单和鱼贩对通胀的影响。</td></tr>
             <tr><td>多钓点生态</td><td><span class="pill">已实现</span></td><td>3 钓点 + 7 事件 + 存档 v8 已上线；下一步加山涧溪流 / 远海深钓（数据骨架已就位）。</td></tr>
-            <tr><td>陈列 / 装饰</td><td><span class="pill">已实现</span></td><td>陈列架 5 槽 + 卖价加成 + 存档 v9 已上线；下一步把陈列鱼渲染成桌面小景（待美术）、更多陈列形态。</td></tr>
-            <tr><td>图鉴/成就</td><td><span class="pill">已实现</span></td><td>图鉴扩到 60 种；补齐更明确的奖励节奏和未发现鱼剪影表现。</td></tr>
-            <tr><td>美术资源</td><td><span class="pill">已接入</span></td><td>继续拆分前景/角色/水面层，减少整图依赖，提升局部动画空间。</td></tr>
+            <tr><td>活水族箱 / 陈列</td><td><span class="pill">已实现</span></td><td>鱼缸最多 8 条游动 + 纪录卡 + 观赏卖价加成 + 存档 v11 已上线；下一步把缸内鱼渲染成桌面小景、更多缸体形态。</td></tr>
+            <tr><td>桌面宠物 / 专注奖励</td><td><span class="pill">已实现</span></td><td>小馋猫猫税 + 专注 25/50 分钟保底渔获已上线；下一步丰富宠物互动与情绪表现。</td></tr>
+            <tr><td>图鉴 / 成就</td><td><span class="pill">已实现</span></td><td>图鉴扩到 106 种、成就 29 项（含猫税线）；补齐更明确的奖励节奏和未发现鱼剪影表现。</td></tr>
+            <tr><td>美术资源</td><td><span class="pill">已接入</span></td><td>CD 设计系统迁移（带框外壳 + 水彩导航图标 + 衬线展示）、宠物猫 / 渔夫情绪 / 飞鸟多帧已接入；继续拆分前景 / 角色 / 水面层。</td></tr>
             <tr><td>音频资源</td><td><span class="pill">已接入</span></td><td>实机调混音，重点检查长时间挂机时环境音疲劳度。</td></tr>
             <tr><td>打包发行</td><td><span class="pill">待推进</span></td><td>准备 Windows 导出、透明窗口兼容性测试、itch.io/Steam 页面素材。</td></tr>
           </tbody>
@@ -697,7 +713,7 @@
   </main>
 
   <footer>
-    <p>资料来源：当前 Godot 工程、`main.gd`、`fish_data.gd`、`spot_data.gd`、`event_data.gd`、`save_system.gd`、`achievements.gd`、`audio_manager.gd`、`tools/validate_game.gd`、`docs/spot-research-20260614.md`、`docs/art_requests.md`、`docs/fish_icon_art_standard.md`。最后整理日期：2026-06-14（多钓点生态扩展）。</p>
+    <p>资料来源：当前 Godot 工程、`README.md`、`main.gd`、`fish_data.gd`、`spot_data.gd`、`event_data.gd`、`aquarium.gd`、`save_system.gd`、`achievements.gd`、`ui_panels.gd`、`audio_manager.gd`、`tools/validate_game.gd`、`docs/spot-research-20260614.md`、`docs/art_requests.md`、`docs/fish_icon_art_standard.md`。最后整理日期：2026-06-19（106 鱼 + 桌面宠物 + 活水族箱 + 专注奖励 + 衬线/CD 设计系统 UI，存档 v11）。</p>
   </footer>
 </body>
 </html>

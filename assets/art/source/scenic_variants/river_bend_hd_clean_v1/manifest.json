@@ -1,0 +1,39 @@
+{
+  "status": "candidate_assets_no_code_changes",
+  "source": "current 520x400 river_bend phase backgrounds cleaned and upscaled locally",
+  "note": "These are not final AI-redrawn masters; they are clean high-res candidates for engineering/visual review.",
+  "phases": {
+    "dawn": {
+      "current_runtime": "assets/art/background/spot_river_bend_dawn.png",
+      "clean_520": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_520/spot_river_bend_dawn_clean_520.png",
+      "clean_2x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_dawn_clean_2x.png",
+      "clean_3x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_3x_1560x1200/spot_river_bend_dawn_clean_3x.png",
+      "hf_current": 0.008,
+      "hf_clean_520": 0.007
+    },
+    "day": {
+      "current_runtime": "assets/art/background/spot_river_bend_day.png",
+      "clean_520": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_520/spot_river_bend_day_clean_520.png",
+      "clean_2x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_day_clean_2x.png",
+      "clean_3x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_3x_1560x1200/spot_river_bend_day_clean_3x.png",
+      "hf_current": 0.008,
+      "hf_clean_520": 0.005
+    },
+    "dusk": {
+      "current_runtime": "assets/art/background/spot_river_bend_dusk.png",
+      "clean_520": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_520/spot_river_bend_dusk_clean_520.png",
+      "clean_2x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_dusk_clean_2x.png",
+      "clean_3x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_3x_1560x1200/spot_river_bend_dusk_clean_3x.png",
+      "hf_current": 0.007,
+      "hf_clean_520": 0.007
+    },
+    "night": {
+      "current_runtime": "assets/art/background/spot_river_bend_night.png",
+      "clean_520": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_520/spot_river_bend_night_clean_520.png",
+      "clean_2x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_night_clean_2x.png",
+      "clean_3x": "assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_3x_1560x1200/spot_river_bend_night_clean_3x.png",
+      "hf_current": 0.005,
+      "hf_clean_520": 0.005
+    }
+  }
+}
