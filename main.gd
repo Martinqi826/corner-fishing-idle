@@ -29,7 +29,7 @@ const FEATHER_CORE := 0.20
 # immersive = 透明羽化角落挂件（原版，降级为后续完善的「沉浸模式」，代码 gate 保留不删）。
 var display_mode := "framed"
 const FRAMED_SCENE_SCALE := 2.0                 # 带框模式：场景放大填满窗口宽
-const FRAMED_CONSOLE_H := 80.0                  # 底部导航 console 高（加高以完整容纳 32px 图标 + 文字，不被窗口底切）
+const FRAMED_CONSOLE_H := 80.0                  # 底部导航 console 高（完整容纳 44px 图标 + 文字，不被窗口底切）
 const FRAMED_BG := Color(0.105, 0.115, 0.105)   # 带框窗口实底背景（场景外的边）
 
 # —— UI 布局契约 ——
@@ -82,6 +82,8 @@ var _detail_fish := ""       # 当前「鱼种详情卡」显示的鱼 id
 var _opacity := 1.0
 const FPS_OPTIONS := [30, 60, 90, 120]   # 设置里可选的帧率上限
 var max_fps := 30                # 帧率上限：默认 30 挂件省电，可在设置调到 60/90/120
+const UI_SCALE_OPTIONS := [1.0, 1.25, 1.5]   # 设置里可选的界面缩放（整窗等比放大倍率）
+var ui_scale := 1.0              # 界面缩放：1.0 原始；带框模式整窗等比放大，小字随之变大
 var focus_mode := false          # 专注/安静模式：停小动物事件 + 抑制飘字 + 轻微变暗
 var seen_intro := false          # 是否看过首次引导
 var order_chip: Button = null   # HUD 上的每日订单进度小字（可点开订单页）
@@ -491,14 +493,14 @@ func _build_bottom_nav() -> void:
 		if ResourceLoader.exists(n[2]):
 			var ic := TextureRect.new()
 			ic.texture = load(n[2])
-			ic.custom_minimum_size = Vector2(34, 34)   # 容器据此给尺寸，等比居中绘制
+			ic.custom_minimum_size = Vector2(44, 44)   # 容器据此给尺寸，等比居中绘制（任务栏空间足，放大更醒目）
 			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			icon_box.add_child(ic)
 			if tab == 0 or tab == 2:   # 鱼篓满 / 任务可交付 → 红角标，叠图标右上
 				var badge := _make_nav_badge()
-				badge.position = Vector2(25, -3)
+				badge.position = Vector2(35, -3)
 				ic.add_child(badge)
 				_nav_badges[tab] = badge
 		item.add_child(icon_box)
@@ -524,23 +526,7 @@ func _build_bottom_nav() -> void:
 		item.mouse_entered.connect(func() -> void: item.modulate = Color(1.18, 1.18, 1.18))
 		item.mouse_exited.connect(func() -> void: item.modulate = Color(1, 1, 1))
 		row.add_child(item)
-	# 自动开关
-	var auto_lbl := Label.new()
-	auto_lbl.text = "自动"
-	auto_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	auto_lbl.add_theme_font_size_override("font_size", DT.FS_SM)
-	auto_lbl.add_theme_color_override("font_color", DT.TEXT_ON_GLASS)
-	auto_lbl.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.04, 0.9))
-	auto_lbl.add_theme_constant_override("outline_size", 4)
-	row.add_child(auto_lbl)
-	var auto_btn := CheckButton.new()
-	auto_btn.button_pressed = auto_cast
-	auto_btn.focus_mode = Control.FOCUS_NONE
-	auto_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	auto_btn.toggled.connect(func(on: bool) -> void:
-		auto_cast = on
-		_update_action_button())
-	row.add_child(auto_btn)
+	# 「自动垂钓」开关已移入设置页（见 ui_panels.fill_settings），底栏只留导航图标。
 
 
 ## 底栏背景上下文切换：开面板=暗(与 sheet 连成一片,无断裂)；关=透明(浮场景)。
@@ -794,12 +780,14 @@ func _dex_record(id: String, w: float, is_big := false, is_perfect := false, var
 	var vbit := (1 << variant) if variant > 0 else 0  # 记录见过的稀有变体（位掩码）
 	if not dex.has(id):
 		dex[id] = {"n": 1, "w": w, "big": is_big, "perf": is_perfect, "vmask": vbit,
-			"fd": _today_key()}  # v11：首次捕获日期（水族箱纪录卡）
+			"fd": _today_key(), "wd": _today_key()}  # fd 首捕日期；wd 刷新最大体重的日期
 		return false
 	var r: Dictionary = dex[id]
 	var broke: bool = int(r["n"]) >= 5 and w > float(r["w"])
 	r["n"] = int(r["n"]) + 1
-	r["w"] = maxf(float(r["w"]), w)
+	if w > float(r["w"]):   # 刷新个人最大体重，记下破纪录日期
+		r["w"] = w
+		r["wd"] = _today_key()
 	if is_big:
 		r["big"] = true
 	if is_perfect:
@@ -879,7 +867,7 @@ func _do_catch() -> void:
 		var have := mini(_daily_order_indices().size(), need)
 		_toast("订单进度：%s %d/%d" % [_order_short(), have, need],
 			2.0, Color(0.96, 0.78, 0.38))
-	if tier >= 5 or vr >= 3:   # 仅真·稀有（神话 / 七彩）才庆祝闪光，避免高级竿后几乎每次都闪
+	if tier >= 5 or vr >= 3 or broke_record:   # 真·稀有（神话/七彩）或破个人纪录才庆祝闪光
 		_flash()
 	# 渔夫性格：钓到高星/七彩，举手欢呼一下（Task 4）
 	if (q >= 2 or vr >= 3) and painter.has_method("fisher_cheer"):
@@ -1817,6 +1805,30 @@ func _set_opacity(val: float) -> void:
 func _set_max_fps(val: int) -> void:
 	max_fps = val if val in FPS_OPTIONS else 30
 	Engine.max_fps = max_fps
+
+
+## 界面缩放：带框模式下把整窗按 WIN 比例等比放大（canvas_items 拉伸 → 成品图整体放大，
+## 含小字一起变大，布局不变、不溢出）。沉浸模式的羽化/穿透按设计空间标定，不在此缩放，避免裁切错位。
+## 非法值回落 1.0；存档/刷新由调用方负责。
+func _set_ui_scale(val: float) -> void:
+	ui_scale = val if val in UI_SCALE_OPTIONS else 1.0
+	if DisplayServer.get_name() == "headless":
+		return
+	if display_mode != "framed":
+		return
+	var old_size := DisplayServer.window_get_size()
+	var old_pos := DisplayServer.window_get_position()
+	var center := Vector2(old_pos) + Vector2(old_size) * 0.5   # 以原中心为锚放大
+	var new_size := Vector2i(Vector2(WIN) * ui_scale)
+	DisplayServer.window_set_size(new_size)
+	var usable := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen())
+	var pos := Vector2i(center - Vector2(new_size) * 0.5)
+	var max_x := usable.position.x + maxi(0, usable.size.x - new_size.x)
+	var max_y := usable.position.y + maxi(0, usable.size.y - new_size.y)
+	pos.x = clampi(pos.x, usable.position.x, max_x)
+	pos.y = clampi(pos.y, usable.position.y, max_y)
+	DisplayServer.window_set_position(pos)
+	_saved_win_pos = null   # 缩放后位置变化，旧存档位置作废（带框本就居中/夹屏）
 
 
 ## 专注/安静模式：停小动物事件 + 抑制飘字（_popup 已守卫）+ 场景轻微变暗。

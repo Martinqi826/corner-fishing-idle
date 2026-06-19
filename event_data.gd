@@ -25,7 +25,7 @@ const EVENTS := {
 	"morning_fog": {
 		"name": "晨雾", "icon": "event_fog", "kind": "buff",
 		"dur": [60.0, 110.0], "gap": [600.0, 1200.0], "first": [120.0, 300.0],
-		"spots": ["river_bend", "still_lake"],
+		"spots": ["river_bend", "still_lake", "mountain_stream", "polar_lake", "cavern_pool"],
 		"wait_mult": 1.12, "value_mult": 1.12, "luck": 1,
 		"hud": "🌫️晨雾", "color": [0.72, 0.76, 0.80], "flash": false,
 		"toast_in": "🌫️ 晨雾漫上水面，水底安静，上来的多是肥鱼。",
@@ -35,7 +35,7 @@ const EVENTS := {
 	"cold_front": {
 		"name": "寒潮", "icon": "event_fog", "kind": "buff",
 		"dur": [55.0, 90.0], "gap": [800.0, 1500.0], "first": [300.0, 600.0],
-		"spots": ["still_lake"],
+		"spots": ["still_lake", "mountain_stream", "polar_lake"],
 		"wait_mult": 1.45, "value_mult": 1.28, "luck": 2,
 		"hud": "❄️寒潮", "color": [0.62, 0.72, 0.88], "flash": false,
 		"toast_in": "❄️ 寒潮压境，鱼口转慢，但咬钩的往往是大家伙。",
@@ -45,7 +45,7 @@ const EVENTS := {
 	"lucky_current": {
 		"name": "顺水鱼群", "icon": "event_fish_run", "kind": "buff",
 		"dur": [40.0, 75.0], "gap": [700.0, 1400.0], "first": [180.0, 400.0],
-		"spots": ["river_bend", "still_lake"],
+		"spots": ["river_bend", "still_lake", "mountain_stream", "urban_pond"],
 		"wait_mult": 0.7, "value_mult": 1.0, "luck": 3,
 		"hud": "🐟顺水", "color": [0.55, 0.82, 0.70], "flash": false,
 		"toast_in": "🐟 一群鱼顺水游过，浮漂动得勤了些。",
@@ -55,7 +55,7 @@ const EVENTS := {
 	"tide_in": {
 		"name": "涨潮", "icon": "event_tide", "kind": "buff",
 		"dur": [50.0, 85.0], "gap": [600.0, 1200.0], "first": [120.0, 300.0],
-		"spots": ["coast_pier"],
+		"spots": ["coast_pier", "deep_sea", "estuary", "coral_reef"],
 		"wait_mult": 0.6, "value_mult": 1.1, "luck": 4,
 		"hud": "🌊涨潮", "color": [0.45, 0.74, 0.92], "flash": false,
 		"toast_in": "🌊 涨潮了！鱼群随浪涌向栈桥，正是好时候。",
@@ -65,7 +65,7 @@ const EVENTS := {
 	"drift_crate": {
 		"name": "漂流木箱", "icon": "event_crate", "kind": "instant",
 		"dur": [0.0, 0.0], "gap": [900.0, 2000.0], "first": [300.0, 700.0],
-		"spots": ["river_bend", "coast_pier"],
+		"spots": ["river_bend", "coast_pier", "deep_sea", "urban_pond", "estuary", "coral_reef", "cavern_pool"],
 		"reward_base": [40, 120],
 		"hud": "", "color": [0.85, 0.72, 0.42], "flash": false,
 		"toast_in": "📦 一只漂流木箱靠了岸，里面有些散碎金币：+%d！",
@@ -75,7 +75,7 @@ const EVENTS := {
 	"protected_release": {
 		"name": "保护鱼放流", "icon": "event_release", "kind": "instant",
 		"dur": [0.0, 0.0], "gap": [1200.0, 2400.0], "first": [600.0, 1200.0],
-		"spots": ["river_bend", "coast_pier"],
+		"spots": ["river_bend", "coast_pier", "deep_sea", "urban_pond", "estuary", "coral_reef"],
 		"reward_base": [60, 160],
 		"hud": "", "color": [0.62, 0.86, 0.70], "flash": false,
 		"toast_in": "🐟 协助放流了一条养殖保护鱼，获得保育奖励：+%d 金币。",

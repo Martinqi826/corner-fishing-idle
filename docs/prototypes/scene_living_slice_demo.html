@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>新手河湾 · 夜雪活场景切片</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eee8d7;
+      --muted: #bfb7a6;
+      --gold: #e0c77d;
+      --panel: rgba(27, 33, 32, 0.72);
+      --line: rgba(236, 232, 220, 0.16);
+      --snow: 0.34;
+      --mist: 0.42;
+      --night: 0.22;
+      --pulse: 0;
+      --bite: 0;
+      --catch: 0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 22% 12%, rgba(95, 116, 132, 0.18), transparent 34%),
+        linear-gradient(135deg, #101415, #242a27 54%, #151817);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+      overflow: hidden;
+    }
+
+    .game {
+      position: relative;
+      width: min(100vw, 1056px);
+      aspect-ratio: 1056 / 727;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid rgba(236, 232, 220, 0.13);
+      background: #111617;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+      isolation: isolate;
+    }
+
+    .scene {
+      position: absolute;
+      inset: 0 0 80px 0;
+      overflow: hidden;
+      background: #101416;
+    }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+      background-image: url("../../assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_night_clean_2x.png");
+      background-size: cover;
+      background-position: center 46%;
+      transform: scale(1.018);
+      filter: saturate(0.96) contrast(0.98);
+    }
+
+    .season {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 84% 81%, rgba(255, 255, 255, 0.22), transparent 19%),
+        radial-gradient(ellipse at 70% 70%, rgba(218, 230, 234, 0.16), transparent 24%),
+        linear-gradient(180deg, rgba(205, 218, 228, 0.06), rgba(255, 255, 255, 0.09));
+      mix-blend-mode: soft-light;
+    }
+
+    .mist {
+      position: absolute;
+      inset: 0;
+      background-image:
+        url("../../assets/art/effects/mist/mist_drift_01.png"),
+        url("../../assets/art/effects/mist/mist_drift_02.png");
+      background-size: cover, cover;
+      background-position: 0 0, 22px 8px;
+      opacity: var(--mist);
+      mix-blend-mode: screen;
+      filter: blur(1.2px);
+      animation: mist 22s ease-in-out infinite alternate;
+    }
+
+    .water-light {
+      position: absolute;
+      inset: 0;
+      background-image:
+        url("../../assets/art/effects/water/water_shimmer_01.png"),
+        url("../../assets/art/effects/water/water_shimmer_04.png");
+      background-size: cover, cover;
+      background-position: 0 0, 8px 1px;
+      opacity: calc(0.16 + var(--bite) * 0.10);
+      mix-blend-mode: screen;
+      animation: shimmer 5.4s ease-in-out infinite;
+    }
+
+    .snow-back,
+    .snow-front {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        url("../../assets/art/effects/snow/snow_drift_01.png"),
+        url("../../assets/art/effects/snow/snow_drift_02.png");
+      background-size: cover, cover;
+      background-position: 0 0, 26px -12px;
+      opacity: var(--snow);
+      mix-blend-mode: screen;
+      animation: snow 11s linear infinite;
+    }
+
+    .snow-front {
+      filter: blur(0.2px);
+      opacity: calc(var(--snow) * 0.72);
+      animation-duration: 7.5s;
+      transform: scale(1.05);
+    }
+
+    .night-grade {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 83% 72%, rgba(231, 203, 139, calc(0.10 + var(--pulse) * 0.08)), transparent 22%),
+        linear-gradient(180deg, rgba(46, 63, 106, var(--night)), rgba(15, 22, 36, calc(var(--night) + 0.06)));
+      mix-blend-mode: multiply;
+    }
+
+    .lamp-glow {
+      position: absolute;
+      right: 9.8%;
+      bottom: 25.2%;
+      width: 120px;
+      height: 120px;
+      transform: translate(50%, 50%);
+      background-image: url("../../assets/art/effects/light/lantern_glow_02.png");
+      background-size: contain;
+      background-repeat: no-repeat;
+      opacity: calc(0.34 + var(--pulse) * 0.24);
+      mix-blend-mode: screen;
+      animation: lamp 3.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .fisher {
+      position: absolute;
+      right: 9.7%;
+      bottom: 14.7%;
+      width: 96px;
+      height: 96px;
+      background-image: url("../../assets/art/character/fisher_idle.png");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      filter: brightness(0.83) saturate(0.82);
+      transform-origin: 52% 82%;
+      animation: fisherIdle 4.8s ease-in-out infinite;
+      z-index: 6;
+    }
+
+    .state-pull .fisher {
+      background-image: url("../../assets/art/character/fisher_pull_01.png");
+      animation: fisherPull 0.55s ease-in-out infinite alternate;
+    }
+
+    .state-catch .fisher {
+      background-image: url("../../assets/art/character/fisher_pull_02.png");
+      animation: fisherCatch 0.9s ease-out infinite;
+    }
+
+    .cat {
+      position: absolute;
+      right: 20.8%;
+      bottom: 16.1%;
+      width: 42px;
+      height: 42px;
+      background-image: url("../../assets/art/pets/cat_sleep.png");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center bottom;
+      filter: brightness(0.82) saturate(0.78);
+      opacity: 0.92;
+      z-index: 5;
+      animation: catRest 6s ease-in-out infinite;
+    }
+
+    .state-alert .cat,
+    .state-pull .cat {
+      background-image: url("../../assets/art/pets/cat_idle.png");
+    }
+
+    .state-catch .cat {
+      background-image: url("../../assets/art/pets/cat_paw.png");
+      animation: catPaw 0.7s ease-out infinite;
+    }
+
+    .line {
+      position: absolute;
+      left: 72.6%;
+      top: 56.2%;
+      width: 2px;
+      height: 178px;
+      background: rgba(245, 247, 242, 0.62);
+      transform: rotate(10deg);
+      transform-origin: top center;
+      box-shadow: 0 0 3px rgba(255,255,255,0.24);
+      z-index: 4;
+    }
+
+    .state-bite .line,
+    .state-pull .line,
+    .state-catch .line {
+      animation: lineTug 0.42s ease-in-out infinite alternate;
+    }
+
+    .bobber {
+      position: absolute;
+      left: 72.3%;
+      top: 82.8%;
+      width: 28px;
+      height: 28px;
+      background-image: url("../../assets/art/props/bobber_idle.png");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,0.28));
+      animation: bobberIdle 2.8s ease-in-out infinite;
+    }
+
+    .state-bite .bobber,
+    .state-pull .bobber {
+      background-image: url("../../assets/art/props/bobber_bite.png");
+      animation: bobberBite 0.48s ease-in-out infinite;
+    }
+
+    .ripple,
+    .splash {
+      position: absolute;
+      left: 72.3%;
+      top: 82.9%;
+      transform: translate(-50%, -50%);
+      width: 110px;
+      height: 76px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      z-index: 3;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .ripple {
+      background-image: url("../../assets/art/effects/ripple/bobber_ripple_03.png");
+      opacity: 0.45;
+      animation: rippleIdle 4.2s ease-in-out infinite;
+    }
+
+    .state-bite .ripple,
+    .state-pull .ripple {
+      opacity: 0.85;
+      animation: rippleBite 0.9s ease-out infinite;
+    }
+
+    .splash {
+      width: 96px;
+      height: 72px;
+      background-image: url("../../assets/art/effects/catch/water_splash_03.png");
+      opacity: 0;
+    }
+
+    .state-catch .splash {
+      animation: splash 1.2s ease-out infinite;
+    }
+
+    .catch-fish {
+      position: absolute;
+      left: 72.3%;
+      top: 77%;
+      width: 34px;
+      height: 34px;
+      background-image: url("../../assets/art/fish/squid.png");
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0;
+      z-index: 6;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,0.32));
+    }
+
+    .state-catch .catch-fish {
+      animation: fishPop 1.2s ease-out infinite;
+    }
+
+    .hud {
+      position: absolute;
+      left: 18px;
+      top: 14px;
+      display: flex;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(232, 220, 188, 0.20);
+      background: rgba(25, 30, 28, 0.72);
+      color: #eee6d1;
+      font-weight: 650;
+      box-shadow: 0 7px 18px rgba(0,0,0,0.28);
+      text-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    }
+
+    .spot {
+      position: absolute;
+      right: 24px;
+      top: 16px;
+      z-index: 20;
+      text-align: right;
+      text-shadow: 0 2px 7px rgba(0,0,0,0.44);
+    }
+
+    .spot-name {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(29, 33, 34, 0.72);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .phase {
+      margin-top: 6px;
+      color: #f0dfae;
+      font-size: 12px;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 118px;
+      min-width: 230px;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: rgba(38, 47, 42, 0.82);
+      color: #efe8d3;
+      text-align: center;
+      z-index: 21;
+      font-weight: 650;
+      box-shadow: 0 14px 28px rgba(0,0,0,0.28);
+      opacity: 0;
+      transition: opacity 260ms ease, transform 260ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    .signal {
+      position: absolute;
+      left: 22px;
+      bottom: 98px;
+      width: 286px;
+      z-index: 22;
+      display: grid;
+      gap: 8px;
+    }
+
+    .signal-card {
+      padding: 10px 12px;
+      border: 1px solid rgba(232, 220, 188, 0.15);
+      border-radius: 8px;
+      background: rgba(24, 29, 28, 0.62);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.20);
+    }
+
+    .signal-title {
+      color: #f1deb0;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .signal-body {
+      color: #d7cfbd;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .bar {
+      height: 4px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.14);
+      margin-top: 7px;
+    }
+
+    .bar i {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #9fb4c4, #e0c77d);
+      border-radius: inherit;
+    }
+
+    .nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 80px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      align-items: center;
+      z-index: 24;
+      background: rgba(30, 37, 38, 0.79);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-item {
+      display: grid;
+      place-items: center;
+      gap: 3px;
+      font-size: 12px;
+      color: #d9d0bd;
+      text-shadow: 0 2px 7px rgba(0,0,0,0.38);
+    }
+
+    .nav-item img {
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 7px rgba(0,0,0,0.30));
+    }
+
+    .toggle {
+      position: absolute;
+      right: 20px;
+      bottom: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 25;
+      color: #efe8d3;
+      font-size: 12px;
+    }
+
+    .toggle i {
+      width: 28px;
+      height: 15px;
+      border-radius: 999px;
+      background: #d9dad5;
+      box-shadow: inset 12px 0 0 #f2f3ef;
+    }
+
+    .replay {
+      position: absolute;
+      right: 22px;
+      bottom: 96px;
+      z-index: 27;
+      border: 1px solid rgba(232, 220, 188, 0.20);
+      background: rgba(25, 30, 28, 0.68);
+      color: #f0dfae;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .replay:hover {
+      background: rgba(42, 50, 45, 0.78);
+    }
+
+    @keyframes mist {
+      from { transform: translateX(-18px) scale(1.04); }
+      to { transform: translateX(22px) scale(1.08); }
+    }
+
+    @keyframes shimmer {
+      0%, 100% { transform: translateX(-4px); opacity: 0.14; }
+      50% { transform: translateX(5px); opacity: 0.28; }
+    }
+
+    @keyframes snow {
+      from { background-position: 0 -40px, 26px -80px; }
+      to { background-position: 42px 460px, -28px 500px; }
+    }
+
+    @keyframes lamp {
+      0%, 100% { transform: translate(50%, 50%) scale(0.94); opacity: 0.34; }
+      50% { transform: translate(50%, 50%) scale(1.06); opacity: 0.55; }
+    }
+
+    @keyframes fisherIdle {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(1px) rotate(-0.4deg); }
+    }
+
+    @keyframes fisherPull {
+      from { transform: translateY(0) rotate(-1.2deg); }
+      to { transform: translateY(-2px) rotate(1deg); }
+    }
+
+    @keyframes fisherCatch {
+      0% { transform: translateY(0) rotate(0deg); }
+      35% { transform: translateY(-4px) rotate(1.4deg); }
+      100% { transform: translateY(0) rotate(0deg); }
+    }
+
+    @keyframes catRest {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(1px); }
+    }
+
+    @keyframes catPaw {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-2px) rotate(-2deg); }
+    }
+
+    @keyframes lineTug {
+      from { transform: rotate(8deg) translateY(0); }
+      to { transform: rotate(13deg) translateY(4px); }
+    }
+
+    @keyframes bobberIdle {
+      0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+      50% { transform: translate(-50%, -50%) translateY(3px); }
+    }
+
+    @keyframes bobberBite {
+      0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); }
+      40% { transform: translate(-50%, -50%) translateY(9px) scale(0.96); }
+      70% { transform: translate(-50%, -50%) translateY(-3px) scale(1.05); }
+    }
+
+    @keyframes rippleIdle {
+      0%, 100% { transform: translate(-50%, -50%) scale(0.88); opacity: 0.25; }
+      50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.52; }
+    }
+
+    @keyframes rippleBite {
+      0% { transform: translate(-50%, -50%) scale(0.72); opacity: 0.85; }
+      100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+    }
+
+    @keyframes splash {
+      0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+      20% { opacity: 0.85; }
+      100% { transform: translate(-50%, -50%) scale(1.45); opacity: 0; }
+    }
+
+    @keyframes fishPop {
+      0% { transform: translate(-50%, 18px) scale(0.7) rotate(-12deg); opacity: 0; }
+      28% { opacity: 1; }
+      100% { transform: translate(-78px, -112px) scale(1.0) rotate(18deg); opacity: 0; }
+    }
+
+    @media (max-width: 860px) {
+      body { align-items: start; overflow: auto; }
+      .game { width: 100vw; border-radius: 0; }
+      .signal { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" id="game">
+    <div class="scene">
+      <div class="bg"></div>
+      <div class="season"></div>
+      <div class="water-light"></div>
+      <div class="mist"></div>
+      <div class="snow-back"></div>
+      <div class="lamp-glow"></div>
+      <div class="line"></div>
+      <div class="ripple"></div>
+      <div class="splash"></div>
+      <div class="bobber"></div>
+      <div class="catch-fish"></div>
+      <div class="cat"></div>
+      <div class="fisher"></div>
+      <div class="snow-front"></div>
+      <div class="night-grade"></div>
+    </div>
+
+    <div class="hud">
+      <div class="chip" id="coin">1213k</div>
+      <div class="chip" id="bag">2/55</div>
+      <div class="chip" id="dex">105/106</div>
+    </div>
+
+    <div class="spot">
+      <div class="spot-name">新手河湾</div>
+      <div class="phase" id="phaseText">夜晚 · 小雪</div>
+    </div>
+
+    <div class="signal">
+      <div class="signal-card">
+        <div class="signal-title" id="signalTitle">水面平静</div>
+        <div class="signal-body" id="signalBody">冬夜雪势很轻，渔夫等待下一次咬钩。</div>
+        <div class="bar"><i id="progress"></i></div>
+      </div>
+      <div class="signal-card">
+        <div class="signal-title">生态权重</div>
+        <div class="signal-body" id="ecoText">夜行鱼 +12%，冷水鱼 +6%，普通河鱼保持基础池。</div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">· 自动垂钓中 ·</div>
+
+    <button class="replay" id="replay">重播 60s</button>
+
+    <div class="nav">
+      <div class="nav-item"><img src="../../assets/art/ui/nav_basket.png" alt="">鱼篓</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_equip.png" alt="">装备</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_dex.png" alt="">图鉴</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_orders.png" alt="">任务</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_spots.png" alt="">钓点</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_fishtank.png" alt="">鱼缸</div>
+      <div class="nav-item"><img src="../../assets/art/ui/nav_settings.png" alt="">设置</div>
+    </div>
+
+    <div class="toggle">自动 <i></i></div>
+  </main>
+
+  <script>
+    const game = document.getElementById("game");
+    const toast = document.getElementById("toast");
+    const progress = document.getElementById("progress");
+    const signalTitle = document.getElementById("signalTitle");
+    const signalBody = document.getElementById("signalBody");
+    const ecoText = document.getElementById("ecoText");
+    const phaseText = document.getElementById("phaseText");
+    const bag = document.getElementById("bag");
+    const coin = document.getElementById("coin");
+    const replay = document.getElementById("replay");
+
+    const DURATION = 60000;
+    let start = performance.now();
+    let lastStep = "";
+
+    const beats = [
+      {
+        at: 0,
+        id: "idle",
+        cls: "state-idle",
+        title: "水面平静",
+        body: "冬夜雪势很轻，渔夫等待下一次咬钩。",
+        eco: "夜行鱼 +12%，冷水鱼 +6%，普通河鱼保持基础池。",
+        toast: "· 自动垂钓中 ·",
+        snow: 0.30,
+        mist: 0.38,
+        night: 0.22,
+        pulse: 0,
+        bag: "2/55",
+        coin: "1213k",
+        phase: "夜晚 · 小雪"
+      },
+      {
+        at: 9000,
+        id: "snow",
+        cls: "state-alert",
+        title: "雪势渐密",
+        body: "远景被雪雾压低，近处灯光和浮漂更突出。",
+        eco: "天气只做软权重：冷水鱼 +8%，等待时间轻微变长。",
+        toast: "雪势渐密，水面声音变轻",
+        snow: 0.58,
+        mist: 0.55,
+        night: 0.25,
+        pulse: 0.24,
+        bag: "2/55",
+        coin: "1213k",
+        phase: "夜晚 · 中雪"
+      },
+      {
+        at: 19000,
+        id: "active",
+        cls: "state-alert",
+        title: "夜行鱼活跃",
+        body: "系统不锁鱼，只把夜行鱼在当前河流池里的权重抬高。",
+        eco: "夜行鱼 +18%，冷水鱼 +8%，保护鱼仍按原规则。",
+        toast: "夜行鱼活跃",
+        snow: 0.50,
+        mist: 0.48,
+        night: 0.27,
+        pulse: 0.18,
+        bag: "2/55",
+        coin: "1213k",
+        phase: "夜晚 · 中雪"
+      },
+      {
+        at: 31000,
+        id: "bite",
+        cls: "state-bite",
+        title: "浮漂轻沉",
+        body: "天气和夜色没有抢画面，反馈集中到浮漂、涟漪和钓线。",
+        eco: "本次 roll：河流池基础资格 → 夜行权重调整 → 品质修正。",
+        toast: "有鱼咬钩",
+        snow: 0.42,
+        mist: 0.44,
+        night: 0.26,
+        pulse: 0.34,
+        bag: "2/55",
+        coin: "1213k",
+        phase: "夜晚 · 小雪"
+      },
+      {
+        at: 39000,
+        id: "pull",
+        cls: "state-pull",
+        title: "起竿",
+        body: "角色动作、猫的注意力、线的张力一起响应同一个钓鱼事件。",
+        eco: "不是壁纸切换：场景状态正在改变一次 catch 的表现。",
+        toast: "起竿",
+        snow: 0.36,
+        mist: 0.40,
+        night: 0.24,
+        pulse: 0.44,
+        bag: "2/55",
+        coin: "1213k",
+        phase: "夜晚 · 小雪"
+      },
+      {
+        at: 45500,
+        id: "catch",
+        cls: "state-catch",
+        title: "上鱼",
+        body: "水花和暖光只在事件瞬间出现，随后回到安静的夜雪钓点。",
+        eco: "上品 · 夜行鱼，价值加成来自时段软权重。",
+        toast: "上品 · 黄颡鱼 0.18kg",
+        snow: 0.32,
+        mist: 0.36,
+        night: 0.22,
+        pulse: 0.72,
+        bag: "3/55",
+        coin: "1214k",
+        phase: "夜晚 · 小雪"
+      },
+      {
+        at: 54000,
+        id: "settle",
+        cls: "state-idle",
+        title: "回到平静",
+        body: "场景变化收束到等待状态，玩家记住的是钓点气质和刚才那次上鱼。",
+        eco: "生态权重仍在，但不强迫玩家等待某个真实时间。",
+        toast: "· 自动垂钓中 ·",
+        snow: 0.30,
+        mist: 0.38,
+        night: 0.22,
+        pulse: 0,
+        bag: "3/55",
+        coin: "1214k",
+        phase: "夜晚 · 小雪"
+      }
+    ];
+
+    function currentBeat(t) {
+      let beat = beats[0];
+      for (const item of beats) {
+        if (t >= item.at) beat = item;
+      }
+      return beat;
+    }
+
+    function applyBeat(beat) {
+      if (beat.id === lastStep) return;
+      lastStep = beat.id;
+      game.className = `game ${beat.cls}`;
+      signalTitle.textContent = beat.title;
+      signalBody.textContent = beat.body;
+      ecoText.textContent = beat.eco;
+      toast.textContent = beat.toast;
+      bag.textContent = beat.bag;
+      coin.textContent = beat.coin;
+      phaseText.textContent = beat.phase;
+      toast.classList.remove("show");
+      window.setTimeout(() => toast.classList.add("show"), 30);
+    }
+
+    function lerp(a, b, x) {
+      return a + (b - a) * x;
+    }
+
+    function nextBeat(beat) {
+      const idx = beats.indexOf(beat);
+      return beats[Math.min(idx + 1, beats.length - 1)];
+    }
+
+    function tick(now) {
+      const elapsed = (now - start) % DURATION;
+      const beat = currentBeat(elapsed);
+      const next = nextBeat(beat);
+      const span = Math.max(1, next.at - beat.at);
+      const local = Math.max(0, Math.min(1, (elapsed - beat.at) / span));
+      applyBeat(beat);
+
+      const snow = lerp(beat.snow, next.snow, local);
+      const mist = lerp(beat.mist, next.mist, local);
+      const night = lerp(beat.night, next.night, local);
+      const pulse = lerp(beat.pulse, next.pulse, local);
+      const bite = ["bite", "pull", "catch"].includes(beat.id) ? 1 : 0;
+      const caught = beat.id === "catch" ? 1 : 0;
+
+      game.style.setProperty("--snow", snow.toFixed(3));
+      game.style.setProperty("--mist", mist.toFixed(3));
+      game.style.setProperty("--night", night.toFixed(3));
+      game.style.setProperty("--pulse", pulse.toFixed(3));
+      game.style.setProperty("--bite", bite);
+      game.style.setProperty("--catch", caught);
+      progress.style.width = `${(elapsed / DURATION) * 100}%`;
+
+      requestAnimationFrame(tick);
+    }
+
+    replay.addEventListener("click", () => {
+      start = performance.now();
+      lastStep = "";
+    });
+
+    toast.classList.add("show");
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

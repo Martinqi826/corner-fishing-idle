@@ -5,8 +5,10 @@ class_name Spots
 
 
 ## 当前钓点鱼池（多钓点）：_do_catch / 离线按此池出鱼。
+## 限定鱼（FishData.limited）仅在其时段出现，其余时段从出鱼池剔除（不影响订单候选 order_pool）。
 static func pool(g: CornerFishing) -> Array:
-	return SpotData.pool_for(g.current_spot)
+	return SpotData.pool_for(g.current_spot).filter(
+		func(id): return FishData.is_available(str(id), g.day_phase))
 
 
 ## 钓点常驻 + 昼夜时段 + 当前事件 叠加的品阶运气。

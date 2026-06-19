@@ -58,6 +58,29 @@ const LANTERN_SCALE := 0.34  # 灯笼精灵原 96px → ~33px，立在渔夫旁
 var lantern_anchor := Vector2(462, 286)  # 灯笼底部中心（渔夫右侧岸上）
 var rod_tip_off := Vector2(-22, -50)     # 竿尖相对 fisher_anchor 的偏移（钓线起点）
 var phase_tint := Color(0, 0, 0, 0)  # 昼夜时段染色（A=0 不染色），main 经 set_phase_tint 设置
+
+# —— 连续昼夜调色（新）：随真实时钟连续推移的竖向渐变 wash，取代旧的全屏平涂染色 ——
+# use_grade=true 走新调色；false 回退旧 _draw_phase_tint（供 A/B 对比 / 截图）。
+var use_grade := true
+var debug_tod := -1.0                 # ≥0 强制该时刻（小时 0..24），供截图；<0 用真实时钟
+var _tod := 12.0                      # 当前连续时刻 0..24
+var _spot_has_phase_art := false      # 当前底图是否分时段手绘（true→调色只做轻统一，避免双重染色）
+var _gp: Dictionary = {"sky": Color(1, 1, 1), "horizon": Color(1, 1, 1), "water": Color(1, 1, 1), "alpha": 0.0, "glow": 0.0}
+
+# 昼夜调色关键帧（按真实小时 h 排序，0..24 环绕插值）：
+# sky/horizon/water = 天空/地平线/水面三段色；alpha = 叠加强度；glow = 灯光增益。
+# 正午 alpha=0（不叠加），黎明/黄昏暖、夜晚冷而暗；地平线在绘制时更通透，让暖光"透出来"。
+const _GRADE_KEYS := [
+	{"h": 0.0,  "sky": Color(0.06, 0.08, 0.20), "horizon": Color(0.12, 0.14, 0.30), "water": Color(0.03, 0.05, 0.15), "alpha": 0.66, "glow": 1.00},
+	{"h": 5.0,  "sky": Color(0.20, 0.20, 0.38), "horizon": Color(0.46, 0.36, 0.46), "water": Color(0.12, 0.14, 0.28), "alpha": 0.52, "glow": 0.72},
+	{"h": 6.5,  "sky": Color(0.56, 0.56, 0.74), "horizon": Color(0.99, 0.72, 0.55), "water": Color(0.50, 0.52, 0.62), "alpha": 0.32, "glow": 0.44},
+	{"h": 9.0,  "sky": Color(0.93, 0.96, 1.00), "horizon": Color(1.00, 0.98, 0.95), "water": Color(0.90, 0.94, 0.97), "alpha": 0.06, "glow": 0.06},
+	{"h": 12.0, "sky": Color(1.00, 1.00, 1.00), "horizon": Color(1.00, 1.00, 1.00), "water": Color(1.00, 1.00, 1.00), "alpha": 0.00, "glow": 0.00},
+	{"h": 15.5, "sky": Color(1.00, 0.98, 0.92), "horizon": Color(1.00, 0.95, 0.86), "water": Color(0.96, 0.95, 0.92), "alpha": 0.07, "glow": 0.10},
+	{"h": 17.5, "sky": Color(0.80, 0.66, 0.70), "horizon": Color(1.00, 0.74, 0.46), "water": Color(0.70, 0.60, 0.62), "alpha": 0.30, "glow": 0.48},
+	{"h": 18.8, "sky": Color(0.28, 0.26, 0.50), "horizon": Color(0.98, 0.48, 0.38), "water": Color(0.24, 0.24, 0.46), "alpha": 0.50, "glow": 0.78},
+	{"h": 20.5, "sky": Color(0.09, 0.11, 0.26), "horizon": Color(0.22, 0.18, 0.36), "water": Color(0.05, 0.07, 0.20), "alpha": 0.62, "glow": 0.96},
+]
 var _water_overlay: Texture2D     # 旧版波光叠层（无新版帧动画时的回退）
 var _bobber_idle: Texture2D
 var _bobber_bite: Texture2D
@@ -100,6 +123,7 @@ var _flash_t := 0.0
 var _fisher_pull: Array = []        # 收竿/上鱼姿势帧（咬钩时切换，给渔夫加动作）
 var _fisher_mood_tex: Dictionary = {}  # 可选情绪帧 idle_breath/shiver/doze/cheer（缺则回退 idle+变换）
 var fisher_mood := "idle"           # idle / cheer / yawn / shiver / doze
+var _fisher_pull_pose := 0.0         # Smoothed 0..1 pull pose, driven by dip.
 var _mood_t := 0.0                  # 当前非 idle 情绪剩余时长
 var _mood_dur := 1.0
 var _mood_gap := 10.0               # 距下一次环境小情绪
@@ -114,6 +138,7 @@ var _pet_blink_t := 3.0
 # —— 小馋猫正式 sprite（Codex 96x96 透明帧；缺失自动回退程序化猫）——
 const PET_SPRITE_SCALE := 0.30   # 比渔夫(~58px)明显小，退成环境配角，不压主体/背景
 const PET_MODULATE := Color(0.95, 0.96, 1.0, 0.90)  # 冷灰已烤进贴图，这里只极轻偏冷 + 略降透明使其后退
+const PET_STATE_BLEND_DUR := 0.24
 var _pet_tex: Dictionary = {}
 var _pet_shadow_tex: Texture2D = null   # 烘焙柔和接触阴影（缺图回退淡椭圆，杜绝悬浮感）
 var _pet_paths := {
@@ -127,6 +152,9 @@ var _pet_paths := {
 }
 var _pet_tail_t := 8.0       # 距下次轻摆尾（idle 低频小事件）
 var _pet_tail_active := 0.0  # 当前摆尾剩余时长
+var _pet_draw_key := "idle"
+var _pet_prev_key := "idle"
+var _pet_blend_t := PET_STATE_BLEND_DUR
 
 
 func _ready() -> void:
@@ -221,6 +249,12 @@ func catch_flash() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
+	if debug_tod >= 0.0:
+		_tod = debug_tod
+	else:
+		var _td := Time.get_time_dict_from_system()
+		_tod = float(_td["hour"]) + float(_td["minute"]) / 60.0 + float(_td["second"]) / 3600.0
+	_gp = _grade_params(_tod)
 	if _flash_t > 0.0:
 		_flash_t -= delta
 	if _spot_fade < 1.0:
@@ -326,15 +360,23 @@ func _a(c: Color, a: float) -> Color:
 	return Color(c.r, c.g, c.b, a)
 
 
+func _smooth01(x: float) -> float:
+	var c := clampf(x, 0.0, 1.0)
+	return c * c * (3.0 - 2.0 * c)
+
+
 ## 解析钓点底图：优先时段图 spot_<key>_<phase>.png，回退 spot_<key>.png；
 ## 二者都缺（或 bg_key 为空）返回 null，由绘制层回退到 _base（spot_river_bend.png）。
 func _resolve_spot_tex(bg_key: String, phase: String) -> Texture2D:
 	if bg_key == "":
+		_spot_has_phase_art = false
 		return null
 	if phase != "":
 		var tx := _tex("res://assets/art/background/spot_%s_%s.png" % [bg_key, phase])
 		if tx != null:
+			_spot_has_phase_art = true
 			return tx
+	_spot_has_phase_art = false
 	return _tex("res://assets/art/background/spot_%s.png" % bg_key)
 
 
@@ -367,6 +409,9 @@ func uses_clean_bg() -> bool:
 ## 渔夫情绪状态机（Task 4）：cheer/yawn/shiver/doze 为瞬态小情绪，零存档。
 ## cheer 由 main 在高星/七彩上鱼时触发；其余按 main 喂入的夜间/久坐上下文低频自发。
 func _tick_fisher(delta: float) -> void:
+	var target_pull := clampf((dip - 0.12) / 0.88, 0.0, 1.0)
+	var pull_speed := 3.8 if target_pull > _fisher_pull_pose else 2.4
+	_fisher_pull_pose = move_toward(_fisher_pull_pose, target_pull, delta * pull_speed)
 	if _mood_t > 0.0:
 		_mood_t -= delta
 		if _mood_t <= 0.0:
@@ -409,10 +454,76 @@ func fisher_cheer() -> void:
 	_mood_t = _mood_dur
 
 
+func _draw_fisher_frame(tex: Texture2D, alpha: float) -> void:
+	if tex == null or alpha <= 0.001:
+		return
+	var sz := Vector2(tex.get_size()) * FISHER_SCALE
+	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false, Color(1, 1, 1, alpha))
+
+
+func _draw_fisher_smooth() -> void:
+	var tex := _fisher
+	var tex_b: Texture2D = null
+	var blend := 0.0
+	var pull := clampf(_fisher_pull_pose, 0.0, 1.0)
+	if pull > 0.01 and not _fisher_pull.is_empty():
+		var seg := pull * float(_fisher_pull.size())
+		if seg < 1.0 or _fisher_pull.size() == 1:
+			tex_b = _fisher_pull[0]
+			blend = _smooth01(seg)
+		else:
+			tex = _fisher_pull[0]
+			tex_b = _fisher_pull[mini(1, _fisher_pull.size() - 1)]
+			blend = _smooth01(seg - 1.0)
+	elif fisher_mood == "cheer" and _fisher_mood_tex.has("cheer"):
+		tex = _fisher_mood_tex["cheer"]
+	elif fisher_mood == "shiver" and _fisher_mood_tex.has("shiver"):
+		tex = _fisher_mood_tex["shiver"]
+	elif fisher_mood == "doze" and _fisher_mood_tex.has("doze"):
+		tex = _fisher_mood_tex["doze"]
+	elif fisher_mood == "idle" and _fisher_mood_tex.has("idle_breath") and sin(t * 1.7) > 0.6:
+		tex = _fisher_mood_tex["idle_breath"]
+	var off := Vector2.ZERO
+	var rot := 0.0
+	var sc := Vector2.ONE
+	sc.y *= 1.0 + 0.016 * sin(t * 1.7)
+	var mood := fisher_mood if pull <= 0.04 else "idle"
+	var p := 0.0
+	match mood:
+		"cheer":
+			p = 1.0 - _mood_t / _mood_dur
+			off.y = -sin(p * PI) * 6.0
+			sc *= 1.0 + 0.04 * sin(p * PI)
+			rot = 0.035 * sin(p * TAU * 2.0)
+		"yawn":
+			p = 1.0 - _mood_t / _mood_dur
+			var yy := sin(p * PI)
+			sc.y *= 1.0 + 0.05 * yy
+			off.y -= 1.6 * yy
+			rot = -0.04 * yy
+		"shiver":
+			off.x = sin(t * 30.0) * 0.8
+			off.y += 0.8
+			sc.y *= 0.985
+		"doze":
+			rot = 0.05 * sin(t * 0.8)
+			off.y += 1.2 * sin(t * 0.8) + 1.0
+	var flip := -1.0 if fisher_flip else 1.0
+	draw_set_transform(fisher_anchor + off, rot, Vector2(flip * sc.x, sc.y))
+	if tex_b != null:
+		_draw_fisher_frame(tex, 1.0 - blend)
+		_draw_fisher_frame(tex_b, blend)
+	else:
+		_draw_fisher_frame(tex, 1.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 ## 叠加独立渔夫精灵（脚底中心对齐 fisher_anchor）。咬钩时切收竿姿势；情绪用变换叠加。
 func _draw_fisher() -> void:
 	if _fisher == null:
 		return
+	_draw_fisher_smooth()
+	return
 	# 选帧：咬钩收竿优先；其次有专属情绪帧就用；idle 呼吸峰值轻切 idle_breath；都缺回退 idle。
 	var tex := _fisher
 	if dip > 0.5 and not _fisher_pull.is_empty():
@@ -482,6 +593,13 @@ func _tick_pet(delta: float) -> void:
 			_pet_tail_t = _prng.randf_range(6.0, 12.0)
 			if pet_action == "" and not (ctx_night and ctx_idle):
 				_pet_tail_active = _prng.randf_range(0.8, 1.2)
+	var desired_key := _pet_state_key()
+	if desired_key != _pet_draw_key:
+		_pet_prev_key = _pet_draw_key
+		_pet_draw_key = desired_key
+		_pet_blend_t = 0.0
+	else:
+		_pet_blend_t = minf(_pet_blend_t + delta, PET_STATE_BLEND_DUR)
 
 
 func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
@@ -490,8 +608,25 @@ func _pet_ellipse(center: Vector2, rx: float, ry: float, col: Color) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+func _draw_pet_smooth() -> void:
+	var key := _pet_draw_key
+	if _pet_tex.has(key) or _pet_tex.has("idle"):
+		_draw_pet_shadow()
+		var tex = _pet_tex.get(key, _pet_tex.get("idle"))
+		var blend := _smooth01(_pet_blend_t / PET_STATE_BLEND_DUR)
+		if key != _pet_prev_key and blend < 0.999 and _pet_tex.has(_pet_prev_key):
+			_draw_pet_sprite(_pet_tex[_pet_prev_key], _pet_prev_key, 1.0 - blend)
+			_draw_pet_sprite(tex, key, blend)
+		else:
+			_draw_pet_sprite(tex, key, 1.0)
+	else:
+		_draw_pet_proc()
+
+
 ## 小馋猫入口：有正式 sprite 用 PNG 帧，缺图回退程序化占位猫。
 func _draw_pet() -> void:
+	_draw_pet_smooth()
+	return
 	var key := _pet_state_key()
 	if _pet_tex.has(key) or _pet_tex.has("idle"):
 		_draw_pet_shadow()                       # 接触阴影压在脚底，杜绝悬浮感
@@ -528,22 +663,25 @@ func _draw_pet_shadow() -> void:
 
 
 ## 绘制 sprite 帧：脚底中心对齐 pet_anchor（变换驱动），极轻呼吸 + 动作位移 + 无尾帧时摆尾错觉。
-func _draw_pet_sprite(tex: Texture2D) -> void:
+func _draw_pet_sprite(tex: Texture2D, key := "", alpha := 1.0) -> void:
 	var sz := Vector2(tex.get_size()) * PET_SPRITE_SCALE
 	var off := Vector2(0, 1.0)                       # 下移1px，脚底压实不悬浮
 	var rot := 0.0
 	var breath := 1.0 + 0.012 * sin(t * 1.5)         # 呼吸 ~0.3-0.4px，比渔夫更弱
-	if pet_action == "paw":
+	if key == "sleep":
+		breath = 1.0
+	if key == "paw" and pet_action == "paw":
 		var pp: float = 1.0 - _pet_action_t / maxf(_pet_action_dur, 0.001)
 		off.y -= sin(pp * PI) * 1.8
-	elif pet_action == "steal":
+	elif key == "steal" and pet_action == "steal":
 		var pp2: float = 1.0 - _pet_action_t / maxf(_pet_action_dur, 0.001)
 		off.x += sin(pp2 * PI) * 2.2
-	if _pet_tail_active > 0.0 and not _pet_tex.has("tail_01"):
+	if key == "idle" and _pet_tail_active > 0.0 and not _pet_tex.has("tail_01"):
 		rot = sin(t * 6.0) * 0.018                   # 无尾帧时极轻摆错觉（顶端 ~0.5px）
 	draw_set_transform(pet_anchor + off, rot, Vector2(1.0, breath))
 	# PNG 已做雪景融合；这里再叠偏冷偏灰 modulate，降橘色饱和、压亮度，融入环境
-	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false, PET_MODULATE)
+	draw_texture_rect(tex, Rect2(Vector2(-sz.x * 0.5, -sz.y), sz), false,
+		Color(PET_MODULATE.r, PET_MODULATE.g, PET_MODULATE.b, PET_MODULATE.a * alpha))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -614,8 +752,18 @@ func _draw_lantern() -> void:
 
 
 ## 钓线：竿尖 → 浮漂，淡白细线（底图不再烤死钓线，统一由此叠加）。
+func _current_rod_tip() -> Vector2:
+	var idle_tip := fisher_anchor + rod_tip_off
+	if _fisher_pull_pose <= 0.01:
+		return idle_tip
+	var pull_tip_1 := fisher_anchor + Vector2(-16, -57)
+	var pull_tip_2 := fisher_anchor + Vector2(-6, -58)
+	var first := idle_tip.lerp(pull_tip_1, _smooth01(_fisher_pull_pose * 2.0))
+	return first.lerp(pull_tip_2, _smooth01(_fisher_pull_pose * 2.0 - 1.0))
+
+
 func _draw_fishing_line() -> void:
-	var tip := fisher_anchor + rod_tip_off
+	var tip := _current_rod_tip()
 	draw_line(tip, bobber_pos(), Color(0.95, 0.96, 0.97, 0.55), 1.2, true)
 
 
@@ -635,6 +783,99 @@ func _draw_phase_tint() -> void:
 		draw_rect(Rect2(0.0, 0.0, W, H), phase_tint)
 
 
+## 连续昼夜调色参数：按当前时刻 tod(0..24) 在关键帧间平滑插值，环绕到次日。
+## 返回 {sky, horizon, water, alpha, glow}。
+func _grade_params(tod: float) -> Dictionary:
+	var n := _GRADE_KEYS.size()
+	var hh: float = fposmod(tod, 24.0)
+	var i := 0
+	while i < n - 1 and hh >= float(_GRADE_KEYS[i + 1]["h"]):
+		i += 1
+	var a: Dictionary = _GRADE_KEYS[i]
+	var b: Dictionary = _GRADE_KEYS[(i + 1) % n]
+	var h0: float = float(a["h"])
+	var h1: float = float(b["h"])
+	if h1 <= h0:
+		h1 += 24.0
+	var u: float = _smooth01((hh - h0) / maxf(h1 - h0, 0.001))
+	return {
+		"sky": (a["sky"] as Color).lerp(b["sky"], u),
+		"horizon": (a["horizon"] as Color).lerp(b["horizon"], u),
+		"water": (a["water"] as Color).lerp(b["water"], u),
+		"alpha": lerpf(float(a["alpha"]), float(b["alpha"]), u),
+		"glow": lerpf(float(a["glow"]), float(b["glow"]), u),
+	}
+
+
+## 连续昼夜调色叠层：上(天)→地平线→下(水) 的竖向渐变 wash。
+## 地平线处更通透，暖光像"透出来"而非盖一层膜；分时段手绘底图已带色则自动减弱，避免双重染色。
+func _draw_daynight_grade() -> void:
+	var a: float = float(_gp["alpha"])
+	if _spot_has_phase_art:
+		a *= 0.62   # 时段底图已带色，这里减弱但仍下压，避免双重染色又不至于太弱
+	if a <= 0.004:
+		return
+	var sky: Color = _gp["sky"]
+	var hor: Color = _gp["horizon"]
+	var wat: Color = _gp["water"]
+	var hy := HORIZON - 10.0
+	var a_top := a
+	var a_hor := a * 0.55   # 地平线更通透
+	var a_bot := a * 0.92
+	draw_polygon(
+		PackedVector2Array([Vector2(0, 0), Vector2(W, 0), Vector2(W, hy), Vector2(0, hy)]),
+		PackedColorArray([_a(sky, a_top), _a(sky, a_top), _a(hor, a_hor), _a(hor, a_hor)]))
+	draw_polygon(
+		PackedVector2Array([Vector2(0, hy), Vector2(W, hy), Vector2(W, H), Vector2(0, H)]),
+		PackedColorArray([_a(hor, a_hor), _a(hor, a_hor), _a(wat, a_bot), _a(wat, a_bot)]))
+
+
+## 夜间灯火：以灯笼为光源的暖光池 + 水面暖光倒影 + 萤火漂动。
+## 全部画在右下角可见核心(水/岸/渔夫/灯笼)，按 _gp.glow 随天色启停（白昼≈0，夜里最强）。
+func _draw_night_lights() -> void:
+	var glow: float = float(_gp["glow"])
+	if glow <= 0.02:
+		return
+	var fc := _lantern
+	var warm := Color(1.0, 0.78, 0.42)
+	var pool: float = clampf(glow, 0.0, 1.0) * (0.90 + 0.10 * sin(t * TAU / _glow_period))
+	# 暖光池：照亮灯周围的水与岸（大而柔，内强外淡）
+	for i in 9:
+		var f := float(i) / 8.0
+		var rad := lerpf(10.0, 110.0, f)
+		var aa := pow(1.0 - f, 1.9) * 0.15 * pool
+		draw_circle(fc, rad, _a(warm, aa))
+	# 灯火核心 + 轻颤 bloom（暖白，越内越亮）
+	var pulse := 0.90 + 0.10 * sin(t * 7.3)
+	draw_circle(fc, 7.0 * pulse, _a(Color(1.0, 0.90, 0.66), 0.55 * pool))
+	draw_circle(fc, 4.0 * pulse, _a(Color(1.0, 0.95, 0.80), 0.85 * pool))
+	draw_circle(fc, 2.0 * pulse, _a(Color(1.0, 1.0, 0.95), 0.95 * pool))
+	# 水面长倒影：从灯下跌入水中，碎成晃动的光斑（近亮、远碎、随波拉长）
+	var rsx := fc.x - 4.0
+	var rsy := fc.y + 24.0
+	var rlen := 392.0 - rsy
+	var segs := 16
+	for j in segs:
+		var u := float(j) / float(segs - 1)
+		var yy := rsy + u * rlen
+		var drift := -12.0 * u
+		var wob := sin(t * 2.2 + u * 9.0) * (1.5 + u * 6.0)
+		var ww := lerpf(7.0, 28.0, u)
+		var shim := 0.50 + 0.50 * sin(t * 3.0 + u * 7.0 + float(j))
+		var ar := pow(1.0 - u, 0.85) * 0.32 * pool * shim
+		draw_rect(Rect2(rsx + drift - ww * 0.5 + wob, yy, ww, lerpf(3.0, 7.0, u)), _a(warm, ar))
+	# 萤火（暮/夜）：水岸上空缓慢漂移 + 闪烁（参数化，无需生成/存档）
+	if glow > 0.22:
+		var fa: float = clampf((glow - 0.22) / 0.6, 0.0, 1.0)
+		var fcol := Color(0.95, 0.98, 0.62)
+		for k in 8:
+			var ph := float(k) * 1.7
+			var fx := 296.0 + float(k) * 22.0 + sin(t * 0.5 + ph) * 15.0
+			var fy := 318.0 + float(k % 3) * 13.0 + cos(t * 0.36 + ph * 1.3) * 9.0
+			var tw := 0.30 + 0.70 * (0.5 + 0.5 * sin(t * 2.4 + ph * 2.0))
+			draw_circle(Vector2(fx, fy), 1.7, _a(fcol, tw * fa))
+
+
 # —— 干净底图 + 统一叠加层（所有钓场同一路径；底图均为纯风景，渔夫/灯笼/钓线/浮漂全代码叠加）——
 func _draw_composite() -> void:
 	# 底图：昼夜切换时上一张底图淡出、当前底图按 _spot_fade 淡入（缺时段图已在解析层回退，不黑屏）。
@@ -652,7 +893,11 @@ func _draw_composite() -> void:
 	_draw_mist_layer()
 	_draw_shimmer_layer()
 	_draw_snow_layer()
-	_draw_phase_tint()
+	if use_grade:
+		_draw_daynight_grade()
+		_draw_night_lights()
+	else:
+		_draw_phase_tint()
 	_draw_wildlife()
 	_draw_ripples()
 	_draw_bobber_sprite()
@@ -819,6 +1064,8 @@ func _draw_glow_layer() -> void:
 	var i1: int = mini(i0 + 1, n - 1)
 	var frac := f - floorf(f)
 	var base_a := 0.55 + 0.28 * sin(t * TAU / _glow_period)  # 0.27 ~ 0.83，呼吸更明显
+	if use_grade:
+		base_a *= 0.30 + 1.05 * float(_gp["glow"])   # 灯光随天色增强：白昼很弱、夜里点亮
 	var s: float = 1.0 + 0.10 * sin(t * TAU / _glow_period)  # 光晕随呼吸轻微胀缩
 	var sz := Vector2(_glow_tex[0].get_size()) * s
 	var rect := Rect2(_lantern - sz * 0.5, sz)

@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2D 场景状态分层原型</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #171b1d;
+      --panel: #202624;
+      --panel-2: #2a302d;
+      --line: rgba(226, 218, 194, 0.16);
+      --text: #ece8dc;
+      --muted: #b9b0a0;
+      --gold: #ddc17a;
+      --river: #8da5b4;
+      --phase-r: 255;
+      --phase-g: 255;
+      --phase-b: 255;
+      --phase-a: 0;
+      --weather-a: 0.5;
+      --season-a: 0.65;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(141, 165, 180, 0.13), transparent 30%),
+        linear-gradient(135deg, #15191b, #222721 52%, #171b1d);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .page {
+      display: grid;
+      grid-template-columns: minmax(640px, 1fr) 390px;
+      gap: 18px;
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .stage-panel,
+    .side-panel,
+    .note-panel {
+      border: 1px solid var(--line);
+      background: rgba(32, 38, 36, 0.82);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+      border-radius: 8px;
+    }
+
+    .stage-panel {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(19, 23, 23, 0.58);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+    }
+
+    .sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(221, 193, 122, 0.28);
+      background: rgba(221, 193, 122, 0.11);
+      color: #f1dfab;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .scene-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      padding: 24px;
+      flex: 1;
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.16), transparent 18%, transparent 80%, rgba(0, 0, 0, 0.12)),
+        #1a1f21;
+    }
+
+    .scene-shell {
+      width: min(100%, 1040px);
+      aspect-ratio: 1040 / 720;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid rgba(236, 232, 220, 0.13);
+      background: #121516;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 20px 42px rgba(0, 0, 0, 0.26);
+    }
+
+    .art-area {
+      position: absolute;
+      inset: 0 0 80px 0;
+      overflow: hidden;
+      background: #15191a;
+    }
+
+    .art-core {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .art-core img,
+    .season-layer,
+    .weather-layer,
+    .phase-layer,
+    .hero-marker,
+    .season-fg,
+    .air-depth {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .art-core img {
+      object-fit: cover;
+      object-position: center;
+      image-rendering: auto;
+      transform: translateZ(0);
+    }
+
+    .air-depth {
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 12% 25%, rgba(236, 238, 235, 0.52), transparent 34%),
+        linear-gradient(90deg, rgba(236, 238, 235, 0.30), transparent 46%);
+      mix-blend-mode: screen;
+      opacity: 0.42;
+    }
+
+    .season-layer {
+      pointer-events: none;
+      opacity: var(--season-a);
+      mix-blend-mode: soft-light;
+    }
+
+    .season-fg {
+      pointer-events: none;
+      opacity: var(--season-a);
+    }
+
+    .season-winter .season-layer {
+      background:
+        radial-gradient(ellipse at 82% 79%, rgba(255, 255, 255, 0.36), transparent 24%),
+        radial-gradient(ellipse at 67% 63%, rgba(238, 244, 247, 0.25), transparent 22%),
+        linear-gradient(180deg, rgba(205, 221, 232, 0.12), rgba(255, 255, 255, 0.20));
+    }
+
+    .season-winter .season-fg {
+      background:
+        radial-gradient(ellipse at 83% 92%, rgba(255, 255, 255, 0.36), transparent 18%),
+        radial-gradient(ellipse at 59% 96%, rgba(239, 246, 247, 0.22), transparent 12%);
+    }
+
+    .season-spring .season-layer {
+      background:
+        radial-gradient(ellipse at 78% 72%, rgba(96, 139, 83, 0.34), transparent 24%),
+        radial-gradient(ellipse at 63% 58%, rgba(116, 151, 97, 0.20), transparent 20%),
+        linear-gradient(180deg, rgba(201, 226, 203, 0.08), rgba(112, 153, 111, 0.18));
+    }
+
+    .season-spring .season-fg {
+      background:
+        radial-gradient(circle at 86% 67%, rgba(144, 184, 115, 0.18) 0 2px, transparent 3px),
+        radial-gradient(circle at 90% 73%, rgba(121, 166, 104, 0.16) 0 2px, transparent 3px),
+        radial-gradient(circle at 73% 82%, rgba(111, 151, 94, 0.15) 0 2px, transparent 3px);
+      background-size: 64px 54px, 72px 68px, 80px 72px;
+    }
+
+    .season-summer .season-layer {
+      background:
+        radial-gradient(ellipse at 82% 69%, rgba(47, 96, 70, 0.38), transparent 28%),
+        radial-gradient(ellipse at 61% 58%, rgba(45, 88, 77, 0.18), transparent 22%),
+        linear-gradient(180deg, rgba(113, 156, 129, 0.12), rgba(37, 75, 62, 0.22));
+    }
+
+    .season-summer .season-fg {
+      background:
+        linear-gradient(92deg, transparent 0 70%, rgba(30, 66, 55, 0.18) 70% 100%),
+        radial-gradient(circle at 87% 79%, rgba(55, 102, 73, 0.26), transparent 20%);
+    }
+
+    .season-autumn .season-layer {
+      background:
+        radial-gradient(ellipse at 80% 75%, rgba(168, 111, 50, 0.34), transparent 28%),
+        radial-gradient(ellipse at 60% 59%, rgba(141, 96, 52, 0.18), transparent 22%),
+        linear-gradient(180deg, rgba(216, 176, 115, 0.08), rgba(147, 92, 47, 0.20));
+    }
+
+    .season-autumn .season-fg {
+      background:
+        radial-gradient(ellipse at 79% 86%, rgba(204, 142, 58, 0.22) 0 2px, transparent 3px),
+        radial-gradient(ellipse at 88% 78%, rgba(165, 96, 45, 0.20) 0 2px, transparent 3px),
+        radial-gradient(ellipse at 67% 91%, rgba(186, 128, 58, 0.16) 0 2px, transparent 3px);
+      background-size: 58px 42px, 80px 64px, 74px 54px;
+    }
+
+    .weather-layer {
+      pointer-events: none;
+      opacity: var(--weather-a);
+    }
+
+    .weather-clear .weather-layer {
+      opacity: 0;
+    }
+
+    .weather-fog .weather-layer {
+      background:
+        radial-gradient(ellipse at 24% 42%, rgba(230, 235, 232, 0.55), transparent 38%),
+        radial-gradient(ellipse at 55% 62%, rgba(214, 220, 216, 0.22), transparent 30%),
+        linear-gradient(90deg, rgba(235, 238, 235, 0.42), transparent 58%);
+      filter: blur(2px);
+      mix-blend-mode: screen;
+      animation: fogDrift 18s ease-in-out infinite alternate;
+    }
+
+    .weather-snow .weather-layer {
+      background:
+        radial-gradient(circle, rgba(255,255,255,0.86) 0 1px, transparent 2px),
+        radial-gradient(circle, rgba(255,255,255,0.55) 0 1px, transparent 2px),
+        radial-gradient(circle, rgba(255,255,255,0.32) 0 1px, transparent 2px);
+      background-size: 38px 42px, 58px 64px, 92px 98px;
+      background-position: 0 0, 28px 20px, 12px 44px;
+      animation: snowFall 10s linear infinite;
+      mix-blend-mode: screen;
+    }
+
+    .weather-rain .weather-layer {
+      background:
+        repeating-linear-gradient(108deg,
+          rgba(210, 226, 232, 0.0) 0 13px,
+          rgba(210, 226, 232, 0.34) 14px 15px,
+          rgba(210, 226, 232, 0.0) 16px 28px);
+      filter: blur(0.5px);
+      animation: rainSlide 0.7s linear infinite;
+      mix-blend-mode: screen;
+    }
+
+    .weather-storm .weather-layer {
+      background:
+        repeating-linear-gradient(108deg,
+          rgba(210, 226, 232, 0.0) 0 11px,
+          rgba(210, 226, 232, 0.40) 12px 14px,
+          rgba(210, 226, 232, 0.0) 15px 24px),
+        radial-gradient(ellipse at 46% 22%, rgba(255,255,255,0.16), transparent 18%),
+        linear-gradient(180deg, rgba(22, 29, 37, 0.18), rgba(9, 13, 18, 0.30));
+      filter: blur(0.4px);
+      animation: rainSlide 0.45s linear infinite;
+      mix-blend-mode: screen;
+    }
+
+    .phase-layer {
+      pointer-events: none;
+      background: rgba(var(--phase-r), var(--phase-g), var(--phase-b), var(--phase-a));
+      mix-blend-mode: multiply;
+    }
+
+    .phase-dawn .phase-layer,
+    .phase-dusk .phase-layer {
+      mix-blend-mode: soft-light;
+    }
+
+    .hero-marker {
+      pointer-events: none;
+      opacity: 0;
+      border: 2px solid rgba(221, 193, 122, 0.65);
+      box-shadow: inset 0 0 0 999px rgba(221, 193, 122, 0.045);
+    }
+
+    .use-hero .hero-marker {
+      opacity: 1;
+    }
+
+    .hero-tag {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(31, 35, 31, 0.76);
+      border: 1px solid rgba(221, 193, 122, 0.34);
+      color: #f3dfaa;
+      font-size: 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+      opacity: 0;
+    }
+
+    .use-hero .hero-tag {
+      opacity: 1;
+    }
+
+    .mock-fisher {
+      position: absolute;
+      right: 12.2%;
+      bottom: 17.5%;
+      width: 54px;
+      height: 68px;
+      border-radius: 48% 48% 42% 42%;
+      background:
+        radial-gradient(circle at 50% 18%, #b6a07b 0 8px, transparent 9px),
+        linear-gradient(155deg, #5b6250, #30362e);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
+      opacity: 0.82;
+    }
+
+    .mock-fisher::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 132px;
+      right: 38px;
+      top: -54px;
+      background: rgba(238, 239, 230, 0.72);
+      transform: rotate(14deg);
+      transform-origin: bottom center;
+    }
+
+    .mock-cat {
+      position: absolute;
+      right: 19%;
+      bottom: 18%;
+      width: 34px;
+      height: 40px;
+      border-radius: 46% 46% 38% 38%;
+      background:
+        radial-gradient(circle at 35% 24%, #f1b25f 0 3px, transparent 4px),
+        radial-gradient(circle at 65% 24%, #f1b25f 0 3px, transparent 4px),
+        linear-gradient(#9a7b52, #6c5d48);
+      box-shadow: 0 7px 13px rgba(0, 0, 0, 0.22);
+      opacity: 0.75;
+    }
+
+    .nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 80px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      align-items: center;
+      background: rgba(29, 36, 36, 0.76);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .nav span {
+      display: grid;
+      gap: 5px;
+      place-items: center;
+      color: #d6cfbd;
+      font-size: 12px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav b {
+      width: 25px;
+      height: 25px;
+      border-radius: 7px;
+      background: rgba(221, 193, 122, 0.22);
+      border: 1px solid rgba(221, 193, 122, 0.25);
+    }
+
+    .side-panel {
+      padding: 14px;
+      overflow: auto;
+      max-height: calc(100vh - 36px);
+    }
+
+    .group {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 20, 19, 0.24);
+      margin-bottom: 12px;
+    }
+
+    .group h2 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 650;
+      color: #f1e8d1;
+    }
+
+    label {
+      display: block;
+      margin: 9px 0 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      height: 34px;
+      border-radius: 7px;
+      border: 1px solid rgba(236, 232, 220, 0.20);
+      background: #151a19;
+      color: var(--text);
+      padding: 0 9px;
+      outline: none;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #d8bd76;
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .readout {
+      display: grid;
+      gap: 7px;
+      font-size: 12px;
+      color: #d7d0c2;
+    }
+
+    .readout code,
+    .resolver code {
+      display: block;
+      white-space: normal;
+      word-break: break-all;
+      border-radius: 6px;
+      padding: 7px 8px;
+      background: rgba(0, 0, 0, 0.22);
+      color: #e9ddb8;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .stack {
+      display: grid;
+      gap: 6px;
+      counter-reset: layer;
+    }
+
+    .stack div {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 8px;
+      align-items: start;
+      border-radius: 7px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #e8e0cf;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .stack div::before {
+      counter-increment: layer;
+      content: counter(layer);
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(221, 193, 122, 0.16);
+      color: #f1db9d;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .note-panel {
+      margin-top: 12px;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .note-panel strong {
+      color: #efe4c8;
+    }
+
+    @keyframes snowFall {
+      from { background-position: 0 0, 28px 20px, 12px 44px; }
+      to { background-position: 18px 110px, 0 136px, 44px 180px; }
+    }
+
+    @keyframes rainSlide {
+      from { background-position: 0 0; }
+      to { background-position: -32px 86px; }
+    }
+
+    @keyframes fogDrift {
+      from { transform: translateX(-2%) scale(1.03); }
+      to { transform: translateX(3%) scale(1.06); }
+    }
+
+    @media (max-width: 1120px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .side-panel {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="stage-panel">
+      <div class="topbar">
+        <div>
+          <h1>2D 场景状态分层原型</h1>
+          <div class="sub">底图 + 季节材质 + 天气空气 + 日夜光照 + 少量招牌整图</div>
+        </div>
+        <div class="pill" id="statePill">river_bend · winter · night · snow</div>
+      </div>
+
+      <div class="scene-wrap">
+        <div class="scene-shell" id="scene">
+          <div class="art-area">
+            <div class="art-core" id="artCore">
+              <img id="baseImage" alt="scene background">
+              <div class="season-layer"></div>
+              <div class="season-fg"></div>
+              <div class="mock-cat"></div>
+              <div class="mock-fisher"></div>
+              <div class="weather-layer"></div>
+              <div class="air-depth"></div>
+              <div class="phase-layer"></div>
+              <div class="hero-marker"></div>
+              <div class="hero-tag">招牌整图优先：完整背景覆盖普通组合</div>
+            </div>
+          </div>
+          <div class="nav" aria-hidden="true">
+            <span><b></b>鱼篓</span>
+            <span><b></b>装备</span>
+            <span><b></b>图鉴</span>
+            <span><b></b>任务</span>
+            <span><b></b>钓点</span>
+            <span><b></b>鱼缸</span>
+            <span><b></b>设置</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="group">
+        <h2>状态选择</h2>
+
+        <label for="quality">背景资源</label>
+        <select id="quality">
+          <option value="clean2x">2x 清理候选</option>
+          <option value="runtime520">当前 520 运行图</option>
+        </select>
+
+        <label for="season">季节</label>
+        <select id="season">
+          <option value="winter">冬季：雪岸、冰边、裸枝</option>
+          <option value="spring">春季：嫩绿、湿岸、薄雾</option>
+          <option value="summer">夏季：厚植被、深绿阴影</option>
+          <option value="autumn">秋季：枯草、落叶、暖灰岸</option>
+        </select>
+
+        <label for="phase">日夜</label>
+        <select id="phase">
+          <option value="dawn">黎明</option>
+          <option value="day">白昼</option>
+          <option value="dusk">黄昏</option>
+          <option value="night" selected>夜晚</option>
+        </select>
+
+        <label for="weather">天气</label>
+        <select id="weather">
+          <option value="clear">晴/阴：无强天气层</option>
+          <option value="fog">雾：远景降对比</option>
+          <option value="snow" selected>雪：前后景雪粒</option>
+          <option value="rain">雨：斜雨和水面扰动</option>
+          <option value="storm">暴雨：强天气空气</option>
+        </select>
+
+        <label for="intensity">天气强度 <span id="intensityText">50%</span></label>
+        <input id="intensity" type="range" min="0" max="100" value="50">
+
+        <label for="seasonPower">季节覆盖强度 <span id="seasonText">65%</span></label>
+        <input id="seasonPower" type="range" min="0" max="100" value="65">
+
+        <div class="check"><input id="hero" type="checkbox"> <span>模拟招牌整图优先</span></div>
+      </div>
+
+      <div class="group readout">
+        <h2>当前解析</h2>
+        <div>状态：<strong id="stateText"></strong></div>
+        <div>底图：</div>
+        <code id="bgPath"></code>
+        <div>优先完整背景：</div>
+        <code id="heroPath"></code>
+      </div>
+
+      <div class="group">
+        <h2>图层栈</h2>
+        <div class="stack" id="stack"></div>
+      </div>
+
+      <div class="group resolver">
+        <h2>资源查找顺序</h2>
+        <code id="resolver"></code>
+      </div>
+
+      <div class="note-panel">
+        <strong>读图方式：</strong><br>
+        季节层负责“地表材质”，天气层负责“空气和运动”，日夜层负责“光色”。只有很值得展示的组合才做完整高质量背景，例如冬季黎明雾天的“晨雾日出”。
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const asset = {
+      runtime520: {
+        dawn: "../../assets/art/background/spot_river_bend_dawn.png",
+        day: "../../assets/art/background/spot_river_bend_day.png",
+        dusk: "../../assets/art/background/spot_river_bend_dusk.png",
+        night: "../../assets/art/background/spot_river_bend_night.png"
+      },
+      clean2x: {
+        dawn: "../../assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_dawn_clean_2x.png",
+        day: "../../assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_day_clean_2x.png",
+        dusk: "../../assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_dusk_clean_2x.png",
+        night: "../../assets/art/source/scenic_variants/river_bend_hd_clean_v1/clean_2x_1040x800/spot_river_bend_night_clean_2x.png"
+      }
+    };
+
+    const label = {
+      winter: "冬季",
+      spring: "春季",
+      summer: "夏季",
+      autumn: "秋季",
+      dawn: "黎明",
+      day: "白昼",
+      dusk: "黄昏",
+      night: "夜晚",
+      clear: "晴/阴",
+      fog: "雾",
+      snow: "雪",
+      rain: "雨",
+      storm: "暴雨"
+    };
+
+    const phaseTint = {
+      dawn: [255, 219, 184, 0.13],
+      day: [255, 255, 255, 0.00],
+      dusk: [255, 169, 132, 0.16],
+      night: [82, 96, 145, 0.25]
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const controls = {
+      quality: $("quality"),
+      season: $("season"),
+      phase: $("phase"),
+      weather: $("weather"),
+      intensity: $("intensity"),
+      seasonPower: $("seasonPower"),
+      hero: $("hero")
+    };
+
+    function relToRes(path) {
+      return path.replace("../../", "res://");
+    }
+
+    function update() {
+      const quality = controls.quality.value;
+      const season = controls.season.value;
+      const phase = controls.phase.value;
+      const weather = controls.weather.value;
+      const weatherPower = Number(controls.intensity.value) / 100;
+      const seasonPower = Number(controls.seasonPower.value) / 100;
+      const useHero = controls.hero.checked;
+
+      const scene = $("scene");
+      const art = $("artCore");
+      const bg = asset[quality][phase];
+      const tint = phaseTint[phase];
+
+      $("baseImage").src = bg;
+      $("intensityText").textContent = `${Math.round(weatherPower * 100)}%`;
+      $("seasonText").textContent = `${Math.round(seasonPower * 100)}%`;
+
+      art.className = [
+        "art-core",
+        `season-${season}`,
+        `weather-${weather}`,
+        `phase-${phase}`,
+        useHero ? "use-hero" : ""
+      ].join(" ");
+
+      scene.style.setProperty("--weather-a", weatherPower.toFixed(2));
+      scene.style.setProperty("--season-a", seasonPower.toFixed(2));
+      scene.style.setProperty("--phase-r", tint[0]);
+      scene.style.setProperty("--phase-g", tint[1]);
+      scene.style.setProperty("--phase-b", tint[2]);
+      scene.style.setProperty("--phase-a", tint[3]);
+
+      const state = `river_bend · ${label[season]} · ${label[phase]} · ${label[weather]}`;
+      $("statePill").textContent = state;
+      $("stateText").textContent = state;
+      $("bgPath").textContent = relToRes(bg);
+
+      const heroPath = `res://assets/art/background_hero/spot_river_bend_${season}_${weather}_${phase}.png`;
+      $("heroPath").textContent = useHero ? `${heroPath}  // 命中时优先` : `${heroPath}  // 未启用，走分层合成`;
+
+      const layers = [
+        `钓点/时段底图：${quality === "clean2x" ? "2x 背景候选" : "当前 520 背景"}`,
+        `季节材质：${label[season]}覆盖地表、植被、岸边材质`,
+        "角色层：渔夫、宠物、灯笼、钓线保持独立锚点",
+        `天气空气：${label[weather]}，强度 ${Math.round(weatherPower * 100)}%`,
+        `日夜光色：${label[phase]} tint / color grade`,
+        "前景反馈：浮漂、涟漪、灯光、上鱼闪光"
+      ];
+
+      $("stack").innerHTML = layers.map((item) => `<div><span>${item}</span></div>`).join("");
+
+      $("resolver").textContent = [
+        `1. ${heroPath}`,
+        `2. res://assets/art/background_hd/spot_river_bend_${season}_${phase}.png`,
+        `3. res://assets/art/background_hd/spot_river_bend_${phase}.png`,
+        `4. res://assets/art/background/spot_river_bend_${phase}.png`,
+        `5. res://assets/art/background/spot_river_bend.png`,
+        `+ season overlay: res://assets/art/season/${season}/river_bend_overlay.png`,
+        `+ weather overlay: res://assets/art/weather/${weather}/...`
+      ].join("\n");
+    }
+
+    Object.values(controls).forEach((el) => {
+      el.addEventListener("input", update);
+      el.addEventListener("change", update);
+    });
+
+    update();
+  </script>
+</body>
+</html>

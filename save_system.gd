@@ -43,6 +43,7 @@ static func collect(g) -> Dictionary:
 		"ach": g.achievements_done.keys(),
 		"opacity": g._opacity,
 		"max_fps": g.max_fps,           # 帧率上限设置（旧档无 → 载入默认 30）
+		"ui_scale": g.ui_scale,         # 界面缩放设置（旧档无 → 载入默认 1.0）
 		"focus": g.focus_mode,
 		"seen_intro": g.seen_intro,
 		# —— v8 多钓点 ——
@@ -183,6 +184,7 @@ static func apply(g, data: Dictionary) -> void:
 	g._opacity = float(data.get("opacity", 1.0))
 	g._set_opacity(g._opacity)
 	g._set_max_fps(int(data.get("max_fps", 30)))   # 校验 + 应用 Engine.max_fps，旧档默认 30
+	g._set_ui_scale(float(data.get("ui_scale", 1.0)))   # 校验 + 应用窗口缩放，旧档默认 1.0
 	g.seen_intro = bool(data.get("seen_intro", true))  # 有存档=老玩家，默认已看过引导
 	if bool(data.get("focus", false)):
 		g._set_focus(true)

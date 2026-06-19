@@ -52,10 +52,97 @@ const SPOTS := {
 		"value_mult": 1.12,   # 海鱼整体更值钱
 		"luck_bonus": 0,
 	},
+	# —— v3 新增专属钓点（背景图待补：缺图自动回退河湾主图，不崩；见 docs/fish-expansion-plan.md）——
+	"mountain_stream": {
+		"name": "山涧溪流",
+		"desc": "雪线下的清冷急流，水透得见石。柳根、白甲在浅濑成群，深潭里藏着茴鱼、石爬鮡，与极危的川陕哲罗鲑。",
+		"unlock": {"kind": "catches", "n": 180},
+		"habitat_tags": ["stream", "cold"],
+		"event_pool": ["fish_run", "cold_front", "lucky_current", "morning_fog"],
+		"bg_key": "mountain_stream",
+		"order_bias": "stream",
+		"wait_mult": 1.1,     # 清冷急流，咬钩略慢
+		"value_mult": 1.08,   # 冷水鱼更精贵
+		"luck_bonus": 0,
+	},
+	"deep_sea": {
+		"name": "远海深渊",
+		"desc": "离岸百里的深蓝，灯火打不到底。发光的小鱼成片游过，鮟鱇举着灯笼，更深处是月鱼与大王乌贼的领地。",
+		"unlock": {"kind": "catches", "n": 600},
+		"habitat_tags": ["deep"],
+		"event_pool": ["fish_run", "tide_in", "drift_crate", "protected_release"],
+		"bg_key": "deep_sea",
+		"order_bias": "deep",
+		"wait_mult": 0.95,    # 深海鱼多，咬钩勤
+		"value_mult": 1.18,   # 深海鱼最值钱
+		"luck_bonus": 1,      # 深渊出大物
+	},
+	# —— v3 第二波生态钓点（背景图待补：缺图回退河湾主图，不崩；见 docs/fish-expansion-plan.md）——
+	"urban_pond": {
+		"name": "城市野塘",
+		"desc": "桥洞下、护栏边的一汪绿水，浮着落叶与零碎倒影。食蚊鱼、清道夫、巴西龟，偶尔有人放生的招财，咬钩飞快、个个皮实。",
+		"unlock": {"kind": "catches", "n": 250},
+		"habitat_tags": ["urban"],
+		"event_pool": ["fish_run", "drift_crate", "lucky_current", "protected_release"],
+		"bg_key": "urban_pond",
+		"order_bias": "urban",
+		"wait_mult": 0.92,    # 野塘咬钩飞快
+		"value_mult": 0.95,   # 杂鱼不值钱
+		"luck_bonus": 0,
+	},
+	"estuary": {
+		"name": "河口红树林",
+		"desc": "咸淡交汇的潮间带，红树根盘错节。弹涂鱼在泥滩上跳，射水鱼打落虫子，深处藏着大海鲢与极危的黄唇鱼。",
+		"unlock": {"kind": "catches", "n": 450},
+		"habitat_tags": ["brackish"],
+		"event_pool": ["fish_run", "tide_in", "drift_crate", "protected_release"],
+		"bg_key": "estuary",
+		"order_bias": "brackish",
+		"wait_mult": 1.0,
+		"value_mult": 1.1,
+		"luck_bonus": 0,
+	},
+	"coral_reef": {
+		"name": "热带珊瑚礁",
+		"desc": "暖透的浅海花园，珊瑚丛里游满了缤纷的小鱼。小丑鱼、神仙鱼、鹦哥轮番亮相，礁缘巡着苏眉与蝠鲼。",
+		"unlock": {"kind": "catches", "n": 800},
+		"habitat_tags": ["reef"],
+		"event_pool": ["fish_run", "tide_in", "drift_crate", "protected_release"],
+		"bg_key": "coral_reef",
+		"order_bias": "reef",
+		"wait_mult": 1.0,
+		"value_mult": 1.15,   # 热带鱼缤纷值钱
+		"luck_bonus": 0,
+	},
+	"polar_lake": {
+		"name": "极地冰湖",
+		"desc": "冰层下透着幽蓝，凿开一个洞便是入口。北极红点鲑、白鲑在冷水里聚，深处沉着活了几百年的格陵兰睡鲨与巨鳇。",
+		"unlock": {"kind": "catches", "n": 1200},
+		"habitat_tags": ["polar"],
+		"event_pool": ["fish_run", "cold_front", "morning_fog"],
+		"bg_key": "polar_lake",
+		"order_bias": "polar",
+		"wait_mult": 1.12,    # 冰下鱼口慢
+		"value_mult": 1.16,   # 冷水鱼精贵
+		"luck_bonus": 1,      # 但个个是大物
+	},
+	"cavern_pool": {
+		"name": "古潭溶洞",
+		"desc": "钟乳低垂，水黑得照不见底。退了色的盲鱼贴壁游动，潭底藏着多鳍鱼、肺鱼这些活化石，与传说中的大鲵。",
+		"unlock": {"kind": "species", "n": 110},
+		"habitat_tags": ["cavern"],
+		"event_pool": ["fish_run", "morning_fog", "drift_crate"],
+		"bg_key": "cavern_pool",
+		"order_bias": "cavern",
+		"wait_mult": 1.15,    # 暗水鱼少咬钩慢
+		"value_mult": 1.2,    # 盲鱼/活化石稀奇值钱
+		"luck_bonus": 1,
+	},
 }
 
-## 显示与解锁推荐顺序（UI 列表、解锁提示用）。
-const SPOT_ORDER := ["river_bend", "still_lake", "coast_pier"]
+## 显示与解锁推荐顺序（UI 列表、解锁提示用）。大致按解锁阈值递增排（古潭按图鉴种数解锁，排末位）。
+const SPOT_ORDER := ["river_bend", "still_lake", "mountain_stream", "urban_pond", "coast_pier",
+	"estuary", "deep_sea", "coral_reef", "polar_lake", "cavern_pool"]
 
 ## 默认钓点（旧存档迁移落点）。
 const DEFAULT_SPOT := "river_bend"

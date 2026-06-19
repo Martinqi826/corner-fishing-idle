@@ -6,7 +6,7 @@
 
 - **Claude = 总包/编排**：把需求拆成任务；互不重叠的用 Workflow/子 Agent 一回合内并行；有依赖的串行接力；负责集成与回归。
 - **Codex = 美术车道**：只产 `assets/art/**`（含音频/装备/动态层）。Claude 只加载/接入、绝不覆盖。
-- **安全网**：每里程碑 `--headless -s tools/validate_game.gd` 0 失败 + 涉 UI 跑 `dev_screenshot` 看 docs/img + 独立 git commit（可回退）+ 重启客户端。回退点：git 标签 + 桌面备份。
+- **安全网**：每里程碑 `--headless -s tools/validate_game.gd` 0 失败 + 涉 UI 跑 `dev_screenshot` 看 docs/img + 独立 git commit（可回退）+ 重启客户端。回退靠普通 commit（不建备份 tag / 桌面备份）。
 
 ## 模块拆分目标（main.gd 解耦）
 

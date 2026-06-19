@@ -7,6 +7,12 @@
 > （多钓点生态调研）、`docs/spot-expansion-summary-20260614.md`（28→60→106 扩展史）。
 > 数据落点：`fish_data.gd` / `spot_data.gd` / `fish_lore.gd`。
 
+> **实现进度（2026-06-19）：数据层已落地。** 鱼 106 → **219 种**，钓点 3 → **10 个**
+> （+山涧溪流/远海深渊/城市野塘/河口红树林/热带珊瑚礁/极地冰湖/古潭溶洞），`validate_game.gd` **0 失败**。
+> 各生态用独立 tag（stream/cold·deep·urban·brackish·reef·polar·cavern）保证鱼池互不串。
+> **仍为 roadmap（未做）**：美术（图标按 `docs/fish_art_prompts_v3.md` 交 Codex、7 个新钓点背景）、
+> 五层词缀系统、个人巨物纪录簿、钓鱼比赛事件、限定鱼、变体墙显式化、科属套装。
+
 ---
 
 ## 0. 一句话结论

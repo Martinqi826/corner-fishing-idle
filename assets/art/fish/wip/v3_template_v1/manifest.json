@@ -1,0 +1,906 @@
+[
+  {
+    "id": "amur_minnow",
+    "group": "stream",
+    "template": "minnow",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/amur_minnow.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/amur_minnow.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "hillstream_loach",
+    "group": "stream",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/hillstream_loach.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/hillstream_loach.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "plateau_loach",
+    "group": "stream",
+    "template": "loach",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/plateau_loach.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/plateau_loach.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "largescale_shoveljaw",
+    "group": "stream",
+    "template": "chinese_sucker",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/largescale_shoveljaw.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/largescale_shoveljaw.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "taiwan_shoveljaw",
+    "group": "stream",
+    "template": "chinese_sucker",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/taiwan_shoveljaw.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/taiwan_shoveljaw.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "rock_carp",
+    "group": "stream",
+    "template": "carp",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/rock_carp.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/rock_carp.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "schizothorax",
+    "group": "stream",
+    "template": "barbel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/schizothorax.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/schizothorax.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "torrent_catfish",
+    "group": "stream",
+    "template": "amur_catfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/torrent_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/torrent_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "grayling",
+    "group": "stream",
+    "template": "trout",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/grayling.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/grayling.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "sichuan_taimen",
+    "group": "stream",
+    "template": "taimen",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/sichuan_taimen.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/sichuan_taimen.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "lanternfish",
+    "group": "deep_sea",
+    "template": "anchovy",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/lanternfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/lanternfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bristlemouth",
+    "group": "deep_sea",
+    "template": "anchovy",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bristlemouth.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bristlemouth.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "hatchetfish",
+    "group": "deep_sea",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/hatchetfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/hatchetfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "rattail",
+    "group": "deep_sea",
+    "template": "burbot",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/rattail.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/rattail.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "dragonfish",
+    "group": "deep_sea",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/dragonfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/dragonfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "lancetfish",
+    "group": "deep_sea",
+    "template": "wahoo",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/lancetfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/lancetfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "anglerfish",
+    "group": "deep_sea",
+    "template": "blackcarp",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/anglerfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/anglerfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "escolar",
+    "group": "deep_sea",
+    "template": "cobia",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/escolar.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/escolar.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "opah",
+    "group": "deep_sea",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/opah.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/opah.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "giant_squid",
+    "group": "deep_sea",
+    "template": "squid",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/giant_squid.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/giant_squid.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "clownfish",
+    "group": "reef",
+    "template": "koi",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/clownfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/clownfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "damselfish",
+    "group": "reef",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/damselfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/damselfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cardinalfish",
+    "group": "reef",
+    "template": "minnow",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cardinalfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cardinalfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "chromis",
+    "group": "reef",
+    "template": "ricefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/chromis.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/chromis.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "blenny",
+    "group": "reef",
+    "template": "loach",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/blenny.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/blenny.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "firefish",
+    "group": "reef",
+    "template": "halfbeak",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/firefish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/firefish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "butterflyfish",
+    "group": "reef",
+    "template": "fangbream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/butterflyfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/butterflyfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "surgeonfish",
+    "group": "reef",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/surgeonfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/surgeonfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "anthias",
+    "group": "reef",
+    "template": "paradisefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/anthias.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/anthias.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "wrasse",
+    "group": "reef",
+    "template": "paradisefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/wrasse.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/wrasse.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "foxface",
+    "group": "reef",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/foxface.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/foxface.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "hawkfish",
+    "group": "reef",
+    "template": "mandarin",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/hawkfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/hawkfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "angelfish",
+    "group": "reef",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/angelfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/angelfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "parrotfish",
+    "group": "reef",
+    "template": "bass",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/parrotfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/parrotfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "triggerfish",
+    "group": "reef",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/triggerfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/triggerfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "lionfish",
+    "group": "reef",
+    "template": "mandarin",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/lionfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/lionfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "moray",
+    "group": "reef",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/moray.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/moray.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "boxfish",
+    "group": "reef",
+    "template": "fangbream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/boxfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/boxfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "spotted_puffer",
+    "group": "reef",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/spotted_puffer.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/spotted_puffer.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "coral_grouper",
+    "group": "reef",
+    "template": "crimson_snapper",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/coral_grouper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/coral_grouper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bohar_snapper",
+    "group": "reef",
+    "template": "crimson_snapper",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bohar_snapper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bohar_snapper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "emperor_fish",
+    "group": "reef",
+    "template": "yellowfin_seabream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/emperor_fish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/emperor_fish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "unicornfish",
+    "group": "reef",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/unicornfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/unicornfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bumphead_parrot",
+    "group": "reef",
+    "template": "mahseer",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bumphead_parrot.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bumphead_parrot.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "dogtooth_tuna",
+    "group": "reef",
+    "template": "wahoo",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/dogtooth_tuna.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/dogtooth_tuna.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "napoleon_wrasse",
+    "group": "reef",
+    "template": "mahseer",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/napoleon_wrasse.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/napoleon_wrasse.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "manta_ray",
+    "group": "reef",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/manta_ray.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/manta_ray.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "mudskipper",
+    "group": "brackish",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/mudskipper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/mudskipper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "glassfish",
+    "group": "brackish",
+    "template": "whitebait",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/glassfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/glassfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "silverside",
+    "group": "brackish",
+    "template": "anchovy",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/silverside.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/silverside.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "archerfish",
+    "group": "brackish",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/archerfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/archerfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "threadfin",
+    "group": "brackish",
+    "template": "haarder",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/threadfin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/threadfin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "marble_sleeper",
+    "group": "brackish",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/marble_sleeper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/marble_sleeper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "silverbiddy",
+    "group": "brackish",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/silverbiddy.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/silverbiddy.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "mangrove_snapper",
+    "group": "brackish",
+    "template": "crimson_snapper",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/mangrove_snapper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/mangrove_snapper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "fingermark",
+    "group": "brackish",
+    "template": "yellowfin_seabream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/fingermark.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/fingermark.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "milkfish",
+    "group": "brackish",
+    "template": "haarder",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/milkfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/milkfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "tigerperch",
+    "group": "brackish",
+    "template": "bass",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/tigerperch.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/tigerperch.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "king_threadfin",
+    "group": "brackish",
+    "template": "amberjack",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/king_threadfin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/king_threadfin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "tarpon",
+    "group": "brackish",
+    "template": "salmon",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/tarpon.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/tarpon.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "estuary_stingray",
+    "group": "brackish",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/estuary_stingray.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/estuary_stingray.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bull_shark",
+    "group": "brackish",
+    "template": "whale_shark",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bull_shark.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bull_shark.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "giant_threadfin",
+    "group": "brackish",
+    "template": "amberjack",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/giant_threadfin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/giant_threadfin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bahaba",
+    "group": "brackish",
+    "template": "yellow_drum",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bahaba.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bahaba.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "sawfish",
+    "group": "brackish",
+    "template": "paddlefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/sawfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/sawfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "polar_smelt",
+    "group": "polar",
+    "template": "whitebait",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/polar_smelt.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/polar_smelt.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "ninespine_stickleback",
+    "group": "polar",
+    "template": "minnow",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/ninespine_stickleback.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/ninespine_stickleback.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "capelin",
+    "group": "polar",
+    "template": "whitebait",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/capelin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/capelin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "pond_smelt",
+    "group": "polar",
+    "template": "whitebait",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/pond_smelt.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/pond_smelt.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "arctic_cisco",
+    "group": "polar",
+    "template": "grass",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/arctic_cisco.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/arctic_cisco.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "whitefish",
+    "group": "polar",
+    "template": "grass",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/whitefish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/whitefish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "sculpin",
+    "group": "polar",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/sculpin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/sculpin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "ruffe",
+    "group": "polar",
+    "template": "bass",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/ruffe.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/ruffe.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "arctic_char",
+    "group": "polar",
+    "template": "trout",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/arctic_char.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/arctic_char.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "inconnu",
+    "group": "polar",
+    "template": "salmon",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/inconnu.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/inconnu.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "round_whitefish",
+    "group": "polar",
+    "template": "bream",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/round_whitefish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/round_whitefish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "fourhorn_sculpin",
+    "group": "polar",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/fourhorn_sculpin.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/fourhorn_sculpin.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "lake_trout",
+    "group": "polar",
+    "template": "trout",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/lake_trout.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/lake_trout.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "arctic_cod",
+    "group": "polar",
+    "template": "burbot",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/arctic_cod.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/arctic_cod.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "broad_whitefish",
+    "group": "polar",
+    "template": "bighead",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/broad_whitefish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/broad_whitefish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "greenland_halibut",
+    "group": "polar",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/greenland_halibut.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/greenland_halibut.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "arctic_skate",
+    "group": "polar",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/arctic_skate.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/arctic_skate.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "greenland_shark",
+    "group": "polar",
+    "template": "whale_shark",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/greenland_shark.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/greenland_shark.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "beluga_sturgeon",
+    "group": "polar",
+    "template": "sturgeon",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/beluga_sturgeon.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/beluga_sturgeon.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cave_loach",
+    "group": "cavern",
+    "template": "loach",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cave_loach.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cave_loach.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "blind_cavefish",
+    "group": "cavern",
+    "template": "whitebait",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/blind_cavefish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/blind_cavefish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cave_minnow",
+    "group": "cavern",
+    "template": "minnow",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cave_minnow.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cave_minnow.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cave_catfish",
+    "group": "cavern",
+    "template": "amur_catfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cave_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cave_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "olm",
+    "group": "cavern",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/olm.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/olm.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cave_eel",
+    "group": "cavern",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cave_eel.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cave_eel.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "golden_barb",
+    "group": "cavern",
+    "template": "barbel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/golden_barb.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/golden_barb.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "blind_eel",
+    "group": "cavern",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/blind_eel.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/blind_eel.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cave_sleeper",
+    "group": "cavern",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cave_sleeper.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cave_sleeper.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "cavern_catfish",
+    "group": "cavern",
+    "template": "amur_catfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/cavern_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/cavern_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "ancient_loach",
+    "group": "cavern",
+    "template": "loach",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/ancient_loach.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/ancient_loach.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bichir",
+    "group": "cavern",
+    "template": "coelacanth",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bichir.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bichir.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "lungfish",
+    "group": "cavern",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/lungfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/lungfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "giant_salamander",
+    "group": "cavern",
+    "template": "marbled_eel",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/giant_salamander.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/giant_salamander.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "alligator_gar",
+    "group": "cavern",
+    "template": "longsnout",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/alligator_gar.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/alligator_gar.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "mosquitofish",
+    "group": "urban",
+    "template": "ricefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/mosquitofish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/mosquitofish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "feral_goldfish",
+    "group": "urban",
+    "template": "crucian",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/feral_goldfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/feral_goldfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "feral_guppy",
+    "group": "urban",
+    "template": "ricefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/feral_guppy.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/feral_guppy.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "plecostomus",
+    "group": "urban",
+    "template": "sturgeon",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/plecostomus.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/plecostomus.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "crayfish",
+    "group": "urban",
+    "template": "cuttlefish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/crayfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/crayfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "bullfrog",
+    "group": "urban",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/bullfrog.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/bullfrog.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "walking_catfish",
+    "group": "urban",
+    "template": "amur_catfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/walking_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/walking_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "red_eared_slider",
+    "group": "urban",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/red_eared_slider.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/red_eared_slider.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "channel_catfish",
+    "group": "urban",
+    "template": "amur_catfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/channel_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/channel_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "giant_gourami",
+    "group": "urban",
+    "template": "bighead",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/giant_gourami.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/giant_gourami.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "snapping_turtle",
+    "group": "urban",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/snapping_turtle.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/snapping_turtle.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "flathead_catfish",
+    "group": "urban",
+    "template": "flathead_fish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/flathead_catfish.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/flathead_catfish.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "arapaima",
+    "group": "urban",
+    "template": "oarfish",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/arapaima.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/arapaima.png",
+    "status": "wip_template_repaint_for_art_review"
+  },
+  {
+    "id": "yangtze_softshell",
+    "group": "urban",
+    "template": "spotted_scat",
+    "runtime_wip": "assets/art/fish/wip/v3_template_v1/yangtze_softshell.png",
+    "source_wip": "assets/art/fish/wip/v3_template_v1/source/yangtze_softshell.png",
+    "status": "wip_template_repaint_for_art_review"
+  }
+]

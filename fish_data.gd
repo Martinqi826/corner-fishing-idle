@@ -20,8 +20,9 @@ const TIER_COLORS := [
 ##   river 河流 / lake 静水湖泊 / stream 山涧溪流 / coast 海岸 / deep 深水 /
 ##   cold 冷水 / night 夜行 / protected 保护鱼（养殖放流设定）。
 ## 旧 id 与数值保持不变（旧存档兼容）。
-## 106 种鱼（v2 扩充：真实中国淡水鱼 + 海鱼/头足类 + 活化石，谱系见 docs/spot-research-20260614.md）。
-## 各钓点鱼池约 43~48 种（river/lake/coast 按 tags∩habitat_tags 求交）。
+## 219 种鱼（v3 扩充：+山涧溪流/远海深渊各专属，+珊瑚礁/河口红树林/极地冰湖/古潭溶洞/城市野塘 5 生态；
+## 谱系与设计见 docs/fish-expansion-plan.md）。各生态用独立 tag（reef/brackish/polar/cavern/urban）保证鱼池互不串。
+## 钓点见 spot_data.gd（10 个）；缺图标的新鱼运行时回退品阶通用图标。
 const FISH := {
 	# —— 0 普通（常见杂鱼，基本盘）——
 	"whitebait": {"name": "白条", "tier": 0, "wmin": 0.01, "wmax": 0.02, "vmin": 1, "vmax": 3, "tags": ["river", "lake"]},
@@ -130,7 +131,7 @@ const FISH := {
 	"sturgeon": {"name": "施氏鲟", "tier": 4, "wmin": 5.0, "wmax": 30.0, "vmin": 900, "vmax": 1900, "tags": ["river", "lake", "deep"]},
 	"taimen": {"name": "哲罗鲑", "tier": 4, "wmin": 3.0, "wmax": 50.0, "vmin": 1000, "vmax": 2200, "tags": ["river", "stream", "cold"]},
 	# 新增 · 湖
-	"wels_catfish": {"name": "六须鲇", "tier": 4, "wmin": 5.0, "wmax": 100.0, "vmin": 850, "vmax": 2000, "tags": ["lake", "deep", "night"]},
+	"wels_catfish": {"name": "六须鲇", "tier": 4, "wmin": 5.0, "wmax": 100.0, "vmin": 850, "vmax": 2000, "tags": ["lake", "deep", "night"], "limited": {"phases": ["night"], "label": "夜行·深潭巨鲇", "hint": "入夜后才离开深潭出来觅食"}},
 	# 新增 · 海
 	"tuna": {"name": "金枪鱼", "tier": 4, "wmin": 5.0, "wmax": 200.0, "vmin": 900, "vmax": 2000, "tags": ["coast", "deep"]},
 	"giant_grouper": {"name": "龙趸石斑", "tier": 4, "wmin": 10.0, "wmax": 300.0, "vmin": 1000, "vmax": 2200, "tags": ["coast", "deep"]},
@@ -150,8 +151,131 @@ const FISH := {
 	# 扩充 v2 · 活化石 / 深海传奇
 	"paddlefish": {"name": "白鲟", "tier": 5, "wmin": 50.0, "wmax": 300.0, "vmin": 5000, "vmax": 11000, "tags": ["river", "protected"]},
 	"coelacanth": {"name": "矛尾鱼", "tier": 5, "wmin": 30.0, "wmax": 90.0, "vmin": 6000, "vmax": 12000, "tags": ["coast", "deep"]},
-	"oarfish": {"name": "皇带鱼", "tier": 5, "wmin": 50.0, "wmax": 200.0, "vmin": 5500, "vmax": 11000, "tags": ["coast", "deep", "night"]},
+	"oarfish": {"name": "皇带鱼", "tier": 5, "wmin": 50.0, "wmax": 200.0, "vmin": 5500, "vmax": 11000, "tags": ["coast", "deep", "night"], "limited": {"phases": ["night"], "label": "夜行·深海传说", "hint": "深夜的洋面，才会浮起这条龙宫使者"}},
 	"whale_shark": {"name": "鲸鲨", "tier": 5, "wmin": 200.0, "wmax": 1000.0, "vmin": 6000, "vmax": 13000, "tags": ["coast", "deep", "protected"]},
+	# —— 扩充 v3 · 山涧溪流专属（stream/cold：冷水清流，小而精，补低阶基本盘 + 国宝压轴）——
+	"amur_minnow": {"name": "柳根鱼", "tier": 0, "wmin": 0.02, "wmax": 0.12, "vmin": 2, "vmax": 6, "tags": ["stream", "cold"]},
+	"hillstream_loach": {"name": "平鳍鳅", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 2, "vmax": 6, "tags": ["stream"]},
+	"plateau_loach": {"name": "高原鳅", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 2, "vmax": 7, "tags": ["stream", "cold"]},
+	"largescale_shoveljaw": {"name": "多鳞白甲鱼", "tier": 1, "wmin": 0.2, "wmax": 1.2, "vmin": 16, "vmax": 34, "tags": ["stream"]},
+	"taiwan_shoveljaw": {"name": "台湾铲颌鱼", "tier": 1, "wmin": 0.2, "wmax": 1.0, "vmin": 18, "vmax": 40, "tags": ["stream"]},
+	"rock_carp": {"name": "岩原鲤", "tier": 2, "wmin": 0.5, "wmax": 2.5, "vmin": 65, "vmax": 150, "tags": ["stream", "cold"]},
+	"schizothorax": {"name": "裂腹鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 60, "vmax": 140, "tags": ["stream", "cold"]},
+	"torrent_catfish": {"name": "石爬鮡", "tier": 3, "wmin": 0.2, "wmax": 1.0, "vmin": 220, "vmax": 460, "tags": ["stream", "cold", "night"]},
+	"grayling": {"name": "北极茴鱼", "tier": 3, "wmin": 0.3, "wmax": 1.5, "vmin": 240, "vmax": 500, "tags": ["stream", "cold"]},
+	"sichuan_taimen": {"name": "川陕哲罗鲑", "tier": 5, "wmin": 5.0, "wmax": 50.0, "vmin": 4800, "vmax": 10000, "tags": ["stream", "cold", "protected"]},
+	# —— 扩充 v3 · 远海深渊专属（deep：补足低阶基本盘 + 发光鱼 + 头足传奇）——
+	"lanternfish": {"name": "灯笼鱼", "tier": 0, "wmin": 0.005, "wmax": 0.03, "vmin": 3, "vmax": 9, "tags": ["deep", "night"]},
+	"bristlemouth": {"name": "钻光鱼", "tier": 0, "wmin": 0.002, "wmax": 0.01, "vmin": 3, "vmax": 8, "tags": ["deep"]},
+	"hatchetfish": {"name": "银斧鱼", "tier": 1, "wmin": 0.01, "wmax": 0.08, "vmin": 16, "vmax": 36, "tags": ["deep"]},
+	"rattail": {"name": "鼠尾鳕", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 18, "vmax": 44, "tags": ["deep"]},
+	"dragonfish": {"name": "巨口鱼", "tier": 2, "wmin": 0.05, "wmax": 0.3, "vmin": 60, "vmax": 140, "tags": ["deep", "night"]},
+	"lancetfish": {"name": "帆蜥鱼", "tier": 2, "wmin": 1.0, "wmax": 5.0, "vmin": 65, "vmax": 150, "tags": ["deep"]},
+	"anglerfish": {"name": "鮟鱇", "tier": 3, "wmin": 0.5, "wmax": 4.0, "vmin": 230, "vmax": 500, "tags": ["deep", "night"]},
+	"escolar": {"name": "异鳞蛇鲭", "tier": 3, "wmin": 2.0, "wmax": 15.0, "vmin": 220, "vmax": 470, "tags": ["deep"]},
+	"opah": {"name": "月鱼", "tier": 4, "wmin": 10.0, "wmax": 70.0, "vmin": 850, "vmax": 1900, "tags": ["deep"]},
+	"giant_squid": {"name": "大王乌贼", "tier": 5, "wmin": 50.0, "wmax": 250.0, "vmin": 5500, "vmax": 11500, "tags": ["deep"]},
+	# ============================================================
+	# 扩充 v3 第二波（生态批次，目标 ~200+；各生态用独立 tag，鱼池互不串）
+	# ============================================================
+	# —— 热带珊瑚礁（reef）：高颜值收集天堂，暖水缤纷 ——
+	"clownfish": {"name": "小丑鱼", "tier": 0, "wmin": 0.01, "wmax": 0.06, "vmin": 4, "vmax": 12, "tags": ["reef"]},
+	"damselfish": {"name": "雀鲷", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 3, "vmax": 9, "tags": ["reef"]},
+	"cardinalfish": {"name": "天竺鲷", "tier": 0, "wmin": 0.01, "wmax": 0.06, "vmin": 3, "vmax": 10, "tags": ["reef"]},
+	"chromis": {"name": "蓝绿光鳃鱼", "tier": 0, "wmin": 0.005, "wmax": 0.03, "vmin": 3, "vmax": 9, "tags": ["reef"]},
+	"blenny": {"name": "鳚鱼", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 3, "vmax": 9, "tags": ["reef"]},
+	"firefish": {"name": "红火箭", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 4, "vmax": 11, "tags": ["reef"]},
+	"butterflyfish": {"name": "蝴蝶鱼", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 16, "vmax": 36, "tags": ["reef"]},
+	"surgeonfish": {"name": "刺尾鱼", "tier": 1, "wmin": 0.1, "wmax": 0.6, "vmin": 18, "vmax": 42, "tags": ["reef"]},
+	"anthias": {"name": "金拟花鮨", "tier": 1, "wmin": 0.02, "wmax": 0.15, "vmin": 16, "vmax": 34, "tags": ["reef"]},
+	"wrasse": {"name": "隆头鱼", "tier": 1, "wmin": 0.1, "wmax": 0.8, "vmin": 18, "vmax": 40, "tags": ["reef"]},
+	"foxface": {"name": "狐狸鱼", "tier": 1, "wmin": 0.2, "wmax": 1.0, "vmin": 18, "vmax": 40, "tags": ["reef"]},
+	"hawkfish": {"name": "鹰斑鲷", "tier": 1, "wmin": 0.05, "wmax": 0.4, "vmin": 16, "vmax": 34, "tags": ["reef"]},
+	"angelfish": {"name": "神仙鱼", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 65, "vmax": 150, "tags": ["reef"]},
+	"parrotfish": {"name": "鹦哥鱼", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 70, "vmax": 160, "tags": ["reef"]},
+	"triggerfish": {"name": "鳞鲀", "tier": 2, "wmin": 0.3, "wmax": 2.5, "vmin": 60, "vmax": 140, "tags": ["reef"]},
+	"lionfish": {"name": "狮子鱼", "tier": 2, "wmin": 0.2, "wmax": 1.2, "vmin": 70, "vmax": 160, "tags": ["reef"]},
+	"moray": {"name": "裸胸鳝", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 65, "vmax": 150, "tags": ["reef", "night"]},
+	"boxfish": {"name": "箱鲀", "tier": 2, "wmin": 0.1, "wmax": 0.8, "vmin": 60, "vmax": 130, "tags": ["reef"]},
+	"spotted_puffer": {"name": "斑点叉鼻鲀", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 60, "vmax": 140, "tags": ["reef"]},
+	"coral_grouper": {"name": "东星斑", "tier": 3, "wmin": 0.5, "wmax": 4.0, "vmin": 240, "vmax": 520, "tags": ["reef"]},
+	"bohar_snapper": {"name": "千年笛鲷", "tier": 3, "wmin": 0.8, "wmax": 6.0, "vmin": 240, "vmax": 500, "tags": ["reef"]},
+	"emperor_fish": {"name": "龙占鱼", "tier": 3, "wmin": 0.5, "wmax": 4.0, "vmin": 220, "vmax": 480, "tags": ["reef"]},
+	"unicornfish": {"name": "独角倒吊", "tier": 3, "wmin": 0.5, "wmax": 3.0, "vmin": 220, "vmax": 460, "tags": ["reef"]},
+	"bumphead_parrot": {"name": "隆头鹦哥", "tier": 4, "wmin": 5.0, "wmax": 40.0, "vmin": 800, "vmax": 1800, "tags": ["reef"]},
+	"dogtooth_tuna": {"name": "狗牙金枪", "tier": 4, "wmin": 3.0, "wmax": 30.0, "vmin": 850, "vmax": 1900, "tags": ["reef", "deep"]},
+	"napoleon_wrasse": {"name": "苏眉", "tier": 5, "wmin": 10.0, "wmax": 80.0, "vmin": 5000, "vmax": 11000, "tags": ["reef", "protected"]},
+	"manta_ray": {"name": "蝠鲼", "tier": 5, "wmin": 50.0, "wmax": 500.0, "vmin": 5500, "vmax": 12000, "tags": ["reef", "protected"]},
+	# —— 河口红树林（brackish）：汽水带，潮汐泥滩 ——
+	"mudskipper": {"name": "弹涂鱼", "tier": 0, "wmin": 0.01, "wmax": 0.08, "vmin": 3, "vmax": 10, "tags": ["brackish"]},
+	"glassfish": {"name": "玻璃鱼", "tier": 0, "wmin": 0.005, "wmax": 0.03, "vmin": 3, "vmax": 9, "tags": ["brackish"]},
+	"silverside": {"name": "银汉鱼", "tier": 0, "wmin": 0.01, "wmax": 0.06, "vmin": 3, "vmax": 9, "tags": ["brackish"]},
+	"archerfish": {"name": "射水鱼", "tier": 1, "wmin": 0.1, "wmax": 0.5, "vmin": 16, "vmax": 34, "tags": ["brackish"]},
+	"threadfin": {"name": "四指马鲅", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 18, "vmax": 44, "tags": ["brackish"]},
+	"marble_sleeper": {"name": "笋壳鱼", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 18, "vmax": 42, "tags": ["brackish", "night"]},
+	"silverbiddy": {"name": "碟仔鱼", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 16, "vmax": 32, "tags": ["brackish"]},
+	"mangrove_snapper": {"name": "紫红笛鲷", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 60, "vmax": 140, "tags": ["brackish"]},
+	"fingermark": {"name": "画眉笛鲷", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 65, "vmax": 150, "tags": ["brackish"]},
+	"milkfish": {"name": "虱目鱼", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 60, "vmax": 130, "tags": ["brackish"]},
+	"tigerperch": {"name": "花身鸡鱼", "tier": 2, "wmin": 0.2, "wmax": 1.0, "vmin": 60, "vmax": 130, "tags": ["brackish"]},
+	"king_threadfin": {"name": "大午", "tier": 3, "wmin": 2.0, "wmax": 15.0, "vmin": 240, "vmax": 500, "tags": ["brackish"]},
+	"tarpon": {"name": "大海鲢", "tier": 3, "wmin": 3.0, "wmax": 25.0, "vmin": 240, "vmax": 520, "tags": ["brackish"]},
+	"estuary_stingray": {"name": "赤魟", "tier": 3, "wmin": 2.0, "wmax": 20.0, "vmin": 220, "vmax": 470, "tags": ["brackish", "night"]},
+	"bull_shark": {"name": "公牛鲨", "tier": 4, "wmin": 5.0, "wmax": 100.0, "vmin": 850, "vmax": 1900, "tags": ["brackish", "night"]},
+	"giant_threadfin": {"name": "巨马鲅", "tier": 4, "wmin": 5.0, "wmax": 40.0, "vmin": 800, "vmax": 1800, "tags": ["brackish"]},
+	"bahaba": {"name": "黄唇鱼", "tier": 5, "wmin": 10.0, "wmax": 100.0, "vmin": 5500, "vmax": 11500, "tags": ["brackish", "protected"]},
+	"sawfish": {"name": "锯鳐", "tier": 5, "wmin": 20.0, "wmax": 300.0, "vmin": 6000, "vmax": 12000, "tags": ["brackish", "protected", "night"]},
+	# —— 极地冰湖（polar）：冰下冷水，鲑鳟白鲑层 ——
+	"polar_smelt": {"name": "北极公鱼", "tier": 0, "wmin": 0.01, "wmax": 0.06, "vmin": 3, "vmax": 9, "tags": ["polar"]},
+	"ninespine_stickleback": {"name": "九刺鱼", "tier": 0, "wmin": 0.005, "wmax": 0.02, "vmin": 3, "vmax": 8, "tags": ["polar"]},
+	"capelin": {"name": "毛鳞鱼", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 3, "vmax": 10, "tags": ["polar"]},
+	"pond_smelt": {"name": "西太公鱼", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 3, "vmax": 9, "tags": ["polar"]},
+	"arctic_cisco": {"name": "北极白鲑", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 16, "vmax": 40, "tags": ["polar"]},
+	"whitefish": {"name": "高白鲑", "tier": 1, "wmin": 0.3, "wmax": 2.5, "vmin": 18, "vmax": 44, "tags": ["polar"]},
+	"sculpin": {"name": "杜父鱼", "tier": 1, "wmin": 0.1, "wmax": 0.8, "vmin": 16, "vmax": 34, "tags": ["polar"]},
+	"ruffe": {"name": "梅花鲈", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 16, "vmax": 32, "tags": ["polar"]},
+	"arctic_char": {"name": "北极红点鲑", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 65, "vmax": 160, "tags": ["polar"]},
+	"inconnu": {"name": "北鲑", "tier": 2, "wmin": 1.0, "wmax": 8.0, "vmin": 70, "vmax": 160, "tags": ["polar"]},
+	"round_whitefish": {"name": "圆白鲑", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 60, "vmax": 140, "tags": ["polar"]},
+	"fourhorn_sculpin": {"name": "四角杜父鱼", "tier": 2, "wmin": 0.1, "wmax": 0.6, "vmin": 60, "vmax": 130, "tags": ["polar"]},
+	"lake_trout": {"name": "湖红点鲑", "tier": 3, "wmin": 1.0, "wmax": 15.0, "vmin": 240, "vmax": 520, "tags": ["polar"]},
+	"arctic_cod": {"name": "北极鳕", "tier": 3, "wmin": 1.0, "wmax": 8.0, "vmin": 220, "vmax": 460, "tags": ["polar"]},
+	"broad_whitefish": {"name": "宽白鲑", "tier": 3, "wmin": 1.0, "wmax": 6.0, "vmin": 220, "vmax": 470, "tags": ["polar"]},
+	"greenland_halibut": {"name": "格陵兰庸鲽", "tier": 4, "wmin": 5.0, "wmax": 40.0, "vmin": 800, "vmax": 1800, "tags": ["polar", "deep"]},
+	"arctic_skate": {"name": "北极鳐", "tier": 4, "wmin": 5.0, "wmax": 30.0, "vmin": 800, "vmax": 1700, "tags": ["polar"]},
+	"greenland_shark": {"name": "格陵兰睡鲨", "tier": 5, "wmin": 50.0, "wmax": 700.0, "vmin": 5500, "vmax": 12000, "tags": ["polar", "deep", "protected", "night"]},
+	"beluga_sturgeon": {"name": "欧洲鳇", "tier": 5, "wmin": 50.0, "wmax": 800.0, "vmin": 6000, "vmax": 13000, "tags": ["polar", "protected"]},
+	# —— 古潭溶洞（cavern）：暗水盲鱼 + 活化石，多为夜行 ——
+	"cave_loach": {"name": "盲鳅", "tier": 0, "wmin": 0.01, "wmax": 0.05, "vmin": 3, "vmax": 10, "tags": ["cavern", "night"]},
+	"blind_cavefish": {"name": "盲鱼", "tier": 0, "wmin": 0.01, "wmax": 0.06, "vmin": 4, "vmax": 12, "tags": ["cavern", "night"]},
+	"cave_minnow": {"name": "洞穴金线鲃", "tier": 0, "wmin": 0.02, "wmax": 0.1, "vmin": 4, "vmax": 12, "tags": ["cavern", "night"]},
+	"cave_catfish": {"name": "盲鲶", "tier": 1, "wmin": 0.05, "wmax": 0.4, "vmin": 16, "vmax": 36, "tags": ["cavern", "night"]},
+	"olm": {"name": "洞螈", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 18, "vmax": 44, "tags": ["cavern", "night"]},
+	"cave_eel": {"name": "洞穴合鳃", "tier": 1, "wmin": 0.1, "wmax": 0.7, "vmin": 16, "vmax": 40, "tags": ["cavern", "night"]},
+	"golden_barb": {"name": "金线鲃", "tier": 2, "wmin": 0.3, "wmax": 1.5, "vmin": 60, "vmax": 140, "tags": ["cavern", "night"]},
+	"blind_eel": {"name": "盲鳗", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 60, "vmax": 140, "tags": ["cavern", "night"]},
+	"cave_sleeper": {"name": "暗塘鳢", "tier": 2, "wmin": 0.2, "wmax": 1.5, "vmin": 65, "vmax": 150, "tags": ["cavern", "night"]},
+	"cavern_catfish": {"name": "巨洞鲶", "tier": 3, "wmin": 2.0, "wmax": 15.0, "vmin": 240, "vmax": 500, "tags": ["cavern", "night"]},
+	"ancient_loach": {"name": "古鳅", "tier": 3, "wmin": 0.5, "wmax": 3.0, "vmin": 220, "vmax": 470, "tags": ["cavern", "night"]},
+	"bichir": {"name": "多鳍鱼", "tier": 4, "wmin": 0.5, "wmax": 4.0, "vmin": 800, "vmax": 1700, "tags": ["cavern", "night"]},
+	"lungfish": {"name": "肺鱼", "tier": 4, "wmin": 1.0, "wmax": 8.0, "vmin": 850, "vmax": 1900, "tags": ["cavern", "night"]},
+	"giant_salamander": {"name": "大鲵", "tier": 5, "wmin": 5.0, "wmax": 50.0, "vmin": 5000, "vmax": 11000, "tags": ["cavern", "protected", "night"]},
+	"alligator_gar": {"name": "鳄雀鳝", "tier": 5, "wmin": 10.0, "wmax": 100.0, "vmin": 5500, "vmax": 11500, "tags": ["cavern", "night"]},
+	# —— 城市野塘（urban）：皮实/入侵/趣味，节奏快价低 ——
+	"mosquitofish": {"name": "食蚊鱼", "tier": 0, "wmin": 0.002, "wmax": 0.01, "vmin": 1, "vmax": 4, "tags": ["urban"]},
+	"feral_goldfish": {"name": "野金鱼", "tier": 0, "wmin": 0.05, "wmax": 0.4, "vmin": 2, "vmax": 8, "tags": ["urban"]},
+	"feral_guppy": {"name": "野孔雀鱼", "tier": 0, "wmin": 0.001, "wmax": 0.008, "vmin": 2, "vmax": 6, "tags": ["urban"]},
+	"plecostomus": {"name": "清道夫", "tier": 1, "wmin": 0.2, "wmax": 1.5, "vmin": 14, "vmax": 32, "tags": ["urban", "night"]},
+	"crayfish": {"name": "小龙虾", "tier": 1, "wmin": 0.05, "wmax": 0.3, "vmin": 16, "vmax": 34, "tags": ["urban", "night"]},
+	"bullfrog": {"name": "牛蛙", "tier": 1, "wmin": 0.1, "wmax": 0.6, "vmin": 16, "vmax": 36, "tags": ["urban", "night"]},
+	"walking_catfish": {"name": "革胡子鲶", "tier": 1, "wmin": 0.3, "wmax": 2.0, "vmin": 16, "vmax": 40, "tags": ["urban", "night"]},
+	"red_eared_slider": {"name": "巴西龟", "tier": 2, "wmin": 0.3, "wmax": 2.0, "vmin": 60, "vmax": 130, "tags": ["urban"]},
+	"channel_catfish": {"name": "斑点叉尾鮰", "tier": 2, "wmin": 0.5, "wmax": 4.0, "vmin": 60, "vmax": 140, "tags": ["urban", "night"]},
+	"giant_gourami": {"name": "招财鱼", "tier": 2, "wmin": 0.5, "wmax": 3.0, "vmin": 60, "vmax": 140, "tags": ["urban"]},
+	"snapping_turtle": {"name": "大鳄龟", "tier": 3, "wmin": 2.0, "wmax": 30.0, "vmin": 240, "vmax": 500, "tags": ["urban", "night"]},
+	"flathead_catfish": {"name": "平头鲶", "tier": 3, "wmin": 2.0, "wmax": 20.0, "vmin": 240, "vmax": 500, "tags": ["urban", "night"]},
+	"arapaima": {"name": "巨骨舌鱼", "tier": 4, "wmin": 10.0, "wmax": 100.0, "vmin": 850, "vmax": 1900, "tags": ["urban"]},
+	"yangtze_softshell": {"name": "斑鳖", "tier": 5, "wmin": 30.0, "wmax": 200.0, "vmin": 6000, "vmax": 12000, "tags": ["urban", "protected", "night"]},
 }
 
 # 基础品阶权重（rod Lv.1）：58/25/11/4.5/1.3/0.2（%）
@@ -271,6 +395,26 @@ static func _ids_of_tier(ids: Array, tier: int) -> Array:
 
 static func tags_of(id: String) -> Array:
 	return FISH[id].get("tags", ["river"]) if FISH.has(id) else []
+
+
+## 限定鱼配置（{} = 非限定，全时段可遇）。schema: {"phases":[...], "label":..., "hint":...}
+static func limited_of(id: String) -> Dictionary:
+	return FISH[id].get("limited", {}) if FISH.has(id) else {}
+
+
+## 当前时段能否遇到该鱼：限定鱼仅在其 phases 列出的时段出现；非限定鱼总可遇。
+static func is_available(id: String, phase: String) -> bool:
+	var lim: Dictionary = limited_of(id)
+	if lim.is_empty():
+		return true
+	var phases: Array = lim.get("phases", [])
+	return phases.is_empty() or phase in phases
+
+
+## 限定标签（图鉴徽章/说明用），非限定返回 ""。
+static func limited_label(id: String) -> String:
+	var lim: Dictionary = limited_of(id)
+	return str(lim.get("label", "限定")) if not lim.is_empty() else ""
 
 
 ## 鱼竿等级 -> 品阶权重（等级越高，高阶占比越大）。

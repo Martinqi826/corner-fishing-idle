@@ -648,6 +648,7 @@ func _check_save_v11() -> void:
 	g1.focus_pending = 1
 	g1.pet_steals = 4
 	g1.max_fps = 90
+	g1.ui_scale = 1.25
 	g1._save()
 	g1.queue_free()
 	await process_frame
@@ -662,6 +663,7 @@ func _check_save_v11() -> void:
 	_assert(g2.focus_reward_today == 2 and g2.focus_pending == 1, "v11 应恢复专注奖励计数/挂起")
 	_assert(g2.pet_steals == 4, "v11 应恢复宠物偷鱼计数")
 	_assert(g2.max_fps == 90 and Engine.max_fps == 90, "应恢复帧率设置并应用到引擎")
+	_assert(is_equal_approx(g2.ui_scale, 1.25), "应恢复界面缩放设置")
 	g2.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
@@ -687,6 +689,7 @@ func _check_save_v11() -> void:
 	_assert(g3.focus_minutes_total == 0.0 and g3.pet_steals == 0 and g3.focus_pending == 0,
 		"v10→v11 专注/宠物计数应默认零")
 	_assert(g3.max_fps == 30, "旧档无帧率字段 → 应默认 30")
+	_assert(is_equal_approx(g3.ui_scale, 1.0), "旧档无界面缩放字段 → 应默认 1.0")
 	print("  存档 v11：dex首捕/专注/宠物 往返 + v10→v11 无损迁移 通过")
 	g3.queue_free()
 	await process_frame

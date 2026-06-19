@@ -45,10 +45,19 @@ func _run() -> void:
 	_snap("panel_dex.png")
 
 	# 2c) 鱼种详情卡（点鲤鱼，带真实照片）
+	# 注入一条混合变体纪录：验证个人纪录卡 + 变体墙已集/未集混合态（斑斓✓ 鎏金✗ 七彩✓）
+	_main.dex["carp"] = {"n": 14, "w": 3.2, "big": true, "perf": true,
+		"vmask": (1 << 1) | (1 << 3), "fd": "2026-06-19", "wd": "2026-06-19"}
 	_main._detail_fish = "carp"
 	_main._open_panel("fishdetail")
 	await _settle(2)
 	_snap("panel_fishdetail.png")
+	# 详情卡内容超一屏：滚到底再截一张，把关个人纪录卡 + 变体墙
+	var _dsc := _find_detail_scroll(_main)
+	if _dsc != null:
+		_dsc.scroll_vertical = 100000
+		await _settle(3)
+		_snap("panel_fishdetail_lower.png")
 
 	# 3) 升级面板
 	_main._open_panel("rod")
@@ -129,7 +138,7 @@ func _run() -> void:
 	_snap("motion_b.png")
 
 	# 6) UI 对位校验：按钮命中区/落水点画红色标记，美术更新后跑一遍核对是否错位
-	for k in ["catch", "rod", "set"]:
+	for k in _main.btn_centers.keys():
 		var m := ColorRect.new()
 		m.color = Color(1, 0, 0, 0.4)
 		m.size = Vector2(30, 32)
@@ -149,6 +158,17 @@ func _run() -> void:
 func _settle(frames: int) -> void:
 	for i in frames:
 		await process_frame
+
+
+## 递归找详情卡的滚动容器（custom_minimum_size.y == 404，见 ui_panels.fill_fish_detail）。
+func _find_detail_scroll(n: Node) -> ScrollContainer:
+	for c in n.get_children():
+		if c is ScrollContainer and is_equal_approx((c as ScrollContainer).custom_minimum_size.y, 404.0):
+			return c
+		var r := _find_detail_scroll(c)
+		if r != null:
+			return r
+	return null
 
 
 ## 立即结束昼夜底图 crossfade（截图工具需要静帧呈现目标时段，不等 90s 慢淡入）。

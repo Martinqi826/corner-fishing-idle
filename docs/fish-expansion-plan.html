@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>角落垂钓 · 鱼系统扩展方案 v3</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2f3432;
+      --muted: #686d67;
+      --paper: #eee8dc;
+      --paper-2: #f7f3eb;
+      --line: #c9c2b5;
+      --water: #476f78;
+      --pine: #3f4d45;
+      --gold: #d6a85d;
+      --red: #ad5f4d;
+      --shadow: rgba(43, 48, 44, .16);
+      /* 品阶色（与 fish_data.gd TIER_COLORS 对齐） */
+      --t0:#c7c7cc; --t1:#5ac74d; --t2:#4d9ef2; --t3:#b86bf2; --t4:#ff8c1f; --t5:#ff6152;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif; background: #d8d2c4; color: var(--ink); }
+
+    header {
+      min-height: 48vh; display: flex; align-items: flex-end; position: relative; overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(238,232,220,.92) 0%, rgba(207,200,187,.82) 64%, rgba(216,210,196,.96) 100%),
+        radial-gradient(120% 90% at 88% 96%, rgba(71,111,120,.30), rgba(71,111,120,0) 60%);
+    }
+    .hero { width: min(1160px, 92vw); margin: 0 auto; padding: 64px 0 44px; position: relative; z-index: 1; }
+    .eyebrow { margin: 0 0 10px; color: var(--water); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 0 0 14px; max-width: 820px; font-size: clamp(30px, 5vw, 50px); line-height: 1.08; }
+    h2 { margin: 0 0 16px; font-size: 24px; }
+    h3 { margin: 0 0 10px; font-size: 17px; }
+    h4 { margin: 0 0 6px; font-size: 15px; color: var(--pine); }
+    p { margin: 0 0 10px; line-height: 1.76; color: var(--muted); }
+    p:last-child { margin-bottom: 0; }
+    a { color: var(--water); }
+    code { color: var(--water); font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; }
+    .lead { max-width: 880px; font-size: 17px; color: #555b55; line-height: 1.74; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; color: #59605a; background: rgba(255,255,255,.42); font-size: 13px; }
+    .chip b { color: var(--pine); }
+
+    nav { position: sticky; top: 0; z-index: 3; background: rgba(238,232,220,.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(201,194,181,.8); }
+    nav .inner { width: min(1160px, 92vw); margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; }
+    nav a { flex: 0 0 auto; text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; background: rgba(255,255,255,.35); font-size: 13px; }
+    nav a:hover { background: rgba(255,255,255,.75); }
+
+    main { width: min(1160px, 92vw); margin: 0 auto; padding: 40px 0 76px; }
+    section { margin: 0 0 50px; scroll-margin-top: 64px; }
+    .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+    .sec-head .n { color: var(--water); font-weight: 700; font-size: 15px; }
+
+    .grid, .two, .three { display: grid; gap: 14px; }
+    .two { grid-template-columns: 1fr 1fr; }
+    .three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+    .card, .table-wrap, .stat { background: rgba(238,232,220,.72); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 30px var(--shadow); }
+    .card, .table-wrap, .stat { padding: 16px; }
+    .stat strong { display: block; margin-bottom: 4px; font-size: 30px; line-height: 1; color: var(--pine); }
+    .stat span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .card ul, .card ol { margin: 8px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.72; }
+    .card li { margin-bottom: 4px; }
+    .card.accent { border-left: 4px solid var(--water); }
+    .card.gold { border-left: 4px solid var(--gold); }
+    .card.red { border-left: 4px solid var(--red); }
+    .card.pine { border-left: 4px solid var(--pine); }
+    .card h3 { color: var(--ink); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 9px; text-align: left; border-bottom: 1px solid rgba(201,194,181,.78); vertical-align: top; }
+    th { color: var(--pine); font-size: 13px; }
+    td { color: var(--muted); line-height: 1.55; }
+    tbody tr:hover { background: rgba(255,255,255,.28); }
+    td b, td strong { color: var(--pine); }
+
+    .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 9px; background: rgba(255,255,255,.42); border: 1px solid var(--line); color: #535a54; font-size: 12px; white-space: nowrap; }
+    .pill.good { background: rgba(63,77,69,.14); border-color: rgba(63,77,69,.4); color: var(--pine); }
+    .pill.warn { background: rgba(214,168,93,.18); border-color: rgba(214,168,93,.5); color: #9a7327; }
+    .pill.bad  { background: rgba(173,95,77,.16); border-color: rgba(173,95,77,.5); color: var(--red); }
+
+    .verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 4px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+    .verdict > div { padding: 16px 18px; }
+    .verdict .con { background: rgba(173,95,77,.09); }
+    .verdict .pro { background: rgba(63,77,69,.10); border-left: 1px solid var(--line); }
+    .verdict h4 { margin-bottom: 8px; }
+    .verdict ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.7; }
+
+    .callout { margin-top: 14px; padding: 14px 16px; border-radius: 8px; background: rgba(214,168,93,.12); border: 1px solid rgba(214,168,93,.42); }
+    .callout strong { color: #8a6a23; }
+    .callout.water { background: rgba(71,111,120,.10); border-color: rgba(71,111,120,.4); }
+    .callout.water strong { color: var(--water); }
+
+    pre { background: rgba(63,77,69,.07); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: Consolas, "Cascadia Mono", monospace; font-size: 12.5px; color: var(--pine); line-height: 1.6; }
+
+    .tier-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .tier { flex: 1 1 0; min-width: 92px; border-radius: 8px; padding: 10px 8px; text-align: center; color: #fff; box-shadow: 0 6px 14px var(--shadow); }
+    .tier b { display:block; font-size: 15px; }
+    .tier span { font-size: 12px; opacity: .92; }
+
+    .timeline { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0,1fr)); counter-reset: step; margin-top: 6px; }
+    .step { position: relative; padding: 14px; border-left: 3px solid var(--water); background: rgba(247,243,235,.6); border-radius: 8px; }
+    .step::before { counter-increment: step; content: "P" counter(step, decimal); }
+    .step.p0::before { content: "P0"; } .step.p1::before { content: "P1"; } .step.p2::before { content: "P2"; } .step.p3::before { content: "P3"; }
+    .step::before { display: grid; place-items: center; width: 34px; height: 24px; border-radius: 999px; background: var(--water); color: #fff; font-weight: 700; font-size: 12px; margin-bottom: 8px; }
+    .step h4 { font-size: 14px; margin-bottom: 4px; }
+    .step p { font-size: 12.5px; line-height: 1.5; }
+
+    .src-list { margin: 0; padding-left: 20px; line-height: 1.95; font-size: 13.5px; color: var(--muted); }
+    footer { width: min(1160px, 92vw); margin: 0 auto; padding: 6px 0 44px; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 920px) {
+      .two, .three, .verdict, .timeline { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <p class="eyebrow">Corner Fishing · 设计真理文档</p>
+      <h1>鱼系统扩展方案 v3</h1>
+      <p class="lead">玩家说"鱼的种类还是太少了"。本文从<b>钓鱼佬圈子的口径</b>（而非生物学口径）重新校准——该做多少鱼、怎么做才是最优解。结论：不是鱼不够，是结构和存量没做实。</p>
+      <div class="chips">
+        <span class="chip">数据已落地 <b>219 种</b> / 10 钓点</span>
+        <span class="chip">校验 <b>0 失败</b></span>
+        <span class="chip">钓鱼佬口径 <b>200–400</b></span>
+        <span class="chip">美术/系统待跟进</span>
+        <span class="chip">2026-06-19</span>
+      </div>
+      <p class="lead" style="margin-top:14px;font-size:14px;opacity:.85">实现进度：鱼 106→<b>219</b>、钓点 3→<b>10</b> 已落地并过校验；美术（交 Codex）、词缀系统、巨物纪录簿、限定鱼仍为 roadmap。</p>
+    </div>
+  </header>
+
+  <nav><div class="inner">
+    <a href="#s0">0 结论</a>
+    <a href="#s1">1 鱼库</a>
+    <a href="#s2">2 诊断</a>
+    <a href="#s3">3 原则</a>
+    <a href="#s4">4 路线图</a>
+    <a href="#s5">5 品阶</a>
+    <a href="#s6">6 词缀</a>
+    <a href="#s7">7 定价</a>
+    <a href="#s8">8 留存线</a>
+    <a href="#s9">9 美术</a>
+    <a href="#s10">10 实施</a>
+    <a href="#src">参考</a>
+  </div></nav>
+
+  <main>
+
+    <!-- 0 结论 -->
+    <section id="s0">
+      <div class="sec-head"><span class="n">0</span><h2>一句话结论</h2></div>
+      <div class="two">
+        <div class="card accent">
+          <ul>
+            <li><b>不是"鱼不够"，是结构 + 存量没做实</b>：106 条里只有 28 条有正式图标、10 条有 lore。</li>
+            <li>钓鱼佬口径下"值得做的鱼" ≈ <b>200–400 种</b>；我们扩到 ~200–250 踩在市场验证甜点。</li>
+          </ul>
+        </div>
+        <div class="card gold">
+          <ul>
+            <li>长留真正杠杆 = <b>水体多样性 + 破纪录文化</b>，不是"单塘鱼多"。重心：钓点 3 → 8–10 个。</li>
+            <li>交付单位 = <b>主题钓点</b>（每个带 25–40 条成套新鱼），不是散撒鱼名。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1 鱼库 -->
+    <section id="s1">
+      <div class="sec-head"><span class="n">1</span><h2>我们一共有多少种鱼可以用</h2></div>
+      <div class="three" style="margin-bottom:16px">
+        <div class="stat"><strong>35,000+</strong><span>生物学口径（FishBase）<br>= 噪音，不是约束</span></div>
+        <div class="stat"><strong>200–400</strong><span>钓鱼佬口径<br>= 真正有用的区间</span></div>
+        <div class="stat"><strong>106 → ~225</strong><span>我们的目标<br>分期扩张</span></div>
+      </div>
+
+      <h3>钓鱼佬口径（把"有多少鱼"换成"圈子里真正在玩/比/记录的鱼"）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>口径</th><th>谁</th><th>数字</th><th>含义</th></tr></thead>
+          <tbody>
+            <tr><td>全球运动钓最高权威</td><td>IGFA 世界纪录</td><td><b>近 400 种</b> all-tackle</td><td>天花板锚点；乘 line-class/飞蝇/青年组 → 数千类目</td></tr>
+            <tr><td>硬核钓鱼游戏标杆</td><td>俄罗斯钓鱼4 (RF4)</td><td><b>230+ 种</b> / ~18-21 水体</td><td>公认鱼种最全</td></tr>
+            <tr><td>同上</td><td>Fishing Planet</td><td><b>200+ 种</b></td><td>季节/水温/底质驱动</td></tr>
+            <tr><td>钓鱼社区 App</td><td>Fishbrain（1500万钓友）</td><td>识别 <b>300+</b> 运动钓鱼种</td><td>明确只收 sportfish</td></tr>
+            <tr><td>细分圈子</td><td>美国黑鲈赛(B.A.S.S./MLF)</td><td>核心 <b>3-4 种</b>黑鲈</td><td>整个职业巡回赛只围这几种</td></tr>
+            <tr><td>细分圈子</td><td>中国路亚圈</td><td>核心 <b>~10-15 种</b></td><td>鲈/鳜/翘嘴/黑鱼/鳡/鲶/罗非/马口/红鲌/狗鱼</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout"><strong>两个关键观察：</strong>① 黄金区间 200–400 被 IGFA（上限）与 RF4/Fishing Planet（市场甜点）双重锚定。② 没有任何单一玩家长期接触超几十种——丰富感来自<b>换水域/换圈子</b>，不是一个塘鱼多。这决定了下面的全部重心。</div>
+    </section>
+
+    <!-- 2 诊断 -->
+    <section id="s2">
+      <div class="sec-head"><span class="n">2</span><h2>诊断：106 条为什么"感觉少"</h2></div>
+      <div class="tier-row" style="margin-bottom:14px">
+        <div class="tier" style="background:var(--t0)"><b>普通 ×21</b><span>58%</span></div>
+        <div class="tier" style="background:var(--t1)"><b>优良 ×22</b><span>25%</span></div>
+        <div class="tier" style="background:var(--t2)"><b>稀有 ×21</b><span>11%</span></div>
+        <div class="tier" style="background:var(--t3)"><b>史诗 ×21</b><span>4.5%</span></div>
+        <div class="tier" style="background:var(--t4)"><b>传说 ×14</b><span>1.3%</span></div>
+        <div class="tier" style="background:var(--t5)"><b>神话 ×7</b><span>0.2%</span></div>
+      </div>
+      <div class="two">
+        <div class="card red">
+          <ol>
+            <li><b>单池 churn 快</b>：每钓点抽 ~45 条，94% 落在 t0–t2 的 64 条里 → 一两小时常见层全见过。</li>
+            <li><b>高阶看不见</b>：t4+t5 共 21 条只占 1.5%，几乎遇不到，不计入丰富度体感。</li>
+            <li><b>发现曲线前重后平</b>：常见行很快填满，之后只是"已知鱼换稀有度 roll"。</li>
+          </ol>
+        </div>
+        <div class="card red">
+          <ol start="4">
+            <li><b>收集深度隐形</b>：变体其实有 318 个收集格，但图鉴不显式摆出来 → 感受不到"还有这么多没集"。</li>
+            <li><b>缺"换水域"新鲜感</b>：只有 3 个钓点，复刻不出"今天去溪流、明天出海"的核心爽点。</li>
+          </ol>
+        </div>
+      </div>
+      <div class="callout water"><strong>核心：</strong>留存 = 广度 × 深度 × 节奏（轮转）。只加鱼名是最差的单一杠杆。</div>
+    </section>
+
+    <!-- 3 原则 -->
+    <section id="s3">
+      <div class="sec-head"><span class="n">3</span><h2>设计原则</h2></div>
+
+      <h3>3.1 交付单位 = 主题钓点（不是散鱼）</h3>
+      <p>鱼永远是内容本体；钓点是把一批鱼"打包成新内容"的容器。<b>每个新钓点自带 25–40 条成套新鱼。</b>同样"做 30 条鱼"的两种交付方式：</p>
+      <div class="verdict">
+        <div class="con">
+          <h4><span class="pill bad">方式 A</span> 散撒进现有钓点</h4>
+          <ul>
+            <li>老池子 45→60，品阶概率不变 → 老常见鱼各自变罕见一点点（<b>稀释</b>）</li>
+            <li>回访理由：<b>无</b>。同片水、同画面，记不住、不成事件</li>
+            <li>美术：散落各品阶，难成套、难定调</li>
+          </ul>
+        </div>
+        <div class="pro">
+          <h4><span class="pill good">方式 B</span> 打包成新钓点（采纳）</h4>
+          <ul>
+            <li>新背景/新招牌鱼/全空图鉴页/解锁目标 → <b>目的地</b></li>
+            <li>回访理由：<b>有</b>。玩家会想去看看</li>
+            <li>像真钓鱼：换水域=换一套鱼（RF4 卖点是 18 个水体）</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout"><strong>"堆水体 &gt; 堆鱼"的准确含义：</strong>堆"换水域的新鲜感" &gt; 堆"同一塘多几个鱼名"。鱼一条不少做，只是换装法。（例外：往老钓点补鱼用于<b>填补瘦品阶层</b>，属"做厚存量"，是修补而非新内容。）</div>
+
+      <h3 style="margin-top:22px">3.2 价值轴 vs 收集轴 分离</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>轴</th><th>成分</th><th>作用</th></tr></thead>
+          <tbody>
+            <tr><td><b>价值轴</b><br><span class="pill">驱动金币</span></td><td>品阶 × 体重(线性) × 星级 × 钓点 value_mult × 鱼竿</td><td>短中期目标（经济跑步机）</td></tr>
+            <tr><td><b>收集/纪录轴</b><br><span class="pill good">驱动长留</span></td><td>鱼种 × 变体墙 × 词缀图鉴 × 巨物纪录 × 科属套装 × 限定鱼</td><td>金币封顶后的真正目标</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px">经济脊柱永远是 <b>品阶 × 体重</b>；怎么扩鱼都稳。</p>
+    </section>
+
+    <!-- 4 路线图 -->
+    <section id="s4">
+      <div class="sec-head"><span class="n">4</span><h2>规模与分期路线图</h2></div>
+      <p>总量分期到 ~200–250 种，以"钓点"为扩张单位，钓点 3 → <b>8–10 个</b>。</p>
+      <div class="table-wrap" style="margin-bottom:16px">
+        <table>
+          <thead><tr><th>波次</th><th>新钓点（生态）</th><th>新 tag</th><th>候选真实鱼（举例）</th><th>新增</th><th>累计</th></tr></thead>
+          <tbody>
+            <tr><td>当前</td><td>河湾·静水湖·海岸</td><td>river/lake/coast</td><td>（已有 106）</td><td>—</td><td>106</td></tr>
+            <tr><td><span class="pill good">P0</span></td><td>不加钓点，做厚存量</td><td>—</td><td>补 28→106 图标、变体墙显式可见、lore 扩到全 t2+</td><td>0</td><td>106</td></tr>
+            <tr><td><span class="pill">P1</span></td><td>山涧溪流 · 远海深钓</td><td>stream/cold · deep</td><td>招牌鱼已存在；各补 ~10：多鳞白甲/苦花/裸鲤/石爬鮡/虎嘉鱼／蓝鳍金枪/月鱼/灯笼鱼/鮟鱇/巨口鱼</td><td>+20</td><td>~126</td></tr>
+            <tr><td><span class="pill">P2</span></td><td>河口红树林(汽水) · 热带珊瑚礁</td><td><b>brackish</b> · <b>reef</b></td><td>弹涂鱼/虱目鱼/射水鱼/四指马鲅／小丑鱼/刺尾鱼/鹦哥鱼/神仙鱼/苏眉(神话)/狮子鱼</td><td>+60</td><td>~185</td></tr>
+            <tr><td><span class="pill">P3</span></td><td>极地冰湖 · 古潭溶洞 · 城市野塘</td><td><b>polar·cavern·urban</b></td><td>北极红点鲑/白鲑/南极冰鱼／盲鱼/大鲵(神话)/活化石／食蚊鱼/清道夫+趣味"垃圾"彩蛋</td><td>+50</td><td>~235</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout water"><strong>P1 几乎零成本：</strong><code>stream/deep</code> tag 的鱼早已写好（见 <code>fish_data.gd</code>），只缺把它们单独成池的专属钓点（roadmap 里已规划 <code>mountain_stream</code>/<code>deep_sea</code>）。</div>
+      <h3 style="margin-top:18px">每钓点配额（让每个点都"全栈"）</h3>
+      <p>约 12–15 条 t0/t1、8–10 条 t2、5–7 条 t3、2–3 条 t4、1–2 条 t5。哪里都能做梦钓神话，又靠招牌鱼区分性格。</p>
+    </section>
+
+    <!-- 5 品阶 -->
+    <section id="s5">
+      <div class="sec-head"><span class="n">5</span><h2>品阶结构</h2></div>
+      <div class="grid">
+        <div class="card pine"><h3>6 色品阶不动</h3><p>灰绿蓝紫橙红，见色识阶是行业最优解。<b>不加第 7 色</b>破坏认知。</p></div>
+        <div class="card pine"><h3>概率曲线不动</h3><p>58/25/11/4.5/1.3/0.2 保持；靠扩 roster 让每档成员够多，一个 session 内不重复见同一条 t3。</p></div>
+        <div class="card gold"><h3>新增正交维度「限定鱼」</h3><p>不是第 7 色（沿用 6 色 + "限定"徽章）。只在特定<b>事件/天气/时段/季节</b>出现：满月夜才咬的鱼、春汛限定、节日锦鲤变体。把平铺图鉴变成"日历"。</p></div>
+      </div>
+    </section>
+
+    <!-- 6 词缀 -->
+    <section id="s6">
+      <div class="sec-head"><span class="n">6</span><h2>词缀系统：五层鱼牌模型</h2></div>
+      <p>现有 3 条正交轴形式化为 5 层，并新增第 5 层"环境/特性词缀"。<b>纪律：避免乘法通胀。</b></p>
+      <div class="two" style="margin:10px 0">
+        <div class="card accent">
+          <h3>价值轴（4 层，乘法）</h3>
+          <ul>
+            <li>① <b>稀有度(品阶)</b>　决定是哪条鱼、底价区间</li>
+            <li>② <b>体型(重量)</b>　Fisch 线性插值，k² 偏小个体 → 经济脊柱</li>
+            <li>③ <b>品质(星级★)</b>　鱼饵驱动，乘法 ≤×8</li>
+            <li>④ <b>变体(外观)</b>　独立 roll，乘法 ≤×12，超稀有</li>
+          </ul>
+        </div>
+        <div class="card gold">
+          <h3>收集/纪录轴</h3>
+          <ul>
+            <li>④ <b>变体墙</b>　斑斓/鎏金/七彩，106×3 = 318 收集格（头牌）</li>
+            <li>⑤ <b>词缀(新)</b>　环境/状态前缀，做"故事+图鉴+成就"</li>
+            <li>· <b>巨物纪录</b>　每种鱼最大重量进图鉴（钓鱼佬本命，见 §8）</li>
+            <li>· <b>科属套装</b>　鲤科/鲑科/头足等成套，集齐给小 buff/外观</li>
+            <li>· <b>限定收集</b>　事件/季节鱼专属格</li>
+          </ul>
+        </div>
+      </div>
+      <h3>第 5 层「词缀/特性」具体设计</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>类别</th><th>例子</th><th>怎么 roll</th><th>效果</th></tr></thead>
+          <tbody>
+            <tr><td>环境系（钓获当下）</td><td>「晨雾的」「寒潮中的」「月下的」「涨潮时的」「雷雨夜的」</td><td>由当前天气/时段/事件决定</td><td><b>加性</b> +5~15% + 一句氛围文案</td></tr>
+            <tr><td>状态系（鱼本身）</td><td>「怀卵的」「带伤的」「年迈的(成精)」「迷途的(越界)」</td><td>体重/越界 habitat 触发</td><td>加性小幅 + 可选"放生得保育奖励"</td></tr>
+            <tr><td>觅食系</td><td>「贪食的」「警觉的」</td><td>随机</td><td>影响咬钩/挣扎手感的 flavor</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout"><strong>防通胀规则：</strong>词缀走<b>加性、总和封顶 +40%</b>，主要服务图鉴/成就/故事；乘法大头永远只留给"星级×变体"两条超稀有轴。理论封顶 jackpot ≈ 13000×1.4×8×12 ≈ <b>175 万金币</b>，0.0001% 的梦之一杆，做"个人成交纪录"高光即可，经济不会崩。</div>
+    </section>
+
+    <!-- 7 定价 -->
+    <section id="s7">
+      <div class="sec-head"><span class="n">7</span><h2>体重与定价：保 Fisch 模型，新鱼卡带入价值带</h2></div>
+      <p>新生态的鱼<b>必须落进现有同档价值带</b>，无论在哪钓经济都自洽：</p>
+      <pre>t0: 1–18    t1: 14–55    t2: 55–190    t3: 200–580    t4: 750–2200    t5: 4500–13000
+相邻 ×3~4，全谱 ×5000   ← 不动；新鱼按所属档塞进对应区间</pre>
+      <div class="grid" style="margin-top:6px">
+        <div class="card"><h4>钓点 value_mult</h4><p>湖 1.06 / 海 1.12 / 未来深海·极地更高，负责"深水点更值钱"，不破坏带内数学。</p></div>
+        <div class="card"><h4>巨物梦</h4><p><code>wmax</code> 按生态缩放——深海/极地/大洋放真巨物（金枪/旗鱼/鲟鳇/大鲶），溪流放小而精冷水鱼。</p></div>
+        <div class="card"><h4>经济锚点（现状）</h4><p>鱼竿 200×2^(Lv-1)；背包 20→55 / 100→25000；鱼饵 0/800/5000/24000；鱼钩 0/2000/12000/60000。</p></div>
+      </div>
+    </section>
+
+    <!-- 8 留存线 -->
+    <section id="s8">
+      <div class="sec-head"><span class="n">8</span><h2>三条留存线（对应钓鱼圈三种玩家）</h2></div>
+      <div class="three">
+        <div class="card accent"><h3>收集党</h3><p>图鉴 / 变体墙 / 套装</p><ul><li>318 格变体墙</li><li>科属套装</li><li>限定鱼</li></ul></div>
+        <div class="card gold"><h3>纪录党 <span class="pill warn">本命</span></h3><p>个人巨物纪录簿 + 钓鱼比赛事件</p><ul><li>每种鱼记录个人最大重量，破纪录高光（IGFA 文化家用化）</li><li>限时事件冲体重榜（"本周末·翘嘴争霸"）</li><li><b>优先级提前到 P1</b></li></ul></div>
+        <div class="card pine"><h3>数值党</h3><p>进阶 / 经济</p><ul><li>鱼竿/饵/钩进阶</li><li>金币经济</li></ul></div>
+      </div>
+      <div class="callout water"><strong>为什么纪录党优先：</strong>钓鱼圈核心 dopamine 是"破纪录/钓到本命大物"，不是"集齐图鉴"。IGFA 整个体系就是围着世界纪录转的——这是最贴钓鱼佬心智的长留机制，且与现有 <code>event_data.gd</code> 事件框架同构、低干扰、契合"安静桌面陪伴"定位。</div>
+    </section>
+
+    <!-- 9 美术 -->
+    <section id="s9">
+      <div class="sec-head"><span class="n">9</span><h2>美术节奏与质量门（"感觉多"的关键）</h2></div>
+      <div class="two">
+        <div class="card red"><h3>以"美术成套"为节拍</h3><p>绝不放占位图进 runtime（见 <code>docs/fish_icon_manifest.md</code> 质量门）。缺图标的鱼按品阶回退通用图标，但<b>不计入"已完成"</b>——宁可慢，不要一堆占位图。</p></div>
+        <div class="card pine"><h3>每个 Phase 双重把关</h3><p><code>tools/validate_game.gd</code>（逻辑必须全过）+ <code>tools/dev_screenshot.gd</code>（视觉人工把关）。</p></div>
+      </div>
+    </section>
+
+    <!-- 10 实施 -->
+    <section id="s10">
+      <div class="sec-head"><span class="n">10</span><h2>实施顺序（建议）</h2></div>
+      <div class="timeline">
+        <div class="step p0"><h4>做厚存量</h4><p>补图标、变体墙显式可见、lore 扩写。零经济风险，最快见效。</p></div>
+        <div class="step p1"><h4>两钓点 + 纪录簿</h4><p>山涧溪流 + 远海深钓（tag/招牌鱼已就绪，各补 ~10 鱼）；同步做个人巨物纪录簿框架。</p></div>
+        <div class="step p2"><h4>河口 + 珊瑚礁</h4><p>珊瑚礁=颜值变体天堂，自带收集卖点。</p></div>
+        <div class="step p3"><h4>奇观生态 + 系统</h4><p>极地/溶洞/野塘 + 限定鱼框架 + 科属套装 + 钓鱼比赛事件。</p></div>
+      </div>
+      <div class="callout" style="margin-top:18px"><strong>存档：</strong>沿用现有版本化迁移（旧档默认落点 <code>river_bend</code>），新增字段向后兼容。</div>
+    </section>
+
+    <!-- 参考 -->
+    <section id="src">
+      <div class="sec-head"><span class="n">附</span><h2>参考来源</h2></div>
+      <ul class="src-list">
+        <li>IGFA《World Record Game Fishes》（近 400 种 all-tackle 纪录）<a href="https://igfa.org/world-record-game-fishes/">igfa.org/world-record-game-fishes</a></li>
+        <li>Russian Fishing 4（Steam，230+ 种）<a href="https://store.steampowered.com/app/766570/Russian_Fishing_4/">Steam</a> · 鱼种统计 <a href="https://en.rf4-stat.ru/fish/">rf4-stat.ru</a></li>
+        <li>Fishing Planet（200+ 种）<a href="https://store.steampowered.com/app/380600/Fishing_Planet/">Steam</a></li>
+        <li>Fishbrain Fish ID（300+ 运动钓鱼种）<a href="https://fishbrain.com/features/fish-identifier">fishbrain.com</a></li>
+        <li>IGFA 按种纪录参考 <a href="https://www.oneoutdoors.org/guides/igfa-records-by-species">oneoutdoors.org</a></li>
+        <li>内部：<code>docs/fish-research.md</code> · <code>docs/spot-research-20260614.md</code> · <code>docs/spot-expansion-summary-20260614.md</code></li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>角落垂钓 · 鱼系统扩展方案 v3 · 2026-06-19 · 配套 Markdown 源：<code>docs/fish-expansion-plan.md</code>（设计真理以 MD 为准，本 HTML 为人读视图）</footer>
+</body>
+</html>

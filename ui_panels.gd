@@ -1343,11 +1343,114 @@ static func fill_fish_detail(g: CornerFishing, v: VBoxContainer) -> void:
 	# —— 个人纪录 ——
 	if not rec.is_empty():
 		var fd := str(rec.get("fd", ""))
+		var wd := str(rec.get("wd", ""))
+		var pw := float(rec.get("w", 0.0))
+		var wmax := float(info["wmax"])
+		var pct := int(round(pw / wmax * 100.0)) if wmax > 0.0 else 0
 		col.add_child(_kv_card([
 			["累计钓获", "×%d" % int(rec.get("n", 1))],
-			["最大纪录", "%.2f kg" % float(rec.get("w", 0.0))],
+			["🏆 个人最大", "%.2f kg　·　理论上限 %.2f kg（%d%%）" % [pw, wmax, pct]],
+			["破纪录于", wd if wd != "" else "—"],
 			["首次捕获", fd if fd != "" else "很久以前"],
 		]))
+
+	# —— 变体墙（显式 4 格：普通 / 斑斓 / 鎏金 / 七彩）——
+	var vmask := int(rec.get("vmask", 0))
+	var vgot := (1 if not rec.is_empty() else 0)
+	for vi in range(1, FishData.VARIANT_NAMES.size()):
+		if vmask & (1 << vi):
+			vgot += 1
+	var vwrap := PanelContainer.new()
+	vwrap.add_theme_stylebox_override("panel", paper_style(0.95))
+	var vmar := MarginContainer.new()
+	for s in ["left", "right", "top", "bottom"]:
+		vmar.add_theme_constant_override("margin_" + s, 8)
+	vwrap.add_child(vmar)
+	var vcol := VBoxContainer.new()
+	vcol.add_theme_constant_override("separation", 6)
+	vmar.add_child(vcol)
+	var vtitle := Label.new()
+	vtitle.text = "变体墙　%d / %d" % [vgot, FishData.VARIANT_NAMES.size()]
+	vtitle.add_theme_font_size_override("font_size", 12)
+	vtitle.add_theme_color_override("font_color", Color(0.50, 0.47, 0.40))
+	vcol.add_child(vtitle)
+	var vrow := HBoxContainer.new()
+	vrow.add_theme_constant_override("separation", 6)
+	vcol.add_child(vrow)
+	for vi in range(FishData.VARIANT_NAMES.size()):
+		var got := (not rec.is_empty()) if vi == 0 else ((vmask & (1 << vi)) != 0)
+		var vname := "普通" if vi == 0 else str(FishData.VARIANT_NAMES[vi])
+		var vc: Color = Color(0.42, 0.39, 0.34) if vi == 0 else FishData.variant_color(vi)
+		var slot := PanelContainer.new()
+		slot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var ssb := StyleBoxFlat.new()
+		ssb.bg_color = Color(vc.r, vc.g, vc.b, 0.14) if got else Color(0.0, 0.0, 0.0, 0.04)
+		ssb.set_border_width_all(1)
+		ssb.border_color = Color(vc.r, vc.g, vc.b, 0.8) if got else Color(0.3, 0.28, 0.24, 0.35)
+		ssb.set_corner_radius_all(6)
+		ssb.set_content_margin_all(6)
+		slot.add_theme_stylebox_override("panel", ssb)
+		var sbox := VBoxContainer.new()
+		sbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		sbox.add_theme_constant_override("separation", 2)
+		slot.add_child(sbox)
+		var snm := Label.new()
+		snm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		snm.text = vname
+		snm.add_theme_font_size_override("font_size", 12)
+		snm.add_theme_color_override("font_color", vc.darkened(0.2) if got else Color(0.5, 0.47, 0.42, 0.6))
+		sbox.add_child(snm)
+		var sst := Label.new()
+		sst.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sst.add_theme_font_size_override("font_size", 11)
+		if got:
+			sst.text = "已遇" if vi == 0 else "✓ ×%d" % int(FishData.VARIANT_MULTS[vi])
+			sst.add_theme_color_override("font_color", vc.darkened(0.1))
+		else:
+			sst.text = "待捕"
+			sst.add_theme_color_override("font_color", Color(0.5, 0.47, 0.42, 0.5))
+		sbox.add_child(sst)
+		vrow.add_child(slot)
+	col.add_child(vwrap)
+
+	# —— 限定说明（仅限定鱼）：当前时段能否遇到 ——
+	var lim := FishData.limited_of(id)
+	if not lim.is_empty():
+		var avail := FishData.is_available(id, g.day_phase)
+		var night := Color(0.40, 0.47, 0.72)
+		var lwrap := PanelContainer.new()
+		var lsb := StyleBoxFlat.new()
+		lsb.bg_color = Color(night.r, night.g, night.b, 0.16)
+		lsb.set_border_width_all(1)
+		lsb.border_color = Color(night.r, night.g, night.b, 0.55)
+		lsb.set_corner_radius_all(8)
+		lsb.set_content_margin_all(8)
+		lwrap.add_theme_stylebox_override("panel", lsb)
+		var lbox := VBoxContainer.new()
+		lbox.add_theme_constant_override("separation", 3)
+		lwrap.add_child(lbox)
+		var phase_cn := []
+		for p in lim.get("phases", []):
+			phase_cn.append(Weather.display_name(str(p)))
+		var lt := Label.new()
+		lt.text = "🌙 限定 · %s　（仅 %s 可遇）" % [str(lim.get("label", "限定鱼")), "／".join(phase_cn)]
+		lt.add_theme_font_size_override("font_size", 13)
+		lt.add_theme_color_override("font_color", Color(0.82, 0.86, 0.97))
+		lbox.add_child(lt)
+		var la := Label.new()
+		la.text = ("✓ 此刻正当时，快去钓！" if avail else "✗ 当前不可遇，换到对应时段再来")
+		la.add_theme_font_size_override("font_size", 12)
+		la.add_theme_color_override("font_color", Color(0.66, 0.84, 0.60) if avail else Color(0.90, 0.66, 0.54))
+		lbox.add_child(la)
+		if lim.has("hint"):
+			var lh := Label.new()
+			lh.text = "「%s」" % str(lim["hint"])
+			lh.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			lh.custom_minimum_size = Vector2(470, 0)
+			lh.add_theme_font_size_override("font_size", 11)
+			lh.add_theme_color_override("font_color", Color(0.72, 0.74, 0.82))
+			lbox.add_child(lh)
+		col.add_child(lwrap)
 
 	# —— 按钮：百科外链 + 返回图鉴 ——
 	var btns := HBoxContainer.new()
@@ -1507,7 +1610,10 @@ static func dex_card(g: CornerFishing, id: String) -> Control:
 	var nm := Label.new()
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	nm.clip_text = true
-	nm.text = FishData.display_name(id) if known else "？？？"
+	if known and not FishData.limited_of(id).is_empty():
+		nm.text = "🌙" + FishData.display_name(id)   # 限定鱼月亮徽标
+	else:
+		nm.text = FishData.display_name(id) if known else "？？？"
 	nm.add_theme_font_size_override("font_size", DT.FS_MICRO)
 	nm.add_theme_color_override("font_color", tc if known else DT.TEXT_FAINT_GLASS)
 	box.add_child(nm)
@@ -1751,6 +1857,25 @@ static func fill_settings(g: CornerFishing, v: VBoxContainer) -> void:
 	col.add_theme_constant_override("separation", DT.SP_3)
 	sc.add_child(col)
 
+	# 自动垂钓（原底栏开关迁来）：开=浮标自动起竿/起钩；关=手动操作
+	var cast_row := HBoxContainer.new()
+	cast_row.add_theme_constant_override("separation", 8)
+	var cast_lbl := Label.new()
+	cast_lbl.text = "自动垂钓"
+	cast_lbl.add_theme_font_size_override("font_size", DT.FS_SM)
+	cast_lbl.add_theme_color_override("font_color", DT.TEXT_ON_GLASS)
+	cast_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cast_row.add_child(cast_lbl)
+	var cast_btn := CheckButton.new()
+	cast_btn.button_pressed = g.auto_cast
+	cast_btn.focus_mode = Control.FOCUS_NONE
+	cast_btn.toggled.connect(func(on: bool) -> void:
+		g.auto_cast = on
+		g._update_action_button())
+	cast_row.add_child(cast_btn)
+	col.add_child(cast_row)
+	col.add_child(HSeparator.new())
+
 	# 自动卖鱼（付费占位）
 	var auto_row := HBoxContainer.new()
 	auto_row.add_theme_constant_override("separation", 8)
@@ -1826,6 +1951,37 @@ static func fill_settings(g: CornerFishing, v: VBoxContainer) -> void:
 	gap.custom_minimum_size = Vector2(0, 6)
 	col.add_child(gap)
 	col.add_child(HSeparator.new())
+
+	# 界面缩放（带框模式整窗等比放大，小字一起变大；不改布局、不会错位）
+	var ui_lbl := Label.new()
+	ui_lbl.text = "界面缩放"
+	ui_lbl.add_theme_font_size_override("font_size", DT.FS_SM)
+	ui_lbl.add_theme_color_override("font_color", DT.TEXT_MUTED_GLASS)
+	col.add_child(ui_lbl)
+	var ui_row := HBoxContainer.new()
+	ui_row.add_theme_constant_override("separation", DT.SP_2)
+	for s in g.UI_SCALE_OPTIONS:
+		var sb := Button.new()
+		sb.text = "%d%%" % int(round(s * 100.0))
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sb.custom_minimum_size = Vector2(0, 30)
+		var active: bool = is_equal_approx(g.ui_scale, s)
+		apply_tab_skin(sb, active)
+		if not active:
+			sb.pressed.connect(func() -> void:
+				g._set_ui_scale(s)
+				g._save()
+				g._refresh_panel())   # 重建设置页 → 高亮跳到新档
+		ui_row.add_child(sb)
+	col.add_child(ui_row)
+	var ui_hint := Label.new()
+	ui_hint.text = "整个窗口等比放大，桌面占地也会随之变大"
+	ui_hint.add_theme_font_size_override("font_size", DT.FS_2XS)
+	ui_hint.add_theme_color_override("font_color", DT.TEXT_FAINT_GLASS)
+	col.add_child(ui_hint)
+	var gap_ui := Control.new()
+	gap_ui.custom_minimum_size = Vector2(0, 6)
+	col.add_child(gap_ui)
 
 	# 帧率（挂件默认 30 省电；可调高换更顺滑的画面，更耗电）
 	var fps_lbl := Label.new()
