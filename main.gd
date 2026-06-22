@@ -55,6 +55,7 @@ var rod_level := 1
 var bag_level := 1
 var bait_level := 0  # FishData.BAITS 下标，金币永久升级
 var hook_level := 0  # FishData.HOOKS 下标，决定双钩几率
+var lure_level := 0  # FishData.LURES 下标，决定稀有变体偏置（vbias），金币永久升级
 var inventory: Array = []  # 每条 {"id", "w", "v", "q"(星级)}，一条鱼占一格
 var display: Array = []     # 陈列架上的鱼（离开鱼篓、永久展示），最多 Decor.NUM_SLOTS 件
 var lifetime_coins := 0    # 累计卖鱼所得
@@ -859,9 +860,19 @@ func _catch_value_mult() -> float:
 	return Spots.catch_value_mult(self)
 
 
+## 变体偏置累加器（P2 变体杠杆）：各收集杠杆贡献相加，喂给 FishData.roll_variant 抬高变体率。
+## 目前来源：诱饵/窝料成长线（lure_level）。以后加来源（钓点亲和/悬赏等）只在此 += 一行即可。
+## 0 级窝料 → 0，与基线逐位一致；上不封顶交由 roll_variant 内部 clamp(0,10)。
+func _variant_bias() -> float:
+	return FishData.lure_vbias(lure_level)
+
+
 ## 钓一条鱼：限定当前钓点鱼池，应用钓点/事件增值系数。
-func _roll_one(luck: int, vbias := 0.0) -> Dictionary:
-	var c := FishData.roll_catch(rng, rod_level, bait_level, luck, _spot_pool(), vbias)
+## vbias<0（默认哨兵）→ 取当前各杠杆累加值 _variant_bias()（在线/离线都吃诱饵加成）；
+## 传非负值则按显式覆盖（专注奖励等强制场景留口）。
+func _roll_one(luck: int, vbias := -1.0) -> Dictionary:
+	var vb := vbias if vbias >= 0.0 else _variant_bias()
+	var c := FishData.roll_catch(rng, rod_level, bait_level, luck, _spot_pool(), vb)
 	var vm := _catch_value_mult()
 	if vm != 1.0:
 		c["v"] = max(1, int(round(float(c["v"]) * vm)))
@@ -1753,6 +1764,7 @@ func _ach_done(a: Dictionary) -> bool:
 		"rod": return rod_level >= int(a["n"])
 		"bait": return bait_level >= int(a["n"])
 		"hook": return hook_level >= int(a["n"])
+		"lure": return lure_level >= int(a["n"])
 		"maxweight": return _dex_max_weight() >= float(a["n"])
 		"display": return display.size() >= int(a["n"])
 		"variant": return best_variant >= int(a["n"])
@@ -1851,6 +1863,25 @@ func _try_upgrade_hook() -> void:
 	_check_achievements()
 	_update_hud()
 	_toast("换上了%s，双钩几率提升！" % nxt["name"], 2.4, Color(0.6, 0.85, 0.5))
+	_save()
+	_refresh_panel()   # 升级页已是鱼篓面板「装备」页签，原地刷新即可
+
+
+func _try_upgrade_lure() -> void:
+	if lure_level >= FishData.LURES.size() - 1:
+		return
+	var nxt: Dictionary = FishData.LURES[lure_level + 1]
+	var cost := int(nxt["cost"])
+	if coins < cost:
+		Audio.play_ui("ui_error")
+		_toast("金币不足", 1.5, Color(1.0, 0.5, 0.4))
+		return
+	coins -= cost
+	lure_level += 1
+	Audio.play_sfx("upgrade")
+	_check_achievements()
+	_update_hud()
+	_toast("撒下%s，稀有变体几率提升！" % nxt["name"], 2.4, Color(0.78, 0.62, 0.95))
 	_save()
 	_refresh_panel()   # 升级页已是鱼篓面板「装备」页签，原地刷新即可
 

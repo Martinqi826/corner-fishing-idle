@@ -8,6 +8,7 @@ class_name SaveSystem
 ## v10 稀有变体：inv/display 第 6 元 var、dex 第 5 元 vmask、best_var；旧档默认普通(0)。
 ## v11 陪伴向：dex 第 6 元 fd(首捕日期，水族箱纪录卡用)；专注奖励 focus_min/rt/rd/pend；
 ##     桌面宠物 pet_steals。旧档默认 fd=""、专注/宠物计数 0（display 复用为水族箱，无损）。
+## v12 第四成长线：lure(诱饵/窝料下标，决定稀有变体偏置 vbias)。旧档默认 0=无窝料（与基线一致，无损）。
 
 const OFFLINE_CAP := 8.0 * 3600.0
 
@@ -23,12 +24,13 @@ static func collect(g) -> Dictionary:
 		disp.append([c["id"], c["w"], c["v"], int(c.get("q", 0)),
 			1 if bool(c.get("lock", false)) else 0, int(c.get("var", 0))])
 	var data := {
-		"ver": 11,
+		"ver": 12,
 		"coins": g.coins,
 		"rod_level": g.rod_level,
 		"bag_level": g.bag_level,
 		"bait": g.bait_level,
 		"hook": g.hook_level,
+		"lure": g.lure_level,   # v12 第四成长线：诱饵/窝料（决定稀有变体偏置 vbias）
 		"inv": inv,
 		"display": disp,
 		"lt_coins": g.lifetime_coins,
@@ -112,6 +114,7 @@ static func apply(g, data: Dictionary) -> void:
 	g.bag_level = max(1, int(data.get("bag_level", 1)))  # v1 无此字段 → 1
 	g.bait_level = clampi(int(data.get("bait", 0)), 0, FishData.BAITS.size() - 1)  # v2 及更早 → 蚯蚓
 	g.hook_level = clampi(int(data.get("hook", 0)), 0, FishData.HOOKS.size() - 1)  # 旧档 → 基础钩
+	g.lure_level = clampi(int(data.get("lure", 0)), 0, FishData.LURES.size() - 1)  # v11 及更早 → 无窝料
 	g.inventory = []
 	for e in data.get("inv", []):           # v1 无此字段 → 空背包
 		if e is Array and e.size() >= 3 and FishData.FISH.has(str(e[0])):

@@ -41,6 +41,9 @@ func _run() -> void:
 	print("=== 鱼钩 / 双钩 ===")
 	await _check_hook()
 
+	print("=== 诱饵 / 窝料（变体杠杆）===")
+	await _check_lure()
+
 	print("=== 成就系统 ===")
 	await _check_achievements_feature()
 
@@ -104,7 +107,7 @@ func _run() -> void:
 	print("=== 桌面宠物（小馋猫）===")
 	await _check_pet()
 
-	print("=== 存档 v11 往返 / v10→v11 迁移 ===")
+	print("=== 存档 v11/v12 往返 / 旧档迁移 ===")
 	await _check_save_v11()
 
 	print("=== 主界面入口收敛（点金币开面板）===")
@@ -504,6 +507,46 @@ func _check_hook() -> void:
 	await process_frame
 
 
+## 诱饵/窝料（P2 变体杠杆第四成长线）：数据档位 + lure_level→_variant_bias()→_roll_one 端到端接线。
+func _check_lure() -> void:
+	_assert(FishData.LURES.size() == 4, "诱饵应 4 档")
+	_assert(FishData.lure_vbias(0) == 0.0, "无窝料 vbias 应为 0（基线不破）")
+	_assert(FishData.lure_vbias(3) > FishData.lure_vbias(1), "高档窝料 vbias 应更高")
+	_assert(FishData.lure_vbias(99) == FishData.lure_vbias(3), "越界档位应夹到最高档")
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = false
+	root.add_child(g)
+	await process_frame
+	# _variant_bias() 累加器：0 级窝料贡献 0，满级 > 0（接到杠杆）
+	g.lure_level = 0
+	_assert(g._variant_bias() == 0.0, "0 级窝料 _variant_bias() 应为 0")
+	g.lure_level = FishData.LURES.size() - 1
+	_assert(g._variant_bias() > 0.0, "满级窝料 _variant_bias() 应 > 0")
+	# 端到端：满级窝料的 _roll_one 变体率应显著高于无窝料（统计，证明接线生效）
+	g.lure_level = 0
+	var base_v := 0
+	for i in 6000:
+		if int(g._roll_one(0).get("var", 0)) >= 1:
+			base_v += 1
+	g.lure_level = FishData.LURES.size() - 1
+	var lured_v := 0
+	for i in 6000:
+		if int(g._roll_one(0).get("var", 0)) >= 1:
+			lured_v += 1
+	print("  变体出现率(各 6000)：无窝料=%d / 满级窝料=%d" % [base_v, lured_v])
+	_assert(lured_v > base_v, "满级窝料应显著抬高 _roll_one 的变体出现率（杠杆接线生效）")
+	# 升级流程 + 成就
+	g.coins = 999999
+	for i in FishData.LURES.size() - 1:
+		g._try_upgrade_lure()
+	_assert(g.lure_level == FishData.LURES.size() - 1, "应能逐级升满窝料")
+	g._check_achievements()
+	_assert(g.achievements_done.has("lure_master"), "用上麝香窝料应解锁成就")
+	print("  诱饵：4 档 / 累加器 / _roll_one 接线 / 升级 / 成就 通过")
+	g.queue_free()
+	await process_frame
+
+
 func _check_focus() -> void:
 	var g: Node = load("res://main.tscn").instantiate()
 	g.save_enabled = false
@@ -653,6 +696,7 @@ func _check_save_v11() -> void:
 	g1.focus_reward_date = g1._today_key()
 	g1.focus_pending = 1
 	g1.pet_steals = 4
+	g1.lure_level = 2   # v12 诱饵/窝料
 	g1.max_fps = 90
 	g1.ui_scale = 1.25
 	g1._save()
@@ -668,6 +712,7 @@ func _check_save_v11() -> void:
 	_assert(absf(g2.focus_minutes_total - 137.5) < 0.01, "v11 应恢复累计专注分钟")
 	_assert(g2.focus_reward_today == 2 and g2.focus_pending == 1, "v11 应恢复专注奖励计数/挂起")
 	_assert(g2.pet_steals == 4, "v11 应恢复宠物偷鱼计数")
+	_assert(g2.lure_level == 2, "v12 应恢复诱饵/窝料等级")
 	_assert(g2.max_fps == 90 and Engine.max_fps == 90, "应恢复帧率设置并应用到引擎")
 	_assert(is_equal_approx(g2.ui_scale, 1.25), "应恢复界面缩放设置")
 	g2._set_ui_scale(9.0)
@@ -698,9 +743,10 @@ func _check_save_v11() -> void:
 	_assert(int(g3.dex["kaluga"].get("vmask", 0)) == (1 << 3), "v10→v11 应保留 dex 变体掩码")
 	_assert(g3.focus_minutes_total == 0.0 and g3.pet_steals == 0 and g3.focus_pending == 0,
 		"v10→v11 专注/宠物计数应默认零")
+	_assert(g3.lure_level == 0, "旧档无 lure 字段 → 应默认无窝料(0)")
 	_assert(g3.max_fps == 30, "旧档无帧率字段 → 应默认 30")
 	_assert(is_equal_approx(g3.ui_scale, 1.0), "旧档无界面缩放字段 → 应默认 1.0")
-	print("  存档 v11：dex首捕/专注/宠物 往返 + v10→v11 无损迁移 通过")
+	print("  存档 v11/v12：dex首捕/专注/宠物/诱饵 往返 + 旧档无损迁移 通过")
 	g3.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)

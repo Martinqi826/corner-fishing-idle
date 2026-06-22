@@ -314,6 +314,21 @@ const HOOKS := [
 	{"name": "双叉钩", "cost": 60000, "double": 0.32, "desc": "一线两钩，常常成对上鱼"},
 ]
 
+# —— 诱饵/窝料：第四条成长线，决定「稀有变体」偏置（vbias）。鱼竿管稀有度、鱼饵管星级、
+# 鱼钩管产量、诱饵管变体——补齐四轴对称。vbias 喂给 roll_variant 按 (1+vbias) 抬高变体率；
+# 0 级（无窝料）vbias=0，与基线逐位一致（不破回归）。作为变体墙收集轴的专属长线 coin sink。——
+const LURES := [
+	{"name": "无窝料", "cost": 0, "vbias": 0.0, "desc": "空钩直钓，花色全凭运气"},
+	{"name": "碎米窝", "cost": 3000, "vbias": 0.6, "desc": "撒把碎米打窝，斑斓鱼更常照面"},
+	{"name": "酒米窝", "cost": 18000, "vbias": 1.5, "desc": "发酵酒米，鎏金鱼明显变勤"},
+	{"name": "麝香窝料", "cost": 90000, "vbias": 3.0, "desc": "老饵师麝香配方，七彩亦偶现身"},
+]
+
+
+## 诱饵/窝料等级 -> 变体偏置 vbias（喂给 roll_variant）。越界自动夹取。
+static func lure_vbias(lure_idx: int) -> float:
+	return float(LURES[clampi(lure_idx, 0, LURES.size() - 1)]["vbias"])
+
 
 ## 星级抽取：逐级 roll，失败即停。
 static func roll_quality(bait_idx: int, rng: RandomNumberGenerator) -> int:

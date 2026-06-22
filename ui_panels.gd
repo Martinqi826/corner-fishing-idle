@@ -512,8 +512,9 @@ static func fill_stats_tab(g: CornerFishing, v: VBoxContainer) -> void:
 		["累计专注", "%d 分钟" % int(g.focus_minutes_total)],
 		["猫税", "被叼走 %d 条" % g.pet_steals],
 		["鱼篓容量", "%d 格" % g._bag_capacity()],
-		["当前装备", "鱼竿 Lv.%d · %s · %s" % [
-			g.rod_level, FishData.BAITS[g.bait_level]["name"], FishData.HOOKS[g.hook_level]["name"]]],
+		["当前装备", "鱼竿 Lv.%d · %s · %s · %s" % [
+			g.rod_level, FishData.BAITS[g.bait_level]["name"], FishData.HOOKS[g.hook_level]["name"],
+			FishData.LURES[g.lure_level]["name"]]],
 	]
 	var sc0 := ScrollContainer.new()
 	sc0.custom_minimum_size = Vector2(0, 360)
@@ -1017,8 +1018,9 @@ static func fill_tasks_tab(g: CornerFishing, v: VBoxContainer) -> void:
 		["累计专注", "%d 分钟" % int(g.focus_minutes_total)],
 		["猫税", "被叼走 %d 条" % g.pet_steals],
 		["鱼篓容量", "%d 格" % g._bag_capacity()],
-		["当前装备", "鱼竿 Lv.%d · %s · %s" % [
-			g.rod_level, FishData.BAITS[g.bait_level]["name"], FishData.HOOKS[g.hook_level]["name"]]],
+		["当前装备", "鱼竿 Lv.%d · %s · %s · %s" % [
+			g.rod_level, FishData.BAITS[g.bait_level]["name"], FishData.HOOKS[g.hook_level]["name"],
+			FishData.LURES[g.lure_level]["name"]]],
 	]
 	for r in rows:
 		list.add_child(_kv_row(str(r[0]), str(r[1])))
@@ -1963,6 +1965,24 @@ static func fill_upgrades(g: CornerFishing, v: VBoxContainer) -> void:
 		else:
 			rw[1].add_child(make_pill("🔒 %d" % int(h["cost"]), DT.GLASS_ROW, DT.TEXT_FAINT_GLASS))
 		list.add_child(rw[0])
+
+	# 诱饵 / 窝料（决定稀有变体几率）
+	_section(list, "诱饵 · 决定稀有变体几率（斑斓/鎏金/七彩，卖价 ×2/×5/×12）")
+	for i in FishData.LURES.size():
+		var lu: Dictionary = FishData.LURES[i]
+		var lsub := "%s · 变体几率 ×%.1f" % [lu.get("desc", ""), 1.0 + float(lu["vbias"])]
+		var lcur := i == g.lure_level
+		var lrw := list_row("res://assets/art/equipment/tackle_box.png", str(lu["name"]), lsub, lcur)
+		if lcur:
+			lrw[1].add_child(make_pill("使用中", DT.GOLD, DT.INK_ON_GOLD))
+		elif i == g.lure_level + 1:
+			var lcost := int(lu["cost"])
+			_equip_btn(lrw[1], "升级 %d" % lcost, g.coins >= lcost, true, g._try_upgrade_lure)
+		elif i < g.lure_level:
+			lrw[1].add_child(make_pill("已超越", DT.GLASS_ROW_HOVER, DT.TEXT_MUTED_GLASS))
+		else:
+			lrw[1].add_child(make_pill("🔒 %d" % int(lu["cost"]), DT.GLASS_ROW, DT.TEXT_FAINT_GLASS))
+		list.add_child(lrw[0])
 	v.add_child(sc)
 
 
@@ -2409,7 +2429,7 @@ static func fill_intro(g: CornerFishing, v: VBoxContainer) -> void:
 	var tips := [
 		"· 浮标会自动钓鱼，钓到的鱼进「鱼篓」。",
 		"· 点右下角 🐟 鱼篓：卖鱼换金币，还能看图鉴 / 订单 / 成就 / 统计。",
-		"· 点 🎣 鱼竿：升级鱼竿(稀有度)、鱼饵(星级)、鱼钩(双钩)。",
+		"· 点 🎣 鱼竿：升级鱼竿(稀有度)、鱼饵(星级)、鱼钩(双钩)、诱饵(稀有变体)。",
 		"· 点 ⚙ 设置：调音量、专注模式、退出。",
 		"· 按住场景空白处，可把窗口拖到屏幕任意角落。",
 		"· 留意金色「收鱼郎」和蓝色「鱼汛」——限时高收益时刻！",
