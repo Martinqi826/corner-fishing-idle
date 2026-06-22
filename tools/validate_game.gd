@@ -110,6 +110,12 @@ func _run() -> void:
 	print("=== 主界面入口收敛（点金币开面板）===")
 	await _check_hud_entry()
 
+	print("=== 测试模式（开发工具）===")
+	await _check_test_mode()
+
+	print("=== 开启新存档（开发工具）===")
+	await _check_new_save()
+
 	print("=== 结果: %d 失败 ===" % failures)
 	quit(1 if failures > 0 else 0)
 
@@ -664,6 +670,10 @@ func _check_save_v11() -> void:
 	_assert(g2.pet_steals == 4, "v11 应恢复宠物偷鱼计数")
 	_assert(g2.max_fps == 90 and Engine.max_fps == 90, "应恢复帧率设置并应用到引擎")
 	_assert(is_equal_approx(g2.ui_scale, 1.25), "应恢复界面缩放设置")
+	g2._set_ui_scale(9.0)
+	_assert(is_equal_approx(g2.ui_scale, g2.UI_SCALE_MAX), "界面缩放超上限应夹到 UI_SCALE_MAX")
+	g2._set_ui_scale(0.05)
+	_assert(is_equal_approx(g2.ui_scale, g2.UI_SCALE_MIN), "界面缩放低于下限应夹到 UI_SCALE_MIN")
 	g2.queue_free()
 	await process_frame
 	DirAccess.remove_absolute(path)
@@ -1155,6 +1165,20 @@ func _check_variants() -> void:
 	_assert(vc[0] > vc[1] and vc[1] > vc[2] and vc[2] > vc[3], "变体越华丽越稀有")
 	_assert(vc[3] > 0, "5 万次内应出七彩")
 	_assert(FishData.VARIANT_MULTS[3] > FishData.VARIANT_MULTS[1], "高变体价值倍率更高")
+	# 收集杠杆（P2 地基）：vbias>0 应整体抬高变体出现率；vbias=0 与基线逐位一致（同种子同流）
+	var rb := RandomNumberGenerator.new()
+	rb.seed = 11
+	var base_v := 0
+	for i in 50000:
+		if FishData.roll_variant(rb) >= 1:
+			base_v += 1
+	rb.seed = 11
+	var biased_v := 0
+	for i in 50000:
+		if FishData.roll_variant(rb, 2.0) >= 1:
+			biased_v += 1
+	print("  变体出现率 bias0=%d / bias2=%d（/5万）" % [base_v, biased_v])
+	_assert(biased_v > base_v * 2, "vbias=2 应显著抬高变体出现率（杠杆生效）")
 	# roll_catch 带 var 字段，且会出现变体
 	var seen := false
 	for i in 20000:
@@ -1521,6 +1545,98 @@ func _check_effects() -> void:
 	print("  动态层资源齐全（水光6/雾3/雪3/涟漪4/灯光4/动物4），事件生命周期通过")
 	game.queue_free()
 	await process_frame
+
+
+## 测试模式（开发工具）：写档冻结隔离 + 改钱/给鱼即时生效 + 强制时段不被时钟覆盖 + 退出还原正式档。
+func _check_test_mode() -> void:
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = true
+	g.save_path = TEST_SAVE
+	root.add_child(g)
+	await process_frame
+	# 正式档基线：coins=4321、空篓，落盘
+	g.coins = 4321
+	g.inventory.clear()
+	g._save()
+	# 进入测试模式：冻结写档
+	TestMode.set_enabled(g, true)
+	_assert(g.test_mode and not g.save_enabled, "进入测试模式应冻结写档")
+	# 设置页（含测试台）应能正常构建（覆盖 fill_test_console：鱼种下拉/分段按钮/事件按钮）
+	g._open_panel("set")
+	await process_frame
+	_assert(is_instance_valid(g._panel), "测试模式下设置页（测试台）应正常构建")
+	# 改钱 / 给鱼即时生效（仅内存）
+	TestMode.add_coins(g, 1000)
+	_assert(g.coins == 5321, "测试加币应即时生效")
+	var before: int = g.inventory.size()
+	var sample_id := str(FishData.FISH.keys()[0])
+	TestMode.give_fish(g, sample_id, 2, 1)
+	_assert(g.inventory.size() == before + 1, "测试给鱼应入篓一条")
+	_assert(g.dex.has(sample_id), "测试给鱼应登记图鉴")
+	# 提速生效
+	TestMode.set_speed(g, 10.0)
+	_assert(is_equal_approx(g.test_speed, 10.0), "测试提速应改 test_speed")
+	# 强制时段：_tick_phase 不被真实时钟覆盖（选一个与当前真实时段不同的强制值）
+	var other := "day" if Weather.current_phase() != "day" else "night"
+	g._forced_phase = other
+	g.day_phase = other
+	g._tick_phase()
+	_assert(g.day_phase == other, "测试强制时段不应被真实时钟覆盖")
+	# 退出测试模式：丢弃测试改动、还原正式档、恢复写档与默认运行态
+	TestMode.set_enabled(g, false)
+	_assert(not g.test_mode and g.save_enabled, "退出测试模式应恢复写档")
+	_assert(g.coins == 4321, "退出测试模式应还原正式档金币（丢弃测试改动）")
+	_assert(g.inventory.is_empty(), "退出测试模式应还原正式档鱼篓（测试给的鱼被丢弃）")
+	_assert(g._forced_phase == "" and is_equal_approx(g.test_speed, 1.0),
+		"退出测试模式应复位强制时段/提速")
+	print("  测试模式：写档冻结/改钱给鱼/强制时段/退出还原正式档 通过")
+	g.queue_free()
+	await process_frame
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+
+
+## 开启新存档（开发工具）：清空磁盘存档 + 全状态复位默认 + 落盘全新档 + 重看引导标记。
+func _check_new_save() -> void:
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+	var g: Node = load("res://main.tscn").instantiate()
+	g.save_enabled = true
+	g.save_path = TEST_SAVE
+	root.add_child(g)
+	await process_frame
+	# 造一份有进度的存档
+	g.coins = 9999
+	g.rod_level = 5
+	g.bag_level = 3
+	g.lifetime_catches = 120
+	g.lifetime_coins = 30000
+	g.inventory = [{"id": str(FishData.FISH.keys()[0]), "w": 0.02, "v": 3, "q": 0, "lock": false, "var": 0}]
+	g.dex = {str(FishData.FISH.keys()[0]): {"n": 5, "w": 0.02, "big": false, "perf": false, "vmask": 0, "fd": "2026-06-01"}}
+	g.seen_intro = true
+	g._save()
+	_assert(FileAccess.file_exists(TEST_SAVE), "前置：应已落盘有进度的存档")
+	# 开启新存档
+	g._new_save()
+	_assert(g.coins == 0 and g.lifetime_catches == 0 and g.lifetime_coins == 0, "新存档应清零金币/累计")
+	_assert(g.rod_level == 1 and g.bag_level == 1 and g.bait_level == 0 and g.hook_level == 0, "新存档应复位装备")
+	_assert(g.inventory.is_empty() and g.dex.is_empty(), "新存档应清空鱼篓与图鉴")
+	_assert(not g.seen_intro, "新存档应重置引导标记（重看引导）")
+	_assert(g.current_spot == SpotData.DEFAULT_SPOT and g.unlocked_spots.size() == 1, "新存档应回默认钓点")
+	# 落盘的新档读回应也是干净的
+	var disk: Variant = SaveSystem.read_file(TEST_SAVE)
+	_assert(disk is Dictionary and int((disk as Dictionary).get("coins", -1)) == 0, "新存档应已落盘为干净档")
+	print("  开启新存档：清空进度/复位默认/落盘干净档/重看引导 通过")
+	g.queue_free()
+	await process_frame
+	for p in [TEST_SAVE, TEST_SAVE + ".bak", TEST_SAVE + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
 
 
 func _assert(cond: bool, msg: String) -> void:

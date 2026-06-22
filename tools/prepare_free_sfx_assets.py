@@ -185,7 +185,13 @@ def render_layers(asset: dict) -> np.ndarray:
 
 
 def main() -> None:
+    # Merge into the existing manifest so layers owned by other generators
+    # (e.g. the procedural ambience beds from prepare_ambience_assets.py) survive
+    # a rerun of this script.
+    manifest_path = OUT / "audio_manifest.json"
     manifest = {}
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     for asset_id, asset in ASSETS.items():
         audio = render_layers(asset)
         out = OUT / asset["path"]
@@ -199,7 +205,7 @@ def main() -> None:
         }
         print(f"{asset_id}: {out} {len(audio) / TARGET_SR:.3f}s")
 
-    (OUT / "audio_manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )

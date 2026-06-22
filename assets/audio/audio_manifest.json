@@ -58,5 +58,47 @@
     "duration_seconds": 28.0,
     "loop": true,
     "description": "Soft looping water ambience. Source: 40 CC0 water/splash/slime SFX loop_water_03."
+  },
+  "amb_stream_loop": {
+    "path": "res://assets/audio/ambience/amb_stream_loop.wav",
+    "duration_seconds": 24.0,
+    "loop": true,
+    "description": "Seamless mountain-stream/riffle bed. Source: Freesound #433589 'jackthemurray' stream-river-water-up-close (via Wikimedia Commons), CC0."
+  },
+  "amb_birds_day": {
+    "path": "res://assets/audio/ambience/amb_birds_day.wav",
+    "duration_seconds": 28.0,
+    "loop": true,
+    "description": "Quiet daytime woodland birdsong bed. Source: OpenGameArt 'Ambient Bird Sounds' by isaiah658, CC0."
+  },
+  "amb_wind_loop": {
+    "path": "res://assets/audio/ambience/amb_wind_loop.wav",
+    "duration_seconds": 26.0,
+    "loop": true,
+    "description": "Open-air wind bed. Source: OpenGameArt 'wind1' open-air wind, CC0."
+  },
+  "amb_night_insects": {
+    "path": "res://assets/audio/ambience/amb_night_insects.wav",
+    "duration_seconds": 22.0,
+    "loop": true,
+    "description": "Warm-night cricket bed. Source: OpenGameArt 'Crickets ambient noise (loopable)', CC0."
+  },
+  "amb_waves_loop": {
+    "path": "res://assets/audio/ambience/amb_waves_loop.wav",
+    "duration_seconds": 24.0,
+    "loop": true,
+    "description": "Ocean swell bed (rolling surf). Source: OpenGameArt 'Beach Ocean Waves' by jasinski (alkai beach), CC0."
+  },
+  "amb_gulls_day": {
+    "path": "res://assets/audio/ambience/amb_gulls_day.wav",
+    "duration_seconds": 30.0,
+    "loop": true,
+    "description": "Coastal gull bed (sparse calls). Source: OpenGameArt 'Solo Seagull Sound Effects' (Seagull Ambient), CC0."
+  },
+  "amb_cave_drip": {
+    "path": "res://assets/audio/ambience/amb_cave_drip.wav",
+    "duration_seconds": 20.0,
+    "loop": true,
+    "description": "Cavern-pool water-drip bed. Source: OpenGameArt 'Dripping water loop' (atmosbasement), CC0."
   }
 }

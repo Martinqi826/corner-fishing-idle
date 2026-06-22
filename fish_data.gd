@@ -334,11 +334,14 @@ static func quality_label(q: int) -> String:
 
 
 ## 稀有变体抽取：从最稀有向常见累加判定，落空则普通。
-static func roll_variant(rng: RandomNumberGenerator) -> int:
+## vbias≥0：收集杠杆（诱饵/悬赏/钓点亲和给的偏置），按 (1+vbias) 整体抬高变体概率；
+## vbias=0 时与原分布逐位一致（保证基线回归不破）。
+static func roll_variant(rng: RandomNumberGenerator, vbias := 0.0) -> int:
+	var scale := 1.0 + clampf(vbias, 0.0, 10.0)
 	var r := rng.randf()
 	var acc := 0.0
 	for vi in range(VARIANT_PROBS.size() - 1, 0, -1):
-		acc += float(VARIANT_PROBS[vi])
+		acc += float(VARIANT_PROBS[vi]) * scale
 		if r < acc:
 			return vi
 	return 0
@@ -434,7 +437,7 @@ static func weights_for_rod(rod_level: int) -> Dictionary:
 ## 体重 roll 偏向小个体（k²），卖价与体重线性挂钩（Fisch 模型）再乘星级倍率。
 ## luck：额外品阶运气（如鱼汛事件 +N），仅抬高高阶权重，不影响鱼价基准。
 ## pool 非空时只在该钓点鱼池内出鱼（多钓点）；为空保持旧行为（全鱼池）。
-static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0, luck := 0, pool: Array = []) -> Dictionary:
+static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0, luck := 0, pool: Array = [], vbias := 0.0) -> Dictionary:
 	var id := roll_fish(weights_for_rod(rod_level + luck), rng, pool)
 	var f: Dictionary = FISH[id]
 	var k := rng.randf()
@@ -447,7 +450,7 @@ static func roll_catch(rng: RandomNumberGenerator, rod_level: int, bait_idx := 0
 	var rod_mult := 1.0 + float(rod_level - 1) * 0.08
 	var jitter := rng.randf_range(0.92, 1.08)
 	var q := roll_quality(bait_idx, rng)
-	var vr := roll_variant(rng)
+	var vr := roll_variant(rng, vbias)
 	return {
 		"id": id,
 		"w": snappedf(w, 0.01),

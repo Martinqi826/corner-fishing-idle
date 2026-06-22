@@ -38,6 +38,12 @@ func _run() -> void:
 	await _settle(2)
 	_snap("panel_bag.png")
 
+	# 限定鱼提前入图鉴：让图鉴列表显示🌙徽标、详情卡能展示限定说明
+	_main.dex["oarfish"] = {"n": 8, "w": 120.0, "big": true, "perf": false,
+		"vmask": (1 << 2), "fd": "2026-06-01", "wd": "2026-06-18"}
+	_main.dex["wels_catfish"] = {"n": 11, "w": 42.0, "big": true, "perf": false,
+		"vmask": 0, "fd": "2026-06-02", "wd": "2026-06-15"}
+
 	# 2b) 图鉴页签
 	_main._catch_tab = 1
 	_main._open_panel("catch")
@@ -58,6 +64,42 @@ func _run() -> void:
 		_dsc.scroll_vertical = 100000
 		await _settle(3)
 		_snap("panel_fishdetail_lower.png")
+
+	# 2d) 限定鱼详情卡（皇带鱼）：夜晚时段 → 限定说明显示"可遇"，滚到底看🌙限定卡
+	_main.day_phase = "night"
+	_main._detail_fish = "oarfish"
+	_main._open_panel("fishdetail")
+	await _settle(2)
+	var _dsc2 := _find_detail_scroll(_main)
+	if _dsc2 != null:
+		_dsc2.scroll_vertical = 100000
+		await _settle(3)
+	_snap("panel_fishdetail_limited.png")
+	_main.day_phase = Weather.current_phase()
+
+	# 2e) 任务页（含本周巨物赛卡）
+	_main._catch_tab = 2
+	_main._open_panel("catch")
+	await _settle(2)
+	_snap("panel_tasks.png")
+
+	# 2f) 比赛目标鱼详情卡（展示🏆 banner）：让目标鱼已发现、本周最佳到位，滚到底
+	var _cfish := str(_main.competition.get("fish", ""))
+	if _cfish != "" and FishData.FISH.has(_cfish):
+		# 不直接引用 Competition 类：-s 工具脚本顶层类引用会在 autoload 前早编译整条依赖图 → Audio not found。
+		# 影子线 = wmax×0.55，这里设到其 80% 展示"接近达标"的进度态。
+		_main.competition["best"] = float(FishData.FISH[_cfish]["wmax"]) * 0.55 * 0.8
+		if not _main.dex.has(_cfish):
+			_main.dex[_cfish] = {"n": 3, "w": float(_main.competition["best"]), "big": false,
+				"perf": false, "vmask": 0, "fd": "2026-06-10", "wd": "2026-06-17"}
+		_main._detail_fish = _cfish
+		_main._open_panel("fishdetail")
+		await _settle(2)
+		var _bsc := _find_detail_scroll(_main)
+		if _bsc != null:
+			_bsc.scroll_vertical = 100000
+			await _settle(3)
+		_snap("panel_fishdetail_comp.png")
 
 	# 3) 升级面板
 	_main._open_panel("rod")

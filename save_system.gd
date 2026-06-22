@@ -36,6 +36,7 @@ static func collect(g) -> Dictionary:
 		"dex": dex_to_save(g),
 		"daily_order": g.daily_order,
 		"weekly": g.weekly,
+		"competition": g.competition,
 		"day_stat": g.day_stat,
 		"best_q": g.best_quality,
 		"best_var": g.best_variant,
@@ -44,6 +45,7 @@ static func collect(g) -> Dictionary:
 		"opacity": g._opacity,
 		"max_fps": g.max_fps,           # 帧率上限设置（旧档无 → 载入默认 30）
 		"ui_scale": g.ui_scale,         # 界面缩放设置（旧档无 → 载入默认 1.0）
+		"paper_grain": g.paper_grain,   # 水彩纸纹偏好（旧档无 → 载入默认开）
 		"focus": g.focus_mode,
 		"seen_intro": g.seen_intro,
 		# —— v8 多钓点 ——
@@ -174,6 +176,15 @@ static func apply(g, data: Dictionary) -> void:
 			"reward": int(wk_raw.get("reward", 0)),
 			"done": bool(wk_raw.get("done", false)),
 		}
+	var comp_raw: Variant = data.get("competition", {})  # 旧档无 → main._ensure_competition 现生成
+	if comp_raw is Dictionary and comp_raw.has("week") and comp_raw.has("fish"):
+		g.competition = {
+			"week": int(comp_raw.get("week", -1)),
+			"fish": str(comp_raw.get("fish", "")),
+			"best": float(comp_raw.get("best", 0.0)),
+			"claimed": bool(comp_raw.get("claimed", false)),
+			"reward": int(comp_raw.get("reward", 0)),
+		}
 	var ds_raw: Variant = data.get("day_stat", {})  # 旧档无 → main._ensure_day_stat 现生成
 	if ds_raw is Dictionary and ds_raw.has("date"):
 		g.day_stat = {
@@ -185,6 +196,7 @@ static func apply(g, data: Dictionary) -> void:
 	g._set_opacity(g._opacity)
 	g._set_max_fps(int(data.get("max_fps", 30)))   # 校验 + 应用 Engine.max_fps，旧档默认 30
 	g._set_ui_scale(float(data.get("ui_scale", 1.0)))   # 校验 + 应用窗口缩放，旧档默认 1.0
+	g._set_paper_grain(bool(data.get("paper_grain", true)))   # 水彩纸纹偏好，旧档默认开
 	g.seen_intro = bool(data.get("seen_intro", true))  # 有存档=老玩家，默认已看过引导
 	if bool(data.get("focus", false)):
 		g._set_focus(true)

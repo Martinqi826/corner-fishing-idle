@@ -489,12 +489,16 @@ func _show_card(sw: Dictionary, at: Vector2) -> void:
 	UIPanels.apply_button_skin(back, false)
 	back.pressed.connect(func() -> void: Decor.remove_to_inventory(g, int(sw["idx"])))
 	box.add_child(back)
+	card.custom_minimum_size = Vector2(186, 0)   # 定宽，高随内容（按真实高摆放，不再用写死的 168）
+	card.top_level = true                         # 脱离鱼缸的 clip_contents：卡片可越过缸底/缸边完整显示，不被裁
 	add_child(card)
 	_card = card
-	# 卡片摆到鱼附近并钳进缸内
-	var csz := Vector2(186, 168)
-	var pos := at + Vector2(12, -csz.y * 0.5)
-	pos.x = clampf(pos.x, 4.0, maxf(4.0, VIEW_SIZE.x - csz.x - 4.0))
-	pos.y = clampf(pos.y, 4.0, maxf(4.0, VIEW_SIZE.y - csz.y - 4.0))
+	# 用内容真实尺寸 + 钳进整张面板可视范围（而非缸内 220 高）：偏下点鱼时卡片向面板下方延伸也能完整显示。
+	var csz := card.get_combined_minimum_size()
+	csz.x = maxf(csz.x, 186.0)
+	var gpt := get_global_transform() * at        # 鱼缸局部点 → 画布全局（top_level 用画布坐标）
+	var pos := gpt + Vector2(12.0, -csz.y * 0.5)
+	var area: Rect2 = g._panel.get_global_rect() if (g != null and is_instance_valid(g._panel)) else get_global_rect()
+	pos.x = clampf(pos.x, area.position.x + 4.0, maxf(area.position.x + 4.0, area.end.x - csz.x - 4.0))
+	pos.y = clampf(pos.y, area.position.y + 4.0, maxf(area.position.y + 4.0, area.end.y - csz.y - 4.0))
 	card.position = pos
-	card.custom_minimum_size = csz

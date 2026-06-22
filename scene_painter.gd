@@ -3,6 +3,7 @@ extends Node2D
 ## 优先用 Codex 产出的真实美术；缺失时回退程序化绘制。
 ## 动态效果层按 docs/dynamic_art_plan.md 接入（全部透明叠加，只播放不修改资源）：
 ##   雾气微风 / 水流高光循环 / 雪粒漂移 / 小动物低频事件 / 浮漂涟漪 / 灯光呼吸
+## 最上层另叠程序化「水彩纸纹」（见 _build_paper_texture / _draw_paper_layer），统一全画面气质。
 ## main.gd 钓鱼状态机通过 dip / add_ripple() 驱动浮标与水花。
 
 const W := 520.0
@@ -119,6 +120,13 @@ var _prng := RandomNumberGenerator.new()
 const FLASH_DUR := 0.6
 var _flash_t := 0.0
 
+# —— 水彩纸纹层：程序化生成的极淡冷压纸颗粒，铺满整幅场景、叠在所有内容之上。
+# 走 painter 自身的羽化材质，会和场景一起向左上消散；把"干净插画"统一成"隔着一层手工纸"的水彩气质。
+# 整幅一次性生成（与场景同尺寸，无平铺缝），零外部资源、零存档；带框/沉浸两态通用。
+const PAPER_ALPHA := 0.055   # 颗粒峰值透明度（极淡，只做质感不夺画面）
+var paper_grain := true
+var _paper_tex: Texture2D = null
+
 # —— 渔夫情绪 / 桌面宠物（Task 4）：尽量零存档、瞬态，用变换驱动 ——
 var _fisher_pull: Array = []        # 收竿/上鱼姿势帧（咬钩时切换，给渔夫加动作）
 var _fisher_mood_tex: Dictionary = {}  # 可选情绪帧 idle_breath/shiver/doze/cheer（缺则回退 idle+变换）
@@ -224,6 +232,32 @@ func _ready() -> void:
 	_wild_timer = _prng.randf_range(12.0, 25.0)
 	# 灯笼为独立叠加精灵，光晕锚点取灯笼火焰处（不再从底图扫描暖色像素）
 	_lantern = lantern_anchor + Vector2(0, -16)
+	_build_paper_texture()
+
+
+## 程序化冷压纸颗粒：两层异频 Perlin 叠加（细纤维 + 大斑驳），整幅一次性烤进一张纹理。
+## alpha 由"偏离中灰的程度"驱动——平滑处近乎透明，纤维峰谷处才轻微显色，得到细而不糊的颗粒。
+func _build_paper_texture() -> void:
+	var fiber := FastNoiseLite.new()
+	fiber.seed = _prng.randi()
+	fiber.noise_type = FastNoiseLite.TYPE_PERLIN
+	fiber.frequency = 0.22                       # 高频 → 细密纸纤维
+	var mottle := FastNoiseLite.new()
+	mottle.seed = _prng.randi()
+	mottle.noise_type = FastNoiseLite.TYPE_PERLIN
+	mottle.frequency = 0.035                      # 低频 → 手工纸厚薄斑驳
+	var iw := int(W)
+	var ih := int(H)
+	var img := Image.create(iw, ih, false, Image.FORMAT_RGBA8)
+	for y in ih:
+		for x in iw:
+			var f := 0.5 + 0.5 * fiber.get_noise_2d(float(x), float(y))
+			var m := 0.5 + 0.5 * mottle.get_noise_2d(float(x), float(y))
+			var g := clampf(0.7 * f + 0.3 * m, 0.0, 1.0)
+			var tone := lerpf(0.60, 0.97, g)        # 暗纤维↔纸白
+			var a := absf(g - 0.5) * 2.0 * PAPER_ALPHA
+			img.set_pixel(x, y, Color(tone * 1.03, tone, tone * 0.94, a))  # 极轻暖偏
+	_paper_tex = ImageTexture.create_from_image(img)
 
 
 func _tex(path: String) -> Texture2D:
@@ -903,6 +937,15 @@ func _draw_composite() -> void:
 	_draw_bobber_sprite()
 	_draw_glow_layer()      # 灯光呼吸光晕（锚在灯笼火焰处）
 	_draw_catch_flash()     # 稀有上鱼柔和暖光脉冲（受羽化遮罩约束）
+	_draw_paper_layer()     # 水彩纸纹（最上层介质，随羽化消散，统一全画面气质）
+
+
+## 水彩纸纹层：把烤好的纸颗粒整幅贴上（最上层）。与场景同尺寸、对齐原点，无平铺缝；
+## 经 painter 的羽化材质天然向左上消散。paper_grain=false 可整体关闭。
+func _draw_paper_layer() -> void:
+	if not paper_grain or _paper_tex == null:
+		return
+	draw_texture(_paper_tex, Vector2.ZERO)
 
 
 func _draw_catch_flash() -> void:

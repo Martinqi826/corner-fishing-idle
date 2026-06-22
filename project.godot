@@ -26,6 +26,11 @@ window/size/no_focus=false
 window/per_pixel_transparency/allowed=false
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+; 关逐显示器 DPI 感知：交给 Windows 统一按显示器缩放整窗位图。
+; 否则在「主屏高缩放(如150%) + 副屏100%」混合多屏下，窗口挪到副屏时视口贴不齐
+; 物理客户区，左/右/上会露 1px 窗口底色，像一条浅"描边"。代价：高缩放屏上水彩被
+; 系统放大略柔（安静水彩风通常无感）。
+window/dpi/allow_hidpi=false
 
 [rendering]
 
