@@ -14,8 +14,8 @@ const HORIZON := 206.0
 # 默认值按当前主图实测；main.gd 可从 ui_layout.json 覆盖（Codex 美术更新时同步）。
 var bite_point := Vector2(384, 344)
 
-# 浮漂精灵缩放：资源是 64/96 大画布，原尺寸在场景里过大，按场景比例缩小。
-const BOBBER_SCALE := 0.24
+# 浮漂精灵缩放：资源 128×128 水彩浮漂（idle/bite 同画幅），按场景比例缩小到 ~15px。
+const BOBBER_SCALE := 0.12
 # 灯光呼吸锚点回退值（dynamic_art_plan.md 给定的近似位置；
 # 实际锚点在 _ready 里扫描主图暖色像素质心自动定位，主图更新也不会错位）
 const LANTERN_POS := Vector2(438, 274)
@@ -57,7 +57,7 @@ var fisher_anchor := Vector2(430, 300)   # 渔夫脚底中心
 var fisher_flip := false
 const LANTERN_SCALE := 0.34  # 灯笼精灵原 96px → ~33px，立在渔夫旁
 var lantern_anchor := Vector2(462, 286)  # 灯笼底部中心（渔夫右侧岸上）
-var rod_tip_off := Vector2(-22, -50)     # 竿尖相对 fisher_anchor 的偏移（钓线起点）
+var rod_tip_off := Vector2(-24, -47)     # 竿尖相对 fisher_anchor 的偏移（钓线起点，对准精灵里画的竿尖）
 var phase_tint := Color(0, 0, 0, 0)  # 昼夜时段染色（A=0 不染色），main 经 set_phase_tint 设置
 
 # —— 连续昼夜调色（新）：随真实时钟连续推移的竖向渐变 wash，取代旧的全屏平涂染色 ——
@@ -797,8 +797,46 @@ func _current_rod_tip() -> Vector2:
 
 
 func _draw_fishing_line() -> void:
-	var tip := _current_rod_tip()
-	draw_line(tip, bobber_pos(), Color(0.95, 0.96, 0.97, 0.55), 1.2, true)
+	var a := _current_rod_tip()
+	var off := Vector2(0, sin(t * 2.0) * 1.2 + dip * 5.0)
+	# 终点接到浮漂上部系线处（随浮漂一起上下浮动），不插进漂身中心。
+	var b := bobber_pos() + off + Vector2(0, -BOBBER_SCALE * 128.0 * 0.30)
+	_draw_painterly_fishing_line(a, b, clampf(dip, 0.0, 1.0))
+
+
+func _quad_bezier(a: Vector2, c: Vector2, b: Vector2, u: float) -> Vector2:
+	return a.lerp(c, u).lerp(c.lerp(b, u), u)
+
+
+func _draw_painterly_fishing_line(a: Vector2, b: Vector2, pull: float) -> void:
+	var dist := a.distance_to(b)
+	if dist < 2.0:
+		return
+	var taut := _smooth01(pull)
+	var sag := clampf(dist * lerpf(0.042, 0.014, taut), 2.5, 11.0)
+	var drift := sin(t * 0.55) * clampf(dist * 0.005, 0.2, 1.0) * (1.0 - taut * 0.65)
+	var mid := a.lerp(b, 0.54) + Vector2(drift, sag)
+	var pts := PackedVector2Array()
+	var seg := 22
+	for i in seg + 1:
+		var u := float(i) / float(seg)
+		pts.append(_quad_bezier(a, mid, b, u))
+	for i in seg:
+		var u := (float(i) + 0.5) / float(seg)
+		var fade := clampf(sin(PI * u) * 1.2, 0.45, 1.0)
+		var wash_alpha := (0.045 + 0.025 * fade) * (1.0 + taut * 0.35)
+		draw_line(pts[i], pts[i + 1], Color(0.62, 0.65, 0.62, wash_alpha), 1.45, true)
+	for i in seg:
+		var u := (float(i) + 0.5) / float(seg)
+		var paper := 0.74 + 0.18 * sin(float(i) * 1.73 + t * 0.33)
+		var alpha := (0.22 + 0.10 * taut) * paper * clampf(sin(PI * u) * 1.15, 0.52, 1.0)
+		var col := Color(0.30, 0.30, 0.26, alpha).lerp(Color(0.52, 0.58, 0.56, alpha * 0.85), u)
+		draw_line(pts[i], pts[i + 1], col, 0.58, true)
+	for j in 3:
+		var u := clampf(0.70 + float(j) * 0.075 + 0.012 * sin(t * 0.8 + float(j)), 0.0, 1.0)
+		var p := _quad_bezier(a, mid, b, u)
+		var q := _quad_bezier(a, mid, b, clampf(u + 0.018, 0.0, 1.0))
+		draw_line(p, q, Color(0.82, 0.85, 0.79, 0.085 * (1.0 - taut * 0.25)), 0.50, true)
 
 
 ## 昼夜时段染色 + 底图切换（main 在跨段时调用；A=0 即白昼不染色）。
@@ -1084,6 +1122,8 @@ func _draw_ripples() -> void:
 				draw_arc(r["pos"], r["r"], 0.0, TAU, 26, _a(C_SHIMMER, a2), 1.5)
 
 
+## 浮漂：用 Codex 水彩贴图（idle/bite，128×128）。咬钩(dip>0.5)切 bite 帧；
+## 轻微上下浮动 + 咬钩下沉。贴图缺失才回退程序绘制 _draw_bobber_proc。
 func _draw_bobber_sprite() -> void:
 	var p := bobber_pos()
 	var tex := _bobber_bite if (dip > 0.5 and _bobber_bite != null) else _bobber_idle
@@ -1117,11 +1157,31 @@ func _draw_glow_layer() -> void:
 		draw_texture_rect(_glow_tex[i1], rect, false, Color(1, 1, 1, base_a * frac))
 
 
+## 水彩浮漂：暖红下身 + 奶白颈 + 细天线，柔晕湿边、哑光低饱和，融进水彩调；
+## 那点红是画面唯一暖焦点。dip>0（咬钩）→ 下沉 + 接水涟漪环加强。
 func _draw_bobber_proc(p: Vector2) -> void:
-	var rr := 5.0 + sin(t * 2.0) * 1.0
-	draw_arc(p + Vector2(0, 2), rr, 0.0, TAU, 18, _a(C_SHIMMER, 0.25), 1.0)
-	draw_circle(p, 3.2, Color(0.86, 0.42, 0.34))
-	draw_circle(p + Vector2(0, -3), 2.0, Color(0.96, 0.96, 0.93))
+	var bite := clampf(dip, 0.0, 1.0)
+	var red := Color(0.79, 0.34, 0.30)
+	var red_dk := Color(0.58, 0.24, 0.23)
+	var cream := Color(0.95, 0.92, 0.84)
+	var edge := Color(0.26, 0.17, 0.18, 0.28)
+	# 接水涟漪环（咬钩时更明显）
+	var ring := 4.6 + sin(t * 2.2) * 0.7 + bite * 3.2
+	draw_arc(p + Vector2(0, 3.0), ring, 0.0, TAU, 22, _a(C_SHIMMER, 0.15 + bite * 0.12), 1.0)
+	# 水下淡倒影
+	draw_circle(p + Vector2(0, 5.0), 2.2, Color(red.r, red.g, red.b, 0.10))
+	# 天线 + 顶红珠
+	draw_line(p + Vector2(0, -3.2), p + Vector2(0, -6.6), red_dk, 1.0, true)
+	draw_circle(p + Vector2(0, -6.7), 0.9, red)
+	# 红下身（主体，占大半）：柔晕 + 实心 + 下缘湿边
+	draw_circle(p + Vector2(0, 1.1), 4.4, Color(red.r, red.g, red.b, 0.20))
+	draw_circle(p + Vector2(0, 1.1), 3.5, red)
+	draw_arc(p + Vector2(0, 1.1), 3.5, deg_to_rad(15), deg_to_rad(165), 16, edge, 0.9)
+	# 奶白颈（上部细带，红占主、不喧宾）：柔晕 + 实心
+	draw_circle(p + Vector2(0, -1.8), 2.3, Color(cream.r, cream.g, cream.b, 0.20))
+	draw_circle(p + Vector2(0, -1.8), 1.7, cream)
+	# 哑光高光（柔，不塑料）
+	draw_circle(p + Vector2(-0.7, -2.1), 0.55, Color(1, 1, 1, 0.5))
 
 
 # ============================ 程序化回退场景 ============================
