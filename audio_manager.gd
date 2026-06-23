@@ -257,6 +257,10 @@ func _configure_stream_looping(stream: AudioStream, should_loop: bool) -> AudioS
 	var copy := stream.duplicate()
 	if copy is AudioStreamWAV:
 		copy.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		copy.loop_begin = 0
+		# 必须显式设循环终点为全长帧数：导入档 loop_mode=Disabled 时 loop_end=0，
+		# 仅运行时改 LOOP_FORWARD 会让循环区间退化为 [0,0] → 卡在首帧 = 无声。
+		copy.loop_end = int(round(copy.get_length() * copy.mix_rate))
 	elif copy is AudioStreamMP3:
 		copy.loop = true
 	elif copy is AudioStreamOggVorbis:
