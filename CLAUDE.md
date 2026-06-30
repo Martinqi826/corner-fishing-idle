@@ -33,7 +33,7 @@
 
 - 引擎 Godot 4.6 / GDScript。逻辑入口 `main.gd`、面板 `ui_panels.gd`、场景绘制 `scene_painter.gd`;完整模块职责见 README「结构」表。
 - **拉到新美术资源后先 `godot --headless --import` 再运行**,否则看不到新图(.godot/ 不入库)。
-- **只维护单一线性 main**:不要建分支 / worktree / 备份 tag / stash(除非我明确要求)。
+- **协作模型见 [CONTRIBUTING.md](CONTRIBUTING.md)**:多人 / 多 AI 并行 = 「分支 + PR + 受保护 main」,改动各走分支、经审查再并回 `main`,**别再多条对话共用一个工作目录**。单人快速迭代仍可直接在 `main` 上做;一旦有第二个贡献者(人或 AI)同时动手,就必须分支隔离。提交永远只 `git add <显式文件>`、绝不 `-A`。
 - **文档以 MD 为单一可信源**(AI 读写、git 跟踪);同名 HTML 仅人读视图,改动先改 MD 再生成 HTML。
 - **验证**:逻辑改动跑 `godot --headless -s tools/validate_game.gd`(必须全过);视觉改动跑 `tools/dev_screenshot.gd` 出图人工把关。
 - 拿不准就先列差异问人,别一次性"照搬全部"。

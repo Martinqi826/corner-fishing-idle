@@ -23,10 +23,11 @@
 - [x] ~~**文档债**:README 写 106鱼/v11~~ → 已同步真实数字(鱼 219、存档 v12;钓点守 3=已上线数,数据层 10)✅ 2026-06-23
 - [ ] **钓线美学未定稿**:用户觉得偏淡/走向/颜色不对,`scene_painter` 多层水彩线待调
 - [ ] **219 鱼美术债**:99 条有专属图标,其余 120 条靠品阶通用图回退
-- [ ] **并行碰撞风险**:多条 Claude 对话共用 `E:\godotgame1\fish-idle`,曾踩 `git add -A` 互相覆盖 / 同文件碰撞。约定见 `docs/parallel-dev-contract.md`;动手前必 `git fetch`、只 `git add <显式文件>`、绝不 `-A`
+- [ ] **并行碰撞风险**:多条 Claude 对话共用 `E:\godotgame1\fish-idle`,曾踩 `git add -A` 互相覆盖 / 同文件碰撞(2026-06-22 P2 杠杆期间又撞 `scene_painter.gd`,靠 commit+push 化解)。**根治方案见 [CONTRIBUTING.md](../CONTRIBUTING.md)**:分支隔离 + PR + 受保护 main。过渡期约定仍见 `docs/parallel-dev-contract.md`;动手前必 `git fetch`、只 `git add <显式文件>`、绝不 `-A`
 
 ## ✅ 决策日志(关键拍板,最新在上 —— 防止反复纠结已否决的方向)
 
+- **2026-06-30** 采用**多人协作模型**:`main` 受保护 + 一人/一AI 一分支一任务 + PR 审查后合并,不共用工作区。新增 [CONTRIBUTING.md](../CONTRIBUTING.md) 为协作总则;`CLAUDE.md`「只维护单一线性 main」改为指向该守则;`parallel-dev-contract.md` 降为 AI 车道细则。**为什么**:多条 AI 对话共用同一文件夹直推 main 已反复造成覆盖/分叉,改为分支隔离 + PR 关卡从结构上根治。待 Owner 在 GitHub 网页开启 `main` 分支保护(步骤见 CONTRIBUTING §7)。
 - **2026-06-23** 建立项目全貌文档系统(VISION/ROADMAP/BACKLOG + CLAUDE.md「全貌协议」);README 同步真实数字;确立口径「钓点对外只算有背景图的 3 个,数据层 10 个不虚报」。
 - **2026-06-22** 以 `origin/main` 为唯一可信基;"拉 GitHub 覆盖本地"同步,丢弃本地探索叉。
 - **2026-06-22** P2 变体杠杆接线为「诱饵/窝料」第 4 成长线,存档升 v12;默认 0 与基线逐位一致。
